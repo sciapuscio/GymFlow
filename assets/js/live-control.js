@@ -341,6 +341,14 @@ const GFLive = (() => {
             const body = isPlaylist ? { context_uri: block.spotify_uri } : { uris: [block.spotify_uri] };
             await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
             if (typeof spRefreshNow === 'function') spRefreshNow();
+            // Retry after 2s: when previous track ended naturally, Spotify device goes to
+            // "paused" state. First call selects the track but doesn't start it.
+            // A second play (empty body = resume) forces the player to actually start.
+            setTimeout(async () => {
+                if (_lastAutoPlayUri === block.spotify_uri && isPlaying) {
+                    GF.post(window.GF_BASE + '/api/spotify.php?action=play', {}).catch(() => { });
+                }
+            }, 2000);
         } catch (e) { /* Spotify not available */ }
     }
 
