@@ -85,6 +85,46 @@
             lh: [.41, .74], rh: [.59, .74],
             lk: [.27, .78], rk: [.73, .78],
             la: [.18, .76], ra: [.82, .76]
+        },
+        // Wave: brazo derecho arriba, listo para saludar
+        wave_up: {
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.35, .23], rs: [.65, .23],
+            le: [.29, .36], re: [.74, .14],
+            lw: [.26, .51], rw: [.86, .10],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94]
+        },
+        // Wave: muñeca baja (medio saludo)
+        wave_down: {
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.35, .23], rs: [.65, .23],
+            le: [.29, .36], re: [.74, .14],
+            lw: [.26, .51], rw: [.86, .24],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94]
+        },
+        // Jog: rodilla izquierda arriba, brazo derecho adelante
+        jog_left: {
+            head: [.50, .06], neck: [.50, .14],
+            ls: [.34, .21], rs: [.66, .21],
+            le: [.25, .32], re: [.74, .30],
+            lw: [.20, .44], rw: [.78, .24],
+            lh: [.42, .56], rh: [.58, .56],
+            lk: [.34, .64], rk: [.61, .74],
+            la: [.35, .57], ra: [.63, .90]
+        },
+        // Jog: rodilla derecha arriba, brazo izquierdo adelante
+        jog_right: {
+            head: [.50, .06], neck: [.50, .14],
+            ls: [.34, .21], rs: [.66, .21],
+            le: [.26, .30], re: [.75, .32],
+            lw: [.22, .24], rw: [.79, .44],
+            lh: [.42, .56], rh: [.58, .56],
+            lk: [.41, .74], rk: [.66, .64],
+            la: [.38, .90], ra: [.66, .57]
         }
     };
 
@@ -108,13 +148,32 @@
             { pose: PS.wipe_up, ms: 280 },
             { pose: PS.stand, ms: 500 }
         ],
+        // 👋 Wave + trot
+        [
+            { pose: PS.stand, ms: 200 },
+            { pose: PS.wave_up, ms: 300 },  // levanta el brazo
+            { pose: PS.wave_down, ms: 160 },  // ola 1
+            { pose: PS.wave_up, ms: 160 },
+            { pose: PS.wave_down, ms: 160 },  // ola 2
+            { pose: PS.wave_up, ms: 160 },
+            { pose: PS.wave_down, ms: 160 },  // ola 3
+            { pose: PS.stand, ms: 300 },  // baja brazo
+            { pose: PS.jog_left, ms: 180 },  // trote 1
+            { pose: PS.stand, ms: 140 },
+            { pose: PS.jog_right, ms: 180 },  // trote 2
+            { pose: PS.stand, ms: 140 },
+            { pose: PS.jog_left, ms: 180 },  // trote 3
+            { pose: PS.stand, ms: 140 },
+            { pose: PS.jog_right, ms: 180 },  // trote 4
+            { pose: PS.stand, ms: 450 }   // para
+        ],
         // 🧘 Sit and stretch
         [
             { pose: PS.stand, ms: 400 },
-            { pose: PS.sit, ms: 600 },
-            { pose: PS.sit_stretch, ms: 700 },
-            { pose: PS.sit, ms: 500 },
-            { pose: PS.stand, ms: 700 }
+            { pose: PS.sit, ms: 700 },   // baja al piso
+            { pose: PS.sit_stretch, ms: 2500 },  // estira y aguanta
+            { pose: PS.sit, ms: 600 },   // vuelve a sentarse
+            { pose: PS.stand, ms: 900 }    // se levanta despacio
         ]
     ];
 
