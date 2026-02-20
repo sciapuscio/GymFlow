@@ -202,7 +202,12 @@ const GFLive = (() => {
         } catch (e) { /* ignore — non-critical */ }
     }
 
-    // Silently pauses Spotify if something was auto-played
+    // Pauses Spotify but KEEPS _lastAutoPlayUri → used when instructor pauses mid-session
+    function spotifyPause() {
+        GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
+    }
+
+    // Pauses Spotify AND clears _lastAutoPlayUri → used when block ends or session stops
     function spotifyAutoPause() {
         if (!_lastAutoPlayUri) return;
         _lastAutoPlayUri = null;
@@ -211,17 +216,19 @@ const GFLive = (() => {
 
     async function togglePlay() {
         if (isPlaying) {
+            // ── PAUSE: stop ticker + pause Spotify (keep URI for resume) ─────────────
             prepRemaining = 0;
             stopTicker();
-            spotifyAutoPause();                              // pause music when instructor pauses session
+            spotifyPause();                                  // pause without clearing URI
             await liveControl('pause');
         } else {
             const b = currentBlock();
+            // isResume: we have elapsed time AND a known Spotify URI (kept across pause)
             const isResume = elapsed > 0 && _lastAutoPlayUri;
 
             if (isResume) {
-                // ── RESUME after pause: seek Spotify to current position ──────────────
-                // song position = intro seconds already played + elapsed in block
+                // ── RESUME after pause: seek Spotify to the exact paused position ─────
+                // Song position = intro seconds (PREPARATE) already played + block elapsed
                 const introSecs = (b?.spotify_intro | 0) || 0;
                 const positionMs = (introSecs + elapsed) * 1000;
                 prepRemaining = 0;                           // no PREPARATE on resume
@@ -232,7 +239,6 @@ const GFLive = (() => {
                     const body = isCtx
                         ? { context_uri: b.spotify_uri, position_ms: positionMs }
                         : { uris: [b.spotify_uri], position_ms: positionMs };
-                    _lastAutoPlayUri = b.spotify_uri;
                     GF.post(window.GF_BASE + '/api/spotify.php?action=play', body)
                         .then(() => { if (typeof spRefreshNow === 'function') setTimeout(spRefreshNow, 1200); })
                         .catch(() => { });
