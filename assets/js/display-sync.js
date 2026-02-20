@@ -2,9 +2,17 @@
 (function () {
     let currentState = null;
     let localElapsed = 0;  // filled by server ticks — no local ticker needed
+    let stickWidget = null;  // StickmanWidget instance
 
     function init() {
         connectSocket();
+        // Init stickman widget (deferred so scripts load first)
+        setTimeout(() => {
+            const el = document.getElementById('stickman-container');
+            if (el && typeof StickmanWidget !== 'undefined') {
+                stickWidget = new StickmanWidget(el, { size: 'normal' });
+            }
+        }, 200);
     }
 
     // ── Socket.IO Connection ─────────────────────────────────────────────────
@@ -158,6 +166,33 @@
 
         // Exercise list chips
         updateExerciseList(block);
+
+        // Stickman widget
+        if (stickWidget) {
+            const exs = block.exercises || [];
+            const exIdx = (() => {
+                if ((block.type === 'tabata' || block.type === 'interval') && exs.length > 1) {
+                    const cfg = block.config || {};
+                    const roundDur = (cfg.work || 20) + (cfg.rest || 10);
+                    return Math.floor(localElapsed / roundDur) % exs.length;
+                }
+                return 0;
+            })();
+            const exObj = exs[exIdx];
+            const exName = (exObj && exObj.name) ? exObj.name : (typeof exObj === 'string' ? exObj : (block.name || ''));
+            // Determine phase: tabata has work/rest sub-phases
+            let smPhase = 'work';
+            if (block.type === 'rest') {
+                smPhase = 'rest';
+            } else if (block.type === 'tabata' || block.type === 'interval') {
+                const cfg = block.config || {};
+                const workSecs = cfg.work || 20;
+                const restSecs = cfg.rest || 10;
+                const cycleSec = workSecs + restSecs;
+                smPhase = (localElapsed % cycleSec) < workSecs ? 'work' : 'rest';
+            }
+            stickWidget.update(exName, smPhase);
+        }
 
         // Block type label & total time
         const typeLabel = document.getElementById('block-type-label');

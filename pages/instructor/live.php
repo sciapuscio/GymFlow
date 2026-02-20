@@ -69,8 +69,8 @@ layout_footer($user);
             <?php endforeach; ?>
         </select>
         <?php if ($session['display_code'] ?? null): ?>
-            <a href="<?php echo BASE_URL ?>/pages/display/sala.php?code=<?php echo urlencode($session['display_code']) ?>" target="_blank"
-                class="btn btn-secondary btn-sm">
+            <a href="<?php echo BASE_URL ?>/pages/display/sala.php?code=<?php echo urlencode($session['display_code']) ?>"
+                target="_blank" class="btn btn-secondary btn-sm">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -78,7 +78,8 @@ layout_footer($user);
                 Display
             </a>
         <?php endif; ?>
-        <a href="<?php echo BASE_URL ?>/pages/instructor/builder.php?id=<?php echo $id ?>" class="btn btn-secondary btn-sm">
+        <a href="<?php echo BASE_URL ?>/pages/instructor/builder.php?id=<?php echo $id ?>"
+            class="btn btn-secondary btn-sm">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -164,9 +165,20 @@ layout_footer($user);
         <!-- Right: Block list + Spotify -->
         <div style="display:flex;flex-direction:column;gap:16px;overflow:hidden">
 
+            <!-- Stickman mini (exercise technique viewer) -->
+            <div class="card" style="padding:14px;display:flex;gap:14px;align-items:flex-start">
+                <div id="stickman-mini" style="flex-shrink:0;width:80px"></div>
+                <div id="stickman-live-tips" style="flex:1;display:flex;flex-direction:column;gap:4px;padding-top:4px">
+                    <div
+                        style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gf-text-muted);margin-bottom:4px">
+                        Técnica</div>
+                </div>
+            </div>
+
             <!-- Block list -->
             <div class="card" style="overflow-y:auto;flex:1">
-                <h3 style="font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:.08em;color:var(--gf-text-muted)">
+                <h3
+                    style="font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:.08em;color:var(--gf-text-muted)">
                     Bloques (<?php echo count($blocks) ?>)
                 </h3>
                 <div style="display:flex;flex-direction:column;gap:6px" id="block-list">
@@ -177,19 +189,29 @@ layout_footer($user);
                         ?>
                         <div class="block-list-item" data-idx="<?php echo $i ?>" onclick="jumpToBlock(<?php echo $i ?>)"
                             style="padding:10px 12px;background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px">
-                            <div style="width:6px;height:36px;border-radius:3px;background:<?php echo $col ?>;flex-shrink:0"></div>
+                            <div
+                                style="width:6px;height:36px;border-radius:3px;background:<?php echo $col ?>;flex-shrink:0">
+                            </div>
                             <div style="flex:1;min-width:0">
-                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:<?php echo $col ?>;letter-spacing:.08em">
+                                <div
+                                    style="font-size:11px;font-weight:700;text-transform:uppercase;color:<?php echo $col ?>;letter-spacing:.08em">
                                     <?php echo strtoupper($block['type']) ?>
                                 </div>
-                                <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                <div
+                                    style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                                     <?php echo htmlspecialchars($block['name'] ?? 'Bloque') ?>
                                 </div>
                                 <?php if (!empty($block['spotify_name'])): ?>
-                                <div style="font-size:10px;color:#1DB954;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;display:flex;align-items:center;gap:4px">
-                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.293a.75.75 0 01-1.032.25c-2.828-1.727-6.39-2.118-10.584-1.16a.75.75 0 01-.332-1.463c4.588-1.044 8.52-.596 11.698 1.34a.75.75 0 01.25 1.033zm1.47-3.27a.937.937 0 01-1.29.312c-3.236-1.99-8.168-2.567-11.993-1.404a.938.938 0 11-.546-1.795c4.374-1.328 9.81-.685 13.518 1.597a.937.937 0 01.31 1.29zm.126-3.402c-3.882-2.308-10.29-2.52-14.002-1.394a1.125 1.125 0 11-.656-2.154c4.26-1.295 11.343-1.046 15.822 1.613a1.125 1.125 0 11-1.164 1.935z"/></svg>
-                                    <?php echo htmlspecialchars($block['spotify_name']) ?><?php if (!empty($block['spotify_intro'])): ?> · <?php echo (int)$block['spotify_intro'] ?>s prep<?php endif; ?>
-                                </div>
+                                    <div
+                                        style="font-size:10px;color:#1DB954;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;display:flex;align-items:center;gap:4px">
+                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="#1DB954">
+                                            <path
+                                                d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.293a.75.75 0 01-1.032.25c-2.828-1.727-6.39-2.118-10.584-1.16a.75.75 0 01-.332-1.463c4.588-1.044 8.52-.596 11.698 1.34a.75.75 0 01.25 1.033zm1.47-3.27a.937.937 0 01-1.29.312c-3.236-1.99-8.168-2.567-11.993-1.404a.938.938 0 11-.546-1.795c4.374-1.328 9.81-.685 13.518 1.597a.937.937 0 01.31 1.29zm.126-3.402c-3.882-2.308-10.29-2.52-14.002-1.394a1.125 1.125 0 11-.656-2.154c4.26-1.295 11.343-1.046 15.822 1.613a1.125 1.125 0 11-1.164 1.935z" />
+                                        </svg>
+                                        <?php echo htmlspecialchars($block['spotify_name']) ?>
+                                        <?php if (!empty($block['spotify_intro'])): ?>
+                                            · <?php echo (int) $block['spotify_intro'] ?>s prep<?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                             <div style="font-size:12px;color:var(--gf-text-muted);font-weight:600;flex-shrink:0">
@@ -204,54 +226,79 @@ layout_footer($user);
             <!-- Spotify Panel -->
             <div class="card" id="spotify-panel">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.293a.75.75 0 01-1.032.25c-2.828-1.727-6.39-2.118-10.584-1.16a.75.75 0 01-.332-1.463c4.588-1.044 8.52-.596 11.698 1.34a.75.75 0 01.25 1.033zm1.47-3.27a.937.937 0 01-1.29.312c-3.236-1.99-8.168-2.567-11.993-1.404a.938.938 0 11-.546-1.795c4.374-1.328 9.81-.685 13.518 1.597a.937.937 0 01.31 1.29zm.126-3.402c-3.882-2.308-10.29-2.52-14.002-1.394a1.125 1.125 0 11-.656-2.154c4.26-1.295 11.343-1.046 15.822 1.613a1.125 1.125 0 11-1.164 1.935z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#1DB954">
+                        <path
+                            d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.293a.75.75 0 01-1.032.25c-2.828-1.727-6.39-2.118-10.584-1.16a.75.75 0 01-.332-1.463c4.588-1.044 8.52-.596 11.698 1.34a.75.75 0 01.25 1.033zm1.47-3.27a.937.937 0 01-1.29.312c-3.236-1.99-8.168-2.567-11.993-1.404a.938.938 0 11-.546-1.795c4.374-1.328 9.81-.685 13.518 1.597a.937.937 0 01.31 1.29zm.126-3.402c-3.882-2.308-10.29-2.52-14.002-1.394a1.125 1.125 0 11-.656-2.154c4.26-1.295 11.343-1.046 15.822 1.613a1.125 1.125 0 11-1.164 1.935z" />
+                    </svg>
                     <span style="font-size:13px;font-weight:700">Música</span>
                     <?php if (!$spotifyConnected): ?>
-                        <a href="<?php echo BASE_URL ?>/pages/instructor/profile.php" class="badge badge-muted" style="margin-left:auto;font-size:11px;text-decoration:none">Conectar →</a>
+                        <a href="<?php echo BASE_URL ?>/pages/instructor/profile.php" class="badge badge-muted"
+                            style="margin-left:auto;font-size:11px;text-decoration:none">Conectar →</a>
                     <?php else: ?>
                         <span class="badge badge-work" style="margin-left:auto;font-size:10px">Activo</span>
                     <?php endif; ?>
                 </div>
 
                 <?php if ($spotifyConnected): ?>
-                <!-- Now playing -->
-                <div id="sp-now-playing" style="display:none;margin-bottom:12px">
-                    <div style="display:flex;gap:10px;align-items:center">
-                        <img id="sp-cover" src="" alt="" style="width:44px;height:44px;border-radius:6px;object-fit:cover;display:none">
-                        <div style="flex:1;min-width:0">
-                            <div id="sp-track" style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
-                            <div id="sp-artist" style="font-size:11px;color:var(--gf-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
+                    <!-- Now playing -->
+                    <div id="sp-now-playing" style="display:none;margin-bottom:12px">
+                        <div style="display:flex;gap:10px;align-items:center">
+                            <img id="sp-cover" src="" alt=""
+                                style="width:44px;height:44px;border-radius:6px;object-fit:cover;display:none">
+                            <div style="flex:1;min-width:0">
+                                <div id="sp-track"
+                                    style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                    —</div>
+                                <div id="sp-artist"
+                                    style="font-size:11px;color:var(--gf-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                    —</div>
+                            </div>
+                        </div>
+                        <div
+                            style="margin-top:8px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden">
+                            <div id="sp-progress-bar"
+                                style="height:100%;background:#1DB954;border-radius:2px;transition:width .5s linear;width:0%">
+                            </div>
                         </div>
                     </div>
-                    <div style="margin-top:8px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden">
-                        <div id="sp-progress-bar" style="height:100%;background:#1DB954;border-radius:2px;transition:width .5s linear;width:0%"></div>
+
+                    <!-- Controls -->
+                    <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+                        <button class="btn btn-ghost btn-sm" onclick="spControl('prev')"
+                            style="padding:6px;width:32px;height:32px;justify-content:center">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost btn-sm" id="sp-play-btn" onclick="spTogglePlay()"
+                            style="padding:6px;width:38px;height:38px;justify-content:center;border-radius:50%">
+                            <svg id="sp-play-ico" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="spControl('next')"
+                            style="padding:6px;width:32px;height:32px;justify-content:center">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 18l8.5-6L6 6v12zm2-8.14 5.1 2.14L8 14.14V9.86zM16 6h2v12h-2z" />
+                            </svg>
+                        </button>
                     </div>
-                </div>
 
-                <!-- Controls -->
-                <div style="display:flex;align-items:center;justify-content:center;gap:8px">
-                    <button class="btn btn-ghost btn-sm" onclick="spControl('prev')" style="padding:6px;width:32px;height:32px;justify-content:center">
-                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-                    </button>
-                    <button class="btn btn-ghost btn-sm" id="sp-play-btn" onclick="spTogglePlay()" style="padding:6px;width:38px;height:38px;justify-content:center;border-radius:50%">
-                        <svg id="sp-play-ico" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-                    <button class="btn btn-ghost btn-sm" onclick="spControl('next')" style="padding:6px;width:32px;height:32px;justify-content:center">
-                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm2-8.14 5.1 2.14L8 14.14V9.86zM16 6h2v12h-2z"/></svg>
-                    </button>
-                </div>
-
-                <!-- Search -->
-                <div style="margin-top:12px;display:flex;gap:6px">
-                    <input class="form-control" id="sp-search" placeholder="Buscar playlist o canción..." style="font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter')spSearch()">
-                    <button class="btn btn-ghost btn-sm" onclick="spSearch()">🔍</button>
-                </div>
-                <div id="sp-results" style="margin-top:8px;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+                    <!-- Search -->
+                    <div style="margin-top:12px;display:flex;gap:6px">
+                        <input class="form-control" id="sp-search" placeholder="Buscar playlist o canción..."
+                            style="font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter')spSearch()">
+                        <button class="btn btn-ghost btn-sm" onclick="spSearch()">🔍</button>
+                    </div>
+                    <div id="sp-results"
+                        style="margin-top:8px;max-height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+                    </div>
 
                 <?php else: ?>
-                <p style="font-size:12px;color:var(--gf-text-muted);text-align:center;padding:8px 0">
-                    Conectá tu cuenta Spotify en<br><a href="<?php echo BASE_URL ?>/pages/instructor/profile.php" style="color:#1DB954">Mi Perfil</a> para usar música en tus sesiones.
-                </p>
+                    <p style="font-size:12px;color:var(--gf-text-muted);text-align:center;padding:8px 0">
+                        Conectá tu cuenta Spotify en<br><a href="<?php echo BASE_URL ?>/pages/instructor/profile.php"
+                            style="color:#1DB954">Mi Perfil</a> para usar música en tus sesiones.
+                    </p>
                 <?php endif; ?>
             </div>
         </div>
@@ -277,17 +324,36 @@ layout_footer($user);
     }
 
     .sp-result-item {
-        display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .12s;font-size:12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background .12s;
+        font-size: 12px;
     }
-    .sp-result-item:hover { background:var(--gf-surface-2); }
-    .sp-result-item img { width:32px;height:32px;border-radius:4px;object-fit:cover;flex-shrink:0; }
+
+    .sp-result-item:hover {
+        background: var(--gf-surface-2);
+    }
+
+    .sp-result-item img {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
 </style>
 
 <script src="http://localhost:3001/socket.io/socket.io.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
+<script src="<?php echo BASE_URL ?>/assets/js/exercise-poses.js"></script>
+<script src="<?php echo BASE_URL ?>/assets/js/stickman.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/live-control.js"></script>
 <script>
-    const SESSION_DATA = <?php echo json_encode(['id' => $id, 'blocks' => $blocks, 'status' => $session['status'], 'sala_id' => (int)$session['sala_id'], 'current_block_index' => (int) $session['current_block_index'], 'current_block_elapsed' => (int) $session['current_block_elapsed']]) ?>;
+    const SESSION_DATA = <?php echo json_encode(['id' => $id, 'blocks' => $blocks, 'status' => $session['status'], 'sala_id' => (int) $session['sala_id'], 'current_block_index' => (int) $session['current_block_index'], 'current_block_elapsed' => (int) $session['current_block_elapsed']]) ?>;
     const SALAS = <?php echo json_encode($salas) ?>;
     const SPOTIFY_CONNECTED = <?php echo $spotifyConnected ? 'true' : 'false' ?>;
     window.GF_SOCKET_URL = 'http://localhost:3001';
@@ -323,7 +389,7 @@ layout_footer($user);
             ico.innerHTML = d.playing
                 ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'  // pause icon
                 : '<path d="M8 5v14l11-7z"/>';                     // play icon
-        } catch(e) {}
+        } catch (e) { }
         spPollTimer = setTimeout(spPollNowPlaying, 3000);
     }
     // Called immediately after autoplay fires so the UI reflects the new track fast
@@ -348,12 +414,12 @@ layout_footer($user);
         res.innerHTML = '';
         const tracks = d.tracks?.items || [];
         const playlists = d.playlists?.items || [];
-        [...tracks.slice(0,5), ...playlists.slice(0,4)].forEach(item => {
+        [...tracks.slice(0, 5), ...playlists.slice(0, 4)].forEach(item => {
             if (!item) return;
             const isPlaylist = !!item.tracks;
             const img = item.album?.images?.[0]?.url || item.images?.[0]?.url || '';
             const name = item.name || '';
-            const sub = isPlaylist ? (item.owner?.display_name || '') : item.artists?.map(a=>a.name).join(', ');
+            const sub = isPlaylist ? (item.owner?.display_name || '') : item.artists?.map(a => a.name).join(', ');
             const uri = item.uri;
             const el = document.createElement('div');
             el.className = 'sp-result-item';

@@ -208,7 +208,9 @@ if (!$sala) {
                 <div class="display-exercise-name" id="display-exercise-name">—</div>
 
                 <!-- Exercise list: all exercises in current block as chips -->
-                <div id="exercise-list" style="display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;margin-bottom:4px"></div>
+                <div id="exercise-list"
+                    style="display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;margin-bottom:4px">
+                </div>
 
                 <div class="display-block-info">
                     <div class="display-block-meta" id="block-meta">—</div>
@@ -236,6 +238,9 @@ if (!$sala) {
                                 id="total-rounds">—</span></span>
                     </div>
                 </div>
+
+                <!-- Stickman exercise animator -->
+                <div id="stickman-container" style="width:100%"></div>
 
                 <!-- Next block -->
                 <div class="display-next-block">
@@ -330,6 +335,8 @@ if (!$sala) {
         // Start polling after 3s so session loads first
         setTimeout(spPollDisplay, 3000);
     </script>
+    <script src="<?php echo BASE_URL ?>/assets/js/exercise-poses.js"></script>
+    <script src="<?php echo BASE_URL ?>/assets/js/stickman.js"></script>
 </body>
 
 </html>

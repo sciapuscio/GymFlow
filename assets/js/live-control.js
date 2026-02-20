@@ -15,6 +15,9 @@ const GFLive = (() => {
     // Spotify
     let _lastAutoPlayUri = null;
 
+    // Stickman (mini, instructor panel)
+    let stickMini = null;
+
     // ── Init ─────────────────────────────────────────────────────────────────
     function init(data) {
         session = data;
@@ -26,6 +29,15 @@ const GFLive = (() => {
         renderBlockList();
         updateBlockDisplay();
         updateControls();
+
+        // Init mini stickman in instructor panel
+        setTimeout(() => {
+            const el = document.getElementById('stickman-mini');
+            if (el && typeof StickmanWidget !== 'undefined') {
+                stickMini = new StickmanWidget(el, { size: 'mini' });
+                _updateStickman();
+            }
+        }, 300);
 
         connectSocket();
     }
@@ -89,18 +101,45 @@ const GFLive = (() => {
         updateControls();
         renderClock();
 
+        // Stickman sync
+        _updateStickman();
+
         // Spotify: on block change, play new track or stop if no track assigned
         if (blockChanged && isPlaying) {
             const b = blocks[currentIdx];
             if (b?.spotify_uri) {
                 autoPlayBlockSpotify(b);
             } else {
-                // New block has no track — always stop, regardless of how music started
+                // New block has no track — always stop
                 _lastAutoPlayUri = null;
                 spotifyPause();
             }
         }
     }
+
+    function _updateStickman() {
+        if (!stickMini) return;
+        const b = blocks[currentIdx];
+        if (!b) return;
+        const exs = b.exercises || [];
+        let exIdx = 0;
+        if ((b.type === 'tabata' || b.type === 'interval') && exs.length > 1) {
+            const cfg = b.config || {};
+            const rd = (cfg.work || 20) + (cfg.rest || 10);
+            exIdx = Math.floor(elapsed / rd) % exs.length;
+        }
+        const exObj = exs[exIdx];
+        const exName = (exObj && exObj.name) ? exObj.name : (typeof exObj === 'string' ? exObj : (b.name || ''));
+        let smPhase = 'work';
+        if (b.type === 'rest') smPhase = 'rest';
+        else if (b.type === 'tabata' || b.type === 'interval') {
+            var cfg2 = b.config || {};
+            var cycleSec2 = (cfg2.work || 20) + (cfg2.rest || 10);
+            smPhase = (elapsed % cycleSec2) < (cfg2.work || 20) ? 'work' : 'rest';
+        }
+        stickMini.update(exName, smPhase);
+    }
+
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     function currentBlock() { return blocks[currentIdx] || null; }
