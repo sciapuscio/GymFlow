@@ -260,16 +260,22 @@
             const cfg = block.config || {};
             const workSecs = cfg.work || 40;
             const restSecs = cfg.rest || (block.type === 'tabata' ? 10 : 20);
+            const totalRounds = cfg.rounds || (block.type === 'tabata' ? 8 : 1);
             const roundDur = workSecs + restSecs;
             const phaseElapsed = elapsed % roundDur;
+            const currentRound = Math.floor(elapsed / roundDur); // 0-indexed
+            const isLastRound = currentRound >= totalRounds - 1;
             const inWork = phaseElapsed < workSecs;
 
-            document.body.className = inWork ? 'state-work' : 'state-rest';
+            // After the last work phase ends, treat as finished (no final rest)
+            const lastWorkEnded = isLastRound && !inWork;
+
+            document.body.className = (inWork || lastWorkEnded) ? 'state-work' : 'state-rest';
 
             if (restOverlay) {
-                // Only show REST overlay if NOT in PREPARATE phase
+                // Only show REST overlay if NOT in PREPARATE phase and NOT after last work
                 const prepVisible = document.getElementById('prep-overlay')?.style.display === 'flex';
-                if (!inWork && !prepVisible) {
+                if (!inWork && !lastWorkEnded && !prepVisible) {
                     const restRemaining = roundDur - phaseElapsed;
                     restOverlay.style.display = 'flex';
                     if (restCountdown) restCountdown.textContent = restRemaining;
@@ -328,8 +334,20 @@
         if (!block) return 300;
         const cfg = block.config || {};
         switch (block.type) {
-            case 'interval': return (cfg.rounds || 1) * ((cfg.work || 40) + (cfg.rest || 20));
-            case 'tabata': return (cfg.rounds || 8) * 30;
+            case 'interval': {
+                const rounds = cfg.rounds || 1;
+                const work = cfg.work || 40;
+                const rest = cfg.rest || 20;
+                // Total = all rounds of work + (rounds-1) rests (no trailing rest after last round)
+                return rounds * work + (rounds - 1) * rest;
+            }
+            case 'tabata': {
+                const rounds = cfg.rounds || 8;
+                const work = cfg.work || 20;
+                const rest = cfg.rest || 10;
+                // No trailing rest after last round
+                return rounds * work + (rounds - 1) * rest;
+            }
             case 'amrap': case 'emom': case 'fortime': return cfg.duration || 600;
             case 'rest': case 'briefing': return cfg.duration || 60;
             case 'series': return (cfg.sets || 3) * ((cfg.rest || 60) + 30);

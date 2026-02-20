@@ -109,11 +109,17 @@ const GFLive = (() => {
             const b2 = currentBlock();
             if (b2?.type === 'interval' || b2?.type === 'tabata') {
                 const cfg = b2.config || {};
-                const roundDur = (cfg.work || 40) + (cfg.rest || 20);
-                const roundNum = Math.floor(elapsed / roundDur) + 1;
+                const workSecs = cfg.work || 40;
+                const restSecs = cfg.rest || (b2.type === 'tabata' ? 10 : 20);
+                const roundDur = workSecs + restSecs;
                 const roundMax = cfg.rounds || 8;
-                const inWork = (elapsed % roundDur) < (cfg.work || 40);
-                if (infoEl) infoEl.textContent = `Ronda ${Math.min(roundNum, roundMax)} / ${roundMax} — ${inWork ? 'WORK' : 'REST'}`;
+                const roundNum = Math.min(Math.floor(elapsed / roundDur) + 1, roundMax);
+                const phaseElapsed = elapsed % roundDur;
+                const inWork = phaseElapsed < workSecs;
+                const isLastRound = roundNum >= roundMax;
+                const lastWorkEnded = isLastRound && !inWork;
+                const phaseLabel = (inWork || lastWorkEnded) ? 'WORK' : 'REST';
+                if (infoEl) infoEl.textContent = `Ronda ${roundNum} / ${roundMax} — ${phaseLabel}`;
             }
         }
     }

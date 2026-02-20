@@ -26,15 +26,35 @@ function sanitize(string $val): string
 function computeBlockDuration(array $block): int
 {
     $cfg = $block['config'] ?? [];
-    return match ($block['type']) {
-        'interval' => (int) ($cfg['rounds'] ?? 1) * ((int) ($cfg['work'] ?? 40) + (int) ($cfg['rest'] ?? 20)),
-        'tabata' => (int) ($cfg['rounds'] ?? 8) * 30,
-        'amrap', 'emom', 'fortime' => (int) ($cfg['duration'] ?? 600),
-        'rest', 'briefing' => (int) ($cfg['duration'] ?? 60),
-        'series' => (int) ($cfg['sets'] ?? 3) * ((int) ($cfg['rest'] ?? 60) + 30),
-        'circuit' => count($block['exercises'] ?? []) * (int) ($cfg['station_time'] ?? 40) * (int) ($cfg['rounds'] ?? 1),
-        default => 300,
-    };
+    switch ($block['type']) {
+        case 'interval': {
+            $rounds = (int) ($cfg['rounds'] ?? 1);
+            $work = (int) ($cfg['work'] ?? 40);
+            $rest = (int) ($cfg['rest'] ?? 20);
+            // No trailing rest after last round
+            return $rounds * $work + ($rounds - 1) * $rest;
+        }
+        case 'tabata': {
+            $rounds = (int) ($cfg['rounds'] ?? 8);
+            $work = (int) ($cfg['work'] ?? 20);
+            $rest = (int) ($cfg['rest'] ?? 10);
+            // No trailing rest after last round
+            return $rounds * $work + ($rounds - 1) * $rest;
+        }
+        case 'amrap':
+        case 'emom':
+        case 'fortime':
+            return (int) ($cfg['duration'] ?? 600);
+        case 'rest':
+        case 'briefing':
+            return (int) ($cfg['duration'] ?? 60);
+        case 'series':
+            return (int) ($cfg['sets'] ?? 3) * ((int) ($cfg['rest'] ?? 60) + 30);
+        case 'circuit':
+            return count($block['exercises'] ?? []) * (int) ($cfg['station_time'] ?? 40) * (int) ($cfg['rounds'] ?? 1);
+        default:
+            return 300;
+    }
 }
 
 function computeTemplateTotal(array $blocks): int

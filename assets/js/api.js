@@ -37,8 +37,20 @@ function formatDuration(sec) {
 function computeBlockDuration(block) {
     const cfg = block.config || {};
     switch (block.type) {
-        case 'interval': return (cfg.rounds || 1) * ((cfg.work || 40) + (cfg.rest || 20));
-        case 'tabata': return (cfg.rounds || 8) * 30;
+        case 'interval': {
+            const rounds = cfg.rounds || 1;
+            const work = cfg.work || 40;
+            const rest = cfg.rest || 20;
+            // No trailing rest after last round
+            return rounds * work + (rounds - 1) * rest;
+        }
+        case 'tabata': {
+            const rounds = cfg.rounds || 8;
+            const work = cfg.work || 20;
+            const rest = cfg.rest || 10;
+            // No trailing rest after last round
+            return rounds * work + (rounds - 1) * rest;
+        }
         case 'amrap':
         case 'emom':
         case 'fortime': return cfg.duration || 600;
