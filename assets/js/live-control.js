@@ -210,19 +210,39 @@ const GFLive = (() => {
             spotifyAutoPause();                              // pause music when instructor pauses session
             await liveControl('pause');
         } else {
-            // Reset so Spotify fires for current block on resume/play
-            _lastAutoPlayUri = null;
-            // Set prep phase from block config before starting ticker
             const b = currentBlock();
-            prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
-            startTicker();
-            // Pass prep_remaining to play action so display gets it immediately
-            await liveControl('play', { prep_remaining: prepRemaining });
-            // Trigger Spotify immediately (music starts, display shows PREPARATE)
-            autoPlayBlockSpotify(b);
+            const isResume = elapsed > 0 && _lastAutoPlayUri;
+
+            if (isResume) {
+                // ── RESUME after pause: seek Spotify to current position ──────────────
+                // song position = intro seconds already played + elapsed in block
+                const introSecs = (b?.spotify_intro | 0) || 0;
+                const positionMs = (introSecs + elapsed) * 1000;
+                prepRemaining = 0;                           // no PREPARATE on resume
+                startTicker();
+                await liveControl('play', { prep_remaining: 0 });
+                if (b?.spotify_uri) {
+                    const isCtx = b.spotify_uri.includes(':playlist:') || b.spotify_uri.includes(':album:');
+                    const body = isCtx
+                        ? { context_uri: b.spotify_uri, position_ms: positionMs }
+                        : { uris: [b.spotify_uri], position_ms: positionMs };
+                    _lastAutoPlayUri = b.spotify_uri;
+                    GF.post(window.GF_BASE + '/api/spotify.php?action=play', body)
+                        .then(() => { if (typeof spRefreshNow === 'function') setTimeout(spRefreshNow, 1200); })
+                        .catch(() => { });
+                }
+            } else {
+                // ── FRESH START: normal autoplay + PREPARATE ─────────────────────────
+                _lastAutoPlayUri = null;
+                prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
+                startTicker();
+                await liveControl('play', { prep_remaining: prepRemaining });
+                autoPlayBlockSpotify(b);
+            }
         }
         updateControls();
     }
+
 
     async function skipForward() {
         const prevBlock = blocks[currentIdx];

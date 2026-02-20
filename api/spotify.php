@@ -215,6 +215,8 @@ if ($action === 'play') {
         $body['uris'] = $data['uris'];          // track array
     if (!empty($data['offset']))
         $body['offset'] = $data['offset'];
+    if (isset($data['position_ms']) && $data['position_ms'] > 0)
+        $body['position_ms'] = (int) $data['position_ms']; // seek to position on resume
 
     // Use explicit device_id if provided, otherwise try without first
     $deviceParam = !empty($data['device_id']) ? '?device_id=' . urlencode($data['device_id']) : '';
