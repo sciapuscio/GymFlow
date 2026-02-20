@@ -137,6 +137,38 @@ if (!$sala) {
         </style>
     </div>
 
+    <!-- DESCANSO OVERLAY (shown during tabata/interval REST phase) -->
+    <div id="rest-overlay"
+        style="display:none;position:fixed;inset:0;background:rgba(10,10,15,0.92);z-index:150;flex-direction:column;align-items:center;justify-content:center;gap:20px;backdrop-filter:blur(4px)">
+        <div
+            style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,5.5vw,70px);letter-spacing:.15em;color:rgba(61,90,254,0.8);text-transform:uppercase">
+            Descanso
+        </div>
+        <div id="rest-countdown"
+            style="font-family:'Bebas Neue',sans-serif;font-size:clamp(120px,22vw,240px);line-height:1;color:#3d5afe;text-shadow:0 0 100px rgba(61,90,254,0.5);animation:restPulse 1s ease-in-out infinite">
+            5
+        </div>
+        <div id="rest-next-label"
+            style="font-size:clamp(14px,2vw,24px);font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.08em;text-transform:uppercase">
+            Siguiente ronda →
+        </div>
+        <style>
+            @keyframes restPulse {
+
+                0%,
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+
+                50% {
+                    transform: scale(1.03);
+                    opacity: .8;
+                }
+            }
+        </style>
+    </div>
+
     <!-- LIVE SESSION SCREEN (hidden initially) -->
     <div class="live-screen" id="live-screen" style="display:none">
 

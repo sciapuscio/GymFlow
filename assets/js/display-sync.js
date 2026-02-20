@@ -240,17 +240,40 @@
         const fill = document.getElementById('block-progress-fill');
         if (fill) fill.style.width = pct + '%';
 
-        // Body state
+        // REST overlay for tabata/interval blocks
+        const restOverlay = document.getElementById('rest-overlay');
+        const restCountdown = document.getElementById('rest-countdown');
+
         if (block.type === 'rest') {
             document.body.classList.add('state-rest');
             document.body.classList.remove('state-work');
+            if (restOverlay) restOverlay.style.display = 'none';
         } else if (block.type === 'interval' || block.type === 'tabata') {
             const cfg = block.config || {};
-            const roundDur = (cfg.work || 40) + (cfg.rest || 20);
-            const inWork = (elapsed % roundDur) < (cfg.work || 40);
+            const workSecs = cfg.work || 40;
+            const restSecs = cfg.rest || (block.type === 'tabata' ? 10 : 20);
+            const roundDur = workSecs + restSecs;
+            const phaseElapsed = elapsed % roundDur;
+            const inWork = phaseElapsed < workSecs;
+
             document.body.className = inWork ? 'state-work' : 'state-rest';
+
+            if (restOverlay) {
+                // Only show REST overlay if NOT in PREPARATE phase
+                const prepVisible = document.getElementById('prep-overlay')?.style.display === 'flex';
+                if (!inWork && !prepVisible) {
+                    const restRemaining = roundDur - phaseElapsed;
+                    restOverlay.style.display = 'flex';
+                    if (restCountdown) restCountdown.textContent = restRemaining;
+                } else {
+                    restOverlay.style.display = 'none';
+                }
+            }
+        } else {
+            if (restOverlay) restOverlay.style.display = 'none';
         }
     }
+
 
     function updateTotalProgress(state) {
         const totalPercent = state.total_duration > 0 ?
