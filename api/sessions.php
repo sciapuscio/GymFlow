@@ -105,10 +105,12 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
 
     switch ($action) {
         case 'play':
+            $prepRemaining = max(0, (int) ($data['prep_remaining'] ?? 0));
             $startedAt = $session['started_at'] ?? $now;
             db()->prepare("UPDATE gym_sessions SET status='playing', started_at=COALESCE(started_at,?), updated_at=? WHERE id=?")
                 ->execute([$startedAt, $now, $id]);
             break;
+
         case 'pause':
             db()->prepare("UPDATE gym_sessions SET status='paused', updated_at=? WHERE id=?")->execute([$now, $id]);
             break;

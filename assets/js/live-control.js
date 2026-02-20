@@ -208,7 +208,8 @@ const GFLive = (() => {
             const b = currentBlock();
             prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
             startTicker();
-            await liveControl('play');
+            // Pass prep_remaining to play action so display gets it immediately
+            await liveControl('play', { prep_remaining: prepRemaining });
             // Trigger Spotify immediately (music starts, display shows PREPARATE)
             autoPlayBlockSpotify(b);
         }

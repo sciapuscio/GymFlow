@@ -184,12 +184,19 @@ layout_footer($user);
                                 <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                                     <?php echo htmlspecialchars($block['name'] ?? 'Bloque') ?>
                                 </div>
+                                <?php if (!empty($block['spotify_name'])): ?>
+                                <div style="font-size:10px;color:#1DB954;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;display:flex;align-items:center;gap:4px">
+                                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.293a.75.75 0 01-1.032.25c-2.828-1.727-6.39-2.118-10.584-1.16a.75.75 0 01-.332-1.463c4.588-1.044 8.52-.596 11.698 1.34a.75.75 0 01.25 1.033zm1.47-3.27a.937.937 0 01-1.29.312c-3.236-1.99-8.168-2.567-11.993-1.404a.938.938 0 11-.546-1.795c4.374-1.328 9.81-.685 13.518 1.597a.937.937 0 01.31 1.29zm.126-3.402c-3.882-2.308-10.29-2.52-14.002-1.394a1.125 1.125 0 11-.656-2.154c4.26-1.295 11.343-1.046 15.822 1.613a1.125 1.125 0 11-1.164 1.935z"/></svg>
+                                    <?php echo htmlspecialchars($block['spotify_name']) ?><?php if (!empty($block['spotify_intro'])): ?> · <?php echo (int)$block['spotify_intro'] ?>s prep<?php endif; ?>
+                                </div>
+                                <?php endif; ?>
                             </div>
                             <div style="font-size:12px;color:var(--gf-text-muted);font-weight:600;flex-shrink:0">
                                 <?php echo $dur ?>
                             </div>
                         </div>
                     <?php endforeach; ?>
+
                 </div>
             </div>
 
