@@ -156,6 +156,9 @@
             metaEl.textContent = metas.join(' · ') || block.name || '';
         }
 
+        // Exercise list chips
+        updateExerciseList(block);
+
         // Block type label & total time
         const typeLabel = document.getElementById('block-type-label');
         if (typeLabel) typeLabel.textContent = (block.type || '').toUpperCase();
@@ -194,6 +197,50 @@
                 document.getElementById('total-rounds').textContent = totalR;
             }
         }
+    }
+
+    // ── Exercise List Chips ────────────────────────────────────────────────────
+    function updateExerciseList(block) {
+        const container = document.getElementById('exercise-list');
+        if (!container) return;
+
+        const exs = block?.exercises || [];
+        const rotatingTypes = ['tabata', 'interval', 'circuit'];
+        const showList = exs.length >= 2 && rotatingTypes.includes(block.type);
+
+        if (!showList) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+
+        // Determine which exercise is currently active
+        let activeIdx = 0;
+        if (block.type === 'tabata' || block.type === 'interval') {
+            const cfg = block.config || {};
+            const roundDur = (cfg.work || 20) + (cfg.rest || 10);
+            activeIdx = Math.floor(localElapsed / roundDur) % exs.length;
+        }
+
+        container.style.display = 'flex';
+        container.innerHTML = exs.map((ex, i) => {
+            const name = ex?.name || ex || '?';
+            const isActive = i === activeIdx;
+            return `<span style="
+                display:inline-flex;align-items:center;
+                padding:5px 16px;
+                border-radius:999px;
+                font-size:clamp(11px,1.3vw,15px);
+                font-weight:${isActive ? '700' : '500'};
+                letter-spacing:.05em;
+                text-transform:uppercase;
+                transition:all .4s ease;
+                border:1.5px solid ${isActive ? 'var(--d-accent,#ff6b35)' : 'rgba(255,255,255,0.15)'};
+                background:${isActive ? 'rgba(255,107,53,0.15)' : 'rgba(255,255,255,0.04)'};
+                color:${isActive ? 'var(--d-accent,#ff6b35)' : 'rgba(255,255,255,0.4)'};
+                box-shadow:${isActive ? '0 0 14px rgba(255,107,53,0.25)' : 'none'};
+            ">${name}</span>`;
+        }).join('');
     }
 
     // No local ticker — server drives elapsed via Socket.IO ticks every 1s

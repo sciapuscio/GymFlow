@@ -207,6 +207,9 @@ if (!$sala) {
 
                 <div class="display-exercise-name" id="display-exercise-name">—</div>
 
+                <!-- Exercise list: all exercises in current block as chips -->
+                <div id="exercise-list" style="display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;margin-bottom:4px"></div>
+
                 <div class="display-block-info">
                     <div class="display-block-meta" id="block-meta">—</div>
                 </div>
