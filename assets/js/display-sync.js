@@ -1,50 +1,30 @@
-// GymFlow — Display Sync Engine (SSE Client)
+// GymFlow — Display Sync Engine (Socket.IO Client)
 (function () {
     let currentState = null;
-    let sseSource = null;
-    let clockTicker = null;
-    let localElapsed = 0;
-    let localPhase = 'work';
+    let localElapsed = 0;  // filled by server ticks — no local ticker needed
 
     function init() {
-        connectSSE();
-        // Fallback: poll every 3s if SSE fails
-        setTimeout(() => {
-            if (!currentState) pollFallback();
-        }, 5000);
+        connectSocket();
     }
 
-    function connectSSE() {
-        const url = `${BASE}/api/sync.php?sala_id=${SALA_ID}`;
-        try {
-            sseSource = new EventSource(url);
-            sseSource.addEventListener('sync', e => {
-                try {
-                    const state = JSON.parse(e.data);
-                    applyState(state);
-                } catch (err) { }
-            });
-            sseSource.onerror = () => {
-                sseSource?.close();
-                sseSource = null;
-                setTimeout(connectSSE, 3000); // auto-reconnect
-            };
-        } catch (e) {
-            pollFallback();
-        }
+    // ── Socket.IO Connection ─────────────────────────────────────────────────
+    function connectSocket() {
+        const url = window.GF_SOCKET_URL || 'http://localhost:3001';
+        const socket = io(url, { transports: ['websocket', 'polling'] });
+
+        socket.on('connect', () => {
+            console.log('[DisplaySync] Socket connected:', socket.id);
+            socket.emit('join:sala', { sala_id: SALA_ID });
+        });
+
+        socket.on('session:state', (tick) => applyState(tick));
+        socket.on('session:tick', (tick) => applyState(tick));
+
+        socket.on('disconnect', () => {
+            console.warn('[DisplaySync] Disconnected, reconnecting...');
+        });
     }
 
-    function pollFallback() {
-        setInterval(async () => {
-            try {
-                const r = await fetch(`${BASE}/api/sync.php?sala_id=${SALA_ID}&poll=1`, { signal: AbortSignal.timeout(2000) });
-                if (r.ok) {
-                    const state = await r.json();
-                    if (state?.state_json) applyState(JSON.parse(state.state_json));
-                }
-            } catch (e) { }
-        }, 2000);
-    }
 
     function applyState(state) {
         const prev = currentState;
@@ -55,16 +35,13 @@
         const block = state.current_block;
         const nextBlock = state.next_block;
         const totalBlocks = state.total_blocks || 0;
-        const serverElapsed = state.elapsed || 0;
 
-        // Detect block change
+        // Server is the ONLY source of elapsed — adopt it directly
+        localElapsed = state.elapsed || 0;
+
+        // Detect block change for flash transition
         const blockChanged = !prev || prev.current_block_index !== blockIdx;
         if (blockChanged && prev) flashTransition();
-
-        // Reset local timer on block change
-        if (blockChanged || Math.abs(localElapsed - serverElapsed) > 2) {
-            localElapsed = serverElapsed;
-        }
 
         // Update body class
         document.body.className = `state-${status}`;
@@ -122,13 +99,8 @@
         // Update block display
         updateBlockDisplay(block, nextBlock, blockIdx, totalBlocks);
 
-        // Ticker
-        if (status === 'playing') {
-            startTicker(block);
-        } else {
-            stopTicker();
-            renderClock(block, localElapsed);
-        }
+        // Render clock directly (no local ticker — server drives time)
+        renderClock(block, localElapsed);
 
         // Total progress
         updateTotalProgress(state);
@@ -224,17 +196,7 @@
         }
     }
 
-    function startTicker(block) {
-        if (clockTicker) clearInterval(clockTicker);
-        clockTicker = setInterval(() => {
-            localElapsed++;
-            renderClock(block || currentState?.current_block, localElapsed);
-        }, 1000);
-    }
-
-    function stopTicker() {
-        if (clockTicker) { clearInterval(clockTicker); clockTicker = null; }
-    }
+    // No local ticker — server drives elapsed via Socket.IO ticks every 1s
 
     function renderClock(block, elapsed) {
         if (!block) return;

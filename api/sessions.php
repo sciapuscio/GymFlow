@@ -107,26 +107,39 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
         case 'play':
             $prepRemaining = max(0, (int) ($data['prep_remaining'] ?? 0));
             $startedAt = $session['started_at'] ?? $now;
-            db()->prepare("UPDATE gym_sessions SET status='playing', started_at=COALESCE(started_at,?), updated_at=? WHERE id=?")
-                ->execute([$startedAt, $now, $id]);
+            // Save block_resumed_at so server can calculate elapsed in real-time
+            db()->prepare("UPDATE gym_sessions SET status='playing', started_at=COALESCE(started_at,?), block_resumed_at=?, updated_at=? WHERE id=?")
+                ->execute([$startedAt, $now, $now, $id]);
             break;
 
         case 'pause':
-            db()->prepare("UPDATE gym_sessions SET status='paused', updated_at=? WHERE id=?")->execute([$now, $id]);
+            // Accumulate elapsed into base before clearing resume timestamp
+            if ($session['block_resumed_at']) {
+                $resumedTs = strtotime($session['block_resumed_at']);
+                $accumulated = (int) $session['current_block_elapsed'] + (time() - $resumedTs);
+            } else {
+                $accumulated = (int) $session['current_block_elapsed'];
+            }
+            db()->prepare("UPDATE gym_sessions SET status='paused', current_block_elapsed=?, block_resumed_at=NULL, updated_at=? WHERE id=?")
+                ->execute([$accumulated, $now, $id]);
             break;
         case 'stop':
-            db()->prepare("UPDATE gym_sessions SET status='finished', finished_at=?, updated_at=? WHERE id=?")->execute([$now, $now, $id]);
+            db()->prepare("UPDATE gym_sessions SET status='finished', finished_at=?, block_resumed_at=NULL, updated_at=? WHERE id=?")
+                ->execute([$now, $now, $id]);
             break;
         case 'skip':
             $nextIdx = min($idx + 1, count($blocks) - 1);
             $finished = ($nextIdx >= count($blocks) - 1 && $idx === $nextIdx) ? 'finished' : $session['status'];
-            db()->prepare("UPDATE gym_sessions SET current_block_index=?, current_block_elapsed=0, status=?, updated_at=? WHERE id=?")
-                ->execute([$nextIdx, $finished, $now, $id]);
+            $resumeTs = ($session['status'] === 'playing') ? $now : null;
+            db()->prepare("UPDATE gym_sessions SET current_block_index=?, current_block_elapsed=0, block_resumed_at=?, status=?, updated_at=? WHERE id=?")
+                ->execute([$nextIdx, $resumeTs, $finished, $now, $id]);
             $idx = $nextIdx;
             break;
         case 'prev':
             $prevIdx = max($idx - 1, 0);
-            db()->prepare("UPDATE gym_sessions SET current_block_index=?, current_block_elapsed=0, updated_at=? WHERE id=?")->execute([$prevIdx, $now, $id]);
+            $resumeTs = ($session['status'] === 'playing') ? $now : null;
+            db()->prepare("UPDATE gym_sessions SET current_block_index=?, current_block_elapsed=0, block_resumed_at=?, updated_at=? WHERE id=?")
+                ->execute([$prevIdx, $resumeTs, $now, $id]);
             $idx = $prevIdx;
             break;
         case 'extend':
@@ -138,7 +151,9 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             break;
         case 'goto':
             $targetIdx = max(0, min((int) ($data['index'] ?? 0), count($blocks) - 1));
-            db()->prepare("UPDATE gym_sessions SET current_block_index=?, current_block_elapsed=0, updated_at=? WHERE id=?")->execute([$targetIdx, $now, $id]);
+            $resumeTs = ($session['status'] === 'playing') ? $now : null;
+            db()->prepare("UPDATE gym_sessions SET current_block_index=?, current_block_elapsed=0, block_resumed_at=?, updated_at=? WHERE id=?")
+                ->execute([$targetIdx, $resumeTs, $now, $id]);
             $idx = $targetIdx;
             break;
         case 'set_sala':
@@ -147,9 +162,16 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             db()->prepare("UPDATE salas SET current_session_id=? WHERE id=?")->execute([$id, $salaId]);
             break;
         case 'update_elapsed':
+            // Legacy fallback: only update base elapsed when NOT playing
+            // (server now tracks elapsed via block_resumed_at timestamp)
             $prepRemaining = max(0, (int) ($data['prep_remaining'] ?? 0));
-            db()->prepare("UPDATE gym_sessions SET current_block_elapsed=?, updated_at=? WHERE id=?")
-                ->execute([(int) ($data['elapsed'] ?? 0), $now, $id]);
+            if ($session['status'] !== 'playing') {
+                db()->prepare("UPDATE gym_sessions SET current_block_elapsed=?, updated_at=? WHERE id=?")
+                    ->execute([(int) ($data['elapsed'] ?? 0), $now, $id]);
+            } else {
+                // Tylko actualizar updated_at para que SSE dispare
+                db()->prepare("UPDATE gym_sessions SET updated_at=? WHERE id=?")->execute([$now, $id]);
+            }
             break;
 
         default:
@@ -165,6 +187,16 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
     if ($salaId) {
         $blocksDecoded = json_decode($updated['blocks_json'], true);
         $ci = (int) $updated['current_block_index'];
+
+        // Calculate real-time elapsed using server timestamps
+        $baseElapsed = (int) $updated['current_block_elapsed'];
+        if ($updated['status'] === 'playing' && !empty($updated['block_resumed_at'])) {
+            $resumedTs = strtotime($updated['block_resumed_at']);
+            $realtimeElapsed = $baseElapsed + (time() - $resumedTs);
+        } else {
+            $realtimeElapsed = $baseElapsed;
+        }
+
         $state = [
             'session_id' => $id,
             'session_name' => $updated['name'],
@@ -173,9 +205,10 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             'current_block' => $blocksDecoded[$ci] ?? null,
             'next_block' => $blocksDecoded[$ci + 1] ?? null,
             'total_blocks' => count($blocksDecoded),
-            'elapsed' => (int) $updated['current_block_elapsed'],
+            'elapsed' => $realtimeElapsed,
             'prep_remaining' => $prepRemaining ?? 0,
             'total_duration' => (int) $updated['total_duration'],
+            'server_ts' => time(), // client can use this to detect SSE latency
             'updated_at' => $now,
         ];
 

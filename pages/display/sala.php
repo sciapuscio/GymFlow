@@ -297,7 +297,9 @@ if (!$sala) {
         const BASE = '<?php echo BASE_URL ?>';
         const GYM_ACCENT = '<?php echo htmlspecialchars($sala['primary_color'] ?? '#00f5d4') ?>';
         const GYM_ACCENT2 = '<?php echo htmlspecialchars($sala['secondary_color'] ?? '#ff6b35') ?>';
+        window.GF_SOCKET_URL = 'http://localhost:3001';
     </script>
+    <script src="http://localhost:3001/socket.io/socket.io.js"></script>
     <script src="<?php echo BASE_URL ?>/assets/js/display-sync.js"></script>
     <script>
         // Spotify now-playing widget

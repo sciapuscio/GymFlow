@@ -1,16 +1,21 @@
-// GymFlow — Live Control Engine
+// GymFlow — Live Control Engine (Socket.IO version)
+// The clock lives on the server. This module only sends commands and renders ticks.
 const GFLive = (() => {
     let session = null;
     let blocks = [];
+    let socket = null;
+
+    // Local state (driven by server ticks)
     let currentIdx = 0;
     let elapsed = 0;
     let isPlaying = false;
-    let ticker = null;
-    let currentPhase = 'work'; // work | rest
-    let phaseElapsed = 0;
-    // Prep phase (PREPARATE countdown before block timer starts)
     let prepRemaining = 0;
+    let _lastBlockIdx = -1;
 
+    // Spotify
+    let _lastAutoPlayUri = null;
+
+    // ── Init ─────────────────────────────────────────────────────────────────
     function init(data) {
         session = data;
         blocks = data.blocks || [];
@@ -22,9 +27,82 @@ const GFLive = (() => {
         updateBlockDisplay();
         updateControls();
 
-        if (isPlaying) startTicker();
+        connectSocket();
     }
 
+    // ── Socket.IO Connection ─────────────────────────────────────────────────
+    function connectSocket() {
+        const url = window.GF_SOCKET_URL || 'http://localhost:3001';
+        socket = io(url, { transports: ['websocket', 'polling'] });
+
+        socket.on('connect', () => {
+            console.log('[GFLive] Socket connected:', socket.id);
+            socket.emit('join:session', {
+                session_id: session.id,
+                sala_id: session.sala_id,
+            });
+        });
+
+        socket.on('session:state', (tick) => applyTick(tick));
+        socket.on('session:tick', (tick) => applyTick(tick));
+
+        // Block changed (server auto-advance): handle Spotify
+        socket.on('session:block_change', ({ block }) => {
+            if (block?.spotify_uri) {
+                autoPlayBlockSpotify(block);
+            } else {
+                // New block has no track (Rest, Briefing, etc.) — always stop
+                _lastAutoPlayUri = null;
+                spotifyPause();
+            }
+        });
+
+        socket.on('error', (msg) => {
+            console.error('[GFLive] Socket error:', msg);
+            showToast('Error de sincronización: ' + msg, 'error');
+        });
+
+        socket.on('disconnect', () => {
+            console.warn('[GFLive] Socket disconnected — reconnecting...');
+        });
+    }
+
+    // ── Apply Server Tick ────────────────────────────────────────────────────
+    function applyTick(tick) {
+        const prevIdx = currentIdx;
+        const prevStatus = isPlaying;
+
+        currentIdx = tick.current_block_index || 0;
+        elapsed = tick.elapsed || 0;
+        prepRemaining = tick.prep_remaining || 0;
+        isPlaying = tick.status === 'playing';
+
+        if (session) session.status = tick.status;
+
+        const blockChanged = currentIdx !== prevIdx;
+
+        if (tick.status === 'finished') {
+            showToast('Sesión finalizada', 'info');
+        }
+
+        updateBlockDisplay();
+        updateControls();
+        renderClock();
+
+        // Spotify: on block change, play new track or stop if no track assigned
+        if (blockChanged && isPlaying) {
+            const b = blocks[currentIdx];
+            if (b?.spotify_uri) {
+                autoPlayBlockSpotify(b);
+            } else {
+                // New block has no track — always stop, regardless of how music started
+                _lastAutoPlayUri = null;
+                spotifyPause();
+            }
+        }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
     function currentBlock() { return blocks[currentIdx] || null; }
 
     function blockDuration(block) {
@@ -32,48 +110,7 @@ const GFLive = (() => {
         return computeBlockDuration(block);
     }
 
-    let _elapsedTick = 0;
-    function startTicker() {
-        if (ticker) clearInterval(ticker);
-        isPlaying = true;
-        ticker = setInterval(() => {
-            _elapsedTick++;
-
-            // ── PREP PHASE ──────────────────────────────────────────────────────
-            if (prepRemaining > 0) {
-                prepRemaining--;
-                renderClock();
-                sendElapsedUpdate(); // push prep state to display every tick
-                return;
-            }
-
-            // ── NORMAL BLOCK TICK ───────────────────────────────────────────────
-            elapsed++;
-            phaseElapsed++;
-            renderClock();
-            // Push elapsed to server every 3s so display stays in sync
-            if (_elapsedTick % 3 === 0) sendElapsedUpdate();
-
-            const b = currentBlock();
-            if (!b) return;
-            const dur = blockDuration(b);
-
-            if (elapsed >= dur) {
-                // Auto advance
-                if (currentIdx < blocks.length - 1) {
-                    skipForward();
-                } else {
-                    stopSession();
-                }
-            }
-        }, 1000);
-    }
-
-    function stopTicker() {
-        if (ticker) { clearInterval(ticker); ticker = null; }
-        isPlaying = false;
-    }
-
+    // ── Render ───────────────────────────────────────────────────────────────
     function renderClock() {
         const b = currentBlock();
         if (!b) return;
@@ -81,46 +118,34 @@ const GFLive = (() => {
         const remaining = Math.max(0, dur - elapsed);
 
         const clockEl = document.getElementById('live-clock');
-        // Show prep countdown in the clock on the instructor panel too
         if (clockEl) clockEl.textContent = prepRemaining > 0 ? `PREP ${prepRemaining}s` : formatDuration(remaining);
 
-        // Block progress bar
         const pct = dur > 0 ? Math.min(100, (elapsed / dur) * 100) : 0;
         const bar = document.getElementById('live-block-progress');
         if (bar) bar.style.width = pct + '%';
 
-        // Total progress
         const doneBlocks = blocks.slice(0, currentIdx).reduce((s, b) => s + blockDuration(b), 0);
         const totalDur = blocks.reduce((s, b) => s + blockDuration(b), 0);
         const totalPct = totalDur > 0 ? Math.min(100, ((doneBlocks + elapsed) / totalDur) * 100) : 0;
         const totalBar = document.getElementById('live-total-progress');
         if (totalBar) totalBar.style.width = totalPct + '%';
 
-        // Status label
         const statusEl = document.getElementById('status-label');
-        if (statusEl) {
-            const status = isPlaying ? (session.status === 'paused' ? 'Pausado' : 'En Vivo') : 'Listo';
-            statusEl.textContent = status;
-        }
+        if (statusEl) statusEl.textContent = isPlaying ? 'En Vivo' : (session?.status === 'paused' ? 'Pausado' : 'Listo');
 
-        // Block info
         const infoEl = document.getElementById('live-block-info');
-        if (infoEl) {
-            const b2 = currentBlock();
-            if (b2?.type === 'interval' || b2?.type === 'tabata') {
-                const cfg = b2.config || {};
-                const workSecs = cfg.work || 40;
-                const restSecs = cfg.rest || (b2.type === 'tabata' ? 10 : 20);
-                const roundDur = workSecs + restSecs;
-                const roundMax = cfg.rounds || 8;
-                const roundNum = Math.min(Math.floor(elapsed / roundDur) + 1, roundMax);
-                const phaseElapsed = elapsed % roundDur;
-                const inWork = phaseElapsed < workSecs;
-                const isLastRound = roundNum >= roundMax;
-                const lastWorkEnded = isLastRound && !inWork;
-                const phaseLabel = (inWork || lastWorkEnded) ? 'WORK' : 'REST';
-                if (infoEl) infoEl.textContent = `Ronda ${roundNum} / ${roundMax} — ${phaseLabel}`;
-            }
+        if (infoEl && (b.type === 'interval' || b.type === 'tabata')) {
+            const cfg = b.config || {};
+            const workSecs = cfg.work || 40;
+            const restSecs = cfg.rest || (b.type === 'tabata' ? 10 : 20);
+            const roundDur = workSecs + restSecs;
+            const roundMax = cfg.rounds || 8;
+            const roundNum = Math.min(Math.floor(elapsed / roundDur) + 1, roundMax);
+            const phaseEl = elapsed % roundDur;
+            const inWork = phaseEl < workSecs;
+            infoEl.textContent = `Ronda ${roundNum} / ${roundMax} — ${inWork ? 'WORK' : 'REST'}`;
+        } else if (infoEl) {
+            infoEl.textContent = '';
         }
     }
 
@@ -129,8 +154,12 @@ const GFLive = (() => {
         if (!b) return;
 
         const typeEl = document.getElementById('live-block-type');
-        if (typeEl) { typeEl.textContent = (b.type || '').toUpperCase(); typeEl.style.backgroundColor = blockTypeColor(b.type) + '26'; typeEl.style.color = blockTypeColor(b.type); }
-
+        if (typeEl) {
+            typeEl.textContent = (b.type || '').toUpperCase();
+            const col = blockTypeColor(b.type);
+            typeEl.style.backgroundColor = col + '26';
+            typeEl.style.color = col;
+        }
         const nameEl = document.getElementById('live-block-name');
         if (nameEl) nameEl.textContent = b.name || 'Bloque';
 
@@ -140,16 +169,12 @@ const GFLive = (() => {
             exEl.textContent = exs.length ? exs.map(e => e.name || e).join(' · ') : '—';
         }
 
-        // Block list highlighting
         renderBlockList();
 
-        // Progress text
         const pt = document.getElementById('progress-text');
         if (pt) pt.textContent = `${currentIdx + 1} / ${blocks.length} bloques`;
 
         renderClock();
-
-        // Auto-play Spotify track assigned to this block
         autoPlayBlockSpotify(b);
     }
 
@@ -169,71 +194,35 @@ const GFLive = (() => {
         } else {
             btn.textContent = '▶';
             btn.style.background = 'var(--gf-accent)';
-            btn.style.color = '#0a0a0f';
         }
     }
 
-    async function liveControl(action, data = {}) {
-        try {
-            const resp = await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=${action}`, data);
-            if (resp?.success) {
-                if (resp.state) syncState(resp.state);
-            }
-        } catch (e) { showToast('Error de control: ' + e.message, 'error'); }
-    }
-
-    function syncState(state) {
-        currentIdx = state.current_block_index || 0;
-        const newStatus = state.status;
-        if (newStatus === 'playing' && !isPlaying) startTicker();
-        if (newStatus === 'paused' && isPlaying) stopTicker();
-        if (newStatus === 'finished') { stopTicker(); showToast('Sesión terminada', 'info'); }
-        session.status = newStatus;
-        updateBlockDisplay();
-        updateControls();
-    }
-
-    // Fires every 3s normally; every tick during prep phase for responsive PREPARATE display
-    async function sendElapsedUpdate() {
-        if (!session?.id || !isPlaying) return;
-        try {
-            await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=update_elapsed`,
-                { elapsed, prep_remaining: prepRemaining });
-        } catch (e) { /* ignore — non-critical */ }
-    }
-
-    // Pauses Spotify but KEEPS _lastAutoPlayUri → used when instructor pauses mid-session
-    function spotifyPause() {
-        GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
-    }
-
-    // Pauses Spotify AND clears _lastAutoPlayUri → used when block ends or session stops
-    function spotifyAutoPause() {
-        if (!_lastAutoPlayUri) return;
-        _lastAutoPlayUri = null;
-        GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
+    // ── Control Emitters ─────────────────────────────────────────────────────
+    function emit(event, data = {}) {
+        if (!socket?.connected) {
+            showToast('Sin conexión al servidor de sync', 'error');
+            return;
+        }
+        socket.emit(event, data);
     }
 
     async function togglePlay() {
+        if (!session) return;
+
         if (isPlaying) {
-            // ── PAUSE: stop ticker + pause Spotify (keep URI for resume) ─────────────
+            // PAUSE
             prepRemaining = 0;
-            stopTicker();
-            spotifyPause();                                  // pause without clearing URI
-            await liveControl('pause');
+            spotifyPause();
+            emit('control:pause');
         } else {
             const b = currentBlock();
-            // isResume: we have elapsed time AND a known Spotify URI (kept across pause)
             const isResume = elapsed > 0 && _lastAutoPlayUri;
 
             if (isResume) {
-                // ── RESUME after pause: seek Spotify to the exact paused position ─────
-                // Song position = intro seconds (PREPARATE) already played + block elapsed
+                // RESUME: seek Spotify to exact position
                 const introSecs = (b?.spotify_intro | 0) || 0;
                 const positionMs = (introSecs + elapsed) * 1000;
-                prepRemaining = 0;                           // no PREPARATE on resume
-                startTicker();
-                await liveControl('play', { prep_remaining: 0 });
+                emit('control:play', { prep_remaining: 0 });
                 if (b?.spotify_uri) {
                     const isCtx = b.spotify_uri.includes(':playlist:') || b.spotify_uri.includes(':album:');
                     const body = isCtx
@@ -244,92 +233,102 @@ const GFLive = (() => {
                         .catch(() => { });
                 }
             } else {
-                // ── FRESH START: normal autoplay + PREPARATE ─────────────────────────
+                // FRESH START
                 _lastAutoPlayUri = null;
-                prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
-                startTicker();
-                await liveControl('play', { prep_remaining: prepRemaining });
+                const prep = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
+                emit('control:play', { prep_remaining: prep });
                 autoPlayBlockSpotify(b);
             }
         }
         updateControls();
     }
 
-
     async function skipForward() {
         const prevBlock = blocks[currentIdx];
-        stopTicker();
-        elapsed = 0;
-        prepRemaining = 0;
-        currentIdx = Math.min(currentIdx + 1, blocks.length - 1);
-        await liveControl('skip');
-        if (session.status !== 'finished') {
-            const b = blocks[currentIdx];
-            // If next block has no Spotify URI and previous did, stop music
-            if (prevBlock?.spotify_uri && !b?.spotify_uri) spotifyAutoPause();
-            prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
-            startTicker();
-        }
-        updateBlockDisplay();
+        emit('control:skip');
+        // Spotify: if next block has no track, stop music
+        const nextBlock = blocks[currentIdx + 1];
+        if (prevBlock?.spotify_uri && !nextBlock?.spotify_uri) spotifyAutoPause();
     }
 
     async function stopSession() {
-        stopTicker();
-        spotifyAutoPause();                                  // always stop music when session ends
-        await liveControl('stop');
+        spotifyAutoPause();
+        emit('control:stop');
         showToast('Sesión finalizada', 'success');
-        session.status = 'finished';
+        if (session) session.status = 'finished';
         updateControls();
     }
 
     async function jumpToBlock(idx) {
-        stopTicker();
-        currentIdx = idx;
-        elapsed = 0;
-        await liveControl('goto', { index: idx });
-        if (isPlaying) startTicker();
-        updateBlockDisplay();
+        emit('control:goto', { index: idx });
     }
 
     async function setSala(salaId) {
-        await liveControl('set_sala', { sala_id: parseInt(salaId) });
-        const salaName = document.getElementById('live-sala-select')?.selectedOptions[0]?.text || '';
-        showToast(`Sala asignada: ${salaName}`, 'success');
-        // Update display link
-        const salas = window.SALAS || [];
-        const sala = salas.find(s => s.id == salaId);
-        if (sala) {
-            const displayLink = document.querySelector('a[href*="/display/"]');
-            if (displayLink) { displayLink.href = `${window.GF_BASE}/pages/display/sala.php?code=${sala.display_code}`; displayLink.style.display = ''; }
-        }
+        // set_sala is still a PHP operation (not real-time)
+        try {
+            await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=set_sala`, { sala_id: parseInt(salaId) });
+            session.sala_id = parseInt(salaId);
+            // Reconnect socket with new sala
+            if (socket?.connected) {
+                socket.emit('join:session', { session_id: session.id, sala_id: parseInt(salaId) });
+            }
+            const salaName = document.getElementById('live-sala-select')?.selectedOptions[0]?.text || '';
+            showToast(`Sala asignada: ${salaName}`, 'success');
+            const salas = window.SALAS || [];
+            const sala = salas.find(s => s.id == salaId);
+            if (sala) {
+                const displayLink = document.querySelector('a[href*="/display/"]');
+                if (displayLink) { displayLink.href = `${window.GF_BASE}/pages/display/sala.php?code=${sala.display_code}`; displayLink.style.display = ''; }
+            }
+        } catch (e) { showToast('Error al asignar sala', 'error'); }
     }
 
+    // ── Spotify Helpers ──────────────────────────────────────────────────────
+    function spotifyPause() {
+        GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
+    }
+    function spotifyAutoPause() {
+        if (!_lastAutoPlayUri) return;
+        _lastAutoPlayUri = null;
+        GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
+    }
+    async function autoPlayBlockSpotify(block) {
+        if (!block?.spotify_uri) return;
+        if (!isPlaying) return;
+        if (block.spotify_uri === _lastAutoPlayUri) return;
+        _lastAutoPlayUri = block.spotify_uri;
+        try {
+            const isPlaylist = block.spotify_uri.startsWith('spotify:playlist:') || block.spotify_uri.startsWith('spotify:album:');
+            const body = isPlaylist ? { context_uri: block.spotify_uri } : { uris: [block.spotify_uri] };
+            await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
+            if (typeof spRefreshNow === 'function') spRefreshNow();
+        } catch (e) { /* Spotify not available */ }
+    }
 
     function blockTypeColor(type) {
         const colors = { interval: '#00f5d4', tabata: '#ff6b35', amrap: '#7c3aed', emom: '#0ea5e9', fortime: '#f59e0b', series: '#ec4899', circuit: '#10b981', rest: '#3d5afe', briefing: '#6b7280' };
         return colors[type] || '#888';
     }
 
-    let _lastAutoPlayUri = null;
-    async function autoPlayBlockSpotify(block) {
-        if (!block?.spotify_uri) return;
-        if (!isPlaying) return;                          // don't fire on init/load
-        if (block.spotify_uri === _lastAutoPlayUri) return; // already playing this URI
-        _lastAutoPlayUri = block.spotify_uri;
-        try {
-            const isPlaylist = block.spotify_uri.startsWith('spotify:playlist:') || block.spotify_uri.startsWith('spotify:album:');
-            const body = isPlaylist ? { context_uri: block.spotify_uri } : { uris: [block.spotify_uri] };
-            await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
-            // Refresh the now-playing widget quickly after play fires
-            if (typeof spRefreshNow === 'function') spRefreshNow();
-        } catch (e) { /* Spotify not available, silently ignore */ }
+    async function skipBackward() {
+        emit('control:prev');
     }
 
-    return { init, togglePlay, skipForward, stopSession, jumpToBlock, setSala };
+    function getSocket() { return socket; }
+
+    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, getSocket };
 })();
 
-// Expose globals used inline
-window.liveControl = (action, data) => GFLive[action] ? GFLive[action](data) : GF.post(`${window.GF_BASE}/api/sessions.php?id=${SESSION_DATA.id}&action=${action}`, data || {}).then(r => r && showToast('OK', 'success'));
+// Expose globals used inline by live.php buttons
+window.liveControl = (action, data) => {
+    const sock = GFLive.getSocket();
+    if (action === 'skip') return GFLive.skipForward();
+    if (action === 'prev') return GFLive.skipBackward();
+    if (action === 'stop') return GFLive.stopSession();
+    if (action === 'extend') { if (sock?.connected) sock.emit('control:extend', data); return; }
+    // Fallback: PHP API for non-live ops (set_sala etc.)
+    GF.post(`${window.GF_BASE}/api/sessions.php?id=${SESSION_DATA.id}&action=${action}`, data || {}).then(r => r && showToast('OK', 'success'));
+};
 window.togglePlay = () => GFLive.togglePlay();
 window.jumpToBlock = idx => GFLive.jumpToBlock(idx);
 window.setSala = id => GFLive.setSala(id);
