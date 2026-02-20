@@ -1,0 +1,440 @@
+/* =====================================================
+   GymFlow — Builder Page Styles (Drag & Drop)
+   ===================================================== */
+
+/* ---- Builder Layout ---- */
+.builder-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 0;
+    height: calc(100vh - var(--header-h));
+    overflow: hidden;
+}
+
+/* Panel Base */
+.builder-panel {
+    background: var(--gf-surface);
+    border-right: 1px solid var(--gf-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.builder-panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gf-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.builder-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+/* ---- Block Library (Left Panel) ---- */
+.block-type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.block-type-card {
+    background: var(--gf-surface-2);
+    border: 1px solid var(--gf-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 10px;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.block-type-card:hover {
+    border-color: var(--gf-accent);
+    background: var(--gf-accent-dim);
+    transform: translateY(-2px);
+}
+
+.block-type-card:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+}
+
+.block-type-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.block-type-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gf-text-muted);
+}
+
+/* Exercise Chips */
+.exercise-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--gf-surface-2);
+    border: 1px solid var(--gf-border);
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    font-size: 13px;
+    margin-bottom: 6px;
+    transition: all 0.15s;
+}
+
+.exercise-chip:hover {
+    border-color: var(--gf-accent-dim);
+    background: var(--gf-accent-dim);
+}
+
+.exercise-chip .muscle-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ---- Canvas (Center Panel) ---- */
+.builder-canvas {
+    background: var(--gf-bg);
+    border-right: 1px solid var(--gf-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.canvas-toolbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--gf-border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.session-name-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gf-text);
+    font-family: var(--font-body);
+    flex: 1;
+    min-width: 0;
+}
+
+.session-name-input::placeholder {
+    color: var(--gf-text-dim);
+}
+
+#blocks-canvas {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Drop zone */
+.drop-zone {
+    border: 2px dashed var(--gf-border);
+    border-radius: var(--radius);
+    padding: 32px;
+    text-align: center;
+    color: var(--gf-text-dim);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.drop-zone.drag-over {
+    border-color: var(--gf-accent);
+    background: var(--gf-accent-dim);
+    color: var(--gf-accent);
+}
+
+/* Block Cards on Canvas */
+.canvas-block {
+    background: var(--gf-surface);
+    border: 1px solid var(--gf-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    user-select: none;
+}
+
+.canvas-block:hover {
+    border-color: var(--gf-border-act);
+}
+
+.canvas-block.selected {
+    border-color: var(--gf-accent);
+    box-shadow: 0 0 0 2px var(--gf-accent-dim);
+}
+
+.canvas-block.dragging {
+    opacity: 0.4;
+}
+
+.canvas-block-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.canvas-block-type-badge {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 13px;
+}
+
+.canvas-block-name {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.canvas-block-duration {
+    font-size: 12px;
+    color: var(--gf-text-muted);
+    font-weight: 600;
+}
+
+.canvas-block-drag-handle {
+    color: var(--gf-text-dim);
+    cursor: grab;
+    padding: 0 4px;
+}
+
+.canvas-block-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.canvas-block:hover .canvas-block-actions {
+    opacity: 1;
+}
+
+.canvas-block-exercises {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ex-pill {
+    font-size: 11px;
+    padding: 3px 8px;
+    background: var(--gf-surface-2);
+    border-radius: 4px;
+    color: var(--gf-text-muted);
+}
+
+/* Canvas drop indicator */
+.drop-indicator {
+    height: 3px;
+    background: var(--gf-accent);
+    border-radius: 2px;
+    margin: 4px 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.drop-indicator.visible {
+    opacity: 1;
+}
+
+/* ---- Properties Panel (Right) ---- */
+.props-panel {
+    background: var(--gf-surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.props-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--gf-text-dim);
+    gap: 12px;
+}
+
+.props-placeholder svg {
+    opacity: 0.3;
+}
+
+.props-placeholder p {
+    font-size: 13px;
+}
+
+/* Block type colors */
+[data-type="interval"] {
+    --block-color: #00f5d4;
+}
+
+[data-type="tabata"] {
+    --block-color: #ff6b35;
+}
+
+[data-type="amrap"] {
+    --block-color: #7c3aed;
+}
+
+[data-type="emom"] {
+    --block-color: #0ea5e9;
+}
+
+[data-type="fortime"] {
+    --block-color: #f59e0b;
+}
+
+[data-type="series"] {
+    --block-color: #ec4899;
+}
+
+[data-type="circuit"] {
+    --block-color: #10b981;
+}
+
+[data-type="rest"] {
+    --block-color: #3d5afe;
+}
+
+[data-type="briefing"] {
+    --block-color: #6b7280;
+}
+
+.canvas-block-type-badge {
+    background: color-mix(in srgb, var(--block-color) 20%, transparent);
+    color: var(--block-color);
+}
+
+/* Exercise filter chips */
+.muscle-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.muscle-chip {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid var(--gf-border);
+    background: transparent;
+    color: var(--gf-text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font-body);
+}
+
+.muscle-chip.active {
+    background: var(--gf-accent-dim);
+    border-color: var(--gf-accent);
+    color: var(--gf-accent);
+}
+
+/* Session summary bar */
+.session-summary-bar {
+    background: var(--gf-surface-2);
+    border-top: 1px solid var(--gf-border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--gf-text-muted);
+}
+
+.summary-item strong {
+    color: var(--gf-text);
+}
+
+/* Exercise list in block */
+.block-exercise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.block-exercise-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--gf-surface-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--gf-border);
+}
+
+.block-exercise-item .handle {
+    color: var(--gf-text-dim);
+    cursor: grab;
+}
+
+.block-exercise-item .ex-name {
+    flex: 1;
+    font-size: 13px;
+}
+
+.block-exercise-item .btn-icon {
+    width: 28px;
+    height: 28px;
+}
+
+/* Range slider */
+input[type="range"] {
+    width: 100%;
+    accent-color: var(--gf-accent);
+}
+
+/* Reps / sets inputs row */
+.param-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.param-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
