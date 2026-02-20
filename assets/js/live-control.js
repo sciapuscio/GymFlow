@@ -196,10 +196,18 @@ const GFLive = (() => {
         } catch (e) { /* ignore — non-critical */ }
     }
 
+    // Silently pauses Spotify if something was auto-played
+    function spotifyAutoPause() {
+        if (!_lastAutoPlayUri) return;
+        _lastAutoPlayUri = null;
+        GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
+    }
+
     async function togglePlay() {
         if (isPlaying) {
             prepRemaining = 0;
             stopTicker();
+            spotifyAutoPause();                              // pause music when instructor pauses session
             await liveControl('pause');
         } else {
             // Reset so Spotify fires for current block on resume/play
@@ -217,14 +225,16 @@ const GFLive = (() => {
     }
 
     async function skipForward() {
+        const prevBlock = blocks[currentIdx];
         stopTicker();
         elapsed = 0;
         prepRemaining = 0;
         currentIdx = Math.min(currentIdx + 1, blocks.length - 1);
         await liveControl('skip');
         if (session.status !== 'finished') {
-            // Set prep for next block if it has a spotify_intro
             const b = blocks[currentIdx];
+            // If next block has no Spotify URI and previous did, stop music
+            if (prevBlock?.spotify_uri && !b?.spotify_uri) spotifyAutoPause();
             prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
             startTicker();
         }
@@ -233,6 +243,7 @@ const GFLive = (() => {
 
     async function stopSession() {
         stopTicker();
+        spotifyAutoPause();                                  // always stop music when session ends
         await liveControl('stop');
         showToast('Sesión finalizada', 'success');
         session.status = 'finished';
