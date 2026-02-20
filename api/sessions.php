@@ -145,8 +145,11 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             db()->prepare("UPDATE salas SET current_session_id=? WHERE id=?")->execute([$id, $salaId]);
             break;
         case 'update_elapsed':
-            db()->prepare("UPDATE gym_sessions SET current_block_elapsed=?, updated_at=? WHERE id=?")->execute([(int) ($data['elapsed'] ?? 0), $now, $id]);
+            $prepRemaining = max(0, (int) ($data['prep_remaining'] ?? 0));
+            db()->prepare("UPDATE gym_sessions SET current_block_elapsed=?, updated_at=? WHERE id=?")
+                ->execute([(int) ($data['elapsed'] ?? 0), $now, $id]);
             break;
+
         default:
             jsonError("Unknown action: $action");
     }
@@ -169,9 +172,11 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             'next_block' => $blocksDecoded[$ci + 1] ?? null,
             'total_blocks' => count($blocksDecoded),
             'elapsed' => (int) $updated['current_block_elapsed'],
+            'prep_remaining' => $prepRemaining ?? 0,
             'total_duration' => (int) $updated['total_duration'],
             'updated_at' => $now,
         ];
+
         db()->prepare("INSERT INTO sync_state (sala_id, session_id, state_json, updated_at) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE session_id=VALUES(session_id), state_json=VALUES(state_json), updated_at=VALUES(updated_at)")
             ->execute([$salaId, $id, json_encode($state), $now]);
         db()->prepare("UPDATE salas SET current_session_id=?, last_sync_at=? WHERE id=?")->execute([$id, $now, $salaId]);

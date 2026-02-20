@@ -100,6 +100,21 @@
         if (finishedScreen) finishedScreen.style.display = 'none';
         if (pausedOverlay) pausedOverlay.classList.toggle('visible', status === 'paused');
 
+        // PREPARATE overlay (Spotify intro countdown)
+        const prepOverlay = document.getElementById('prep-overlay');
+        const prepCountdown = document.getElementById('prep-countdown');
+        const prepBlockName = document.getElementById('prep-block-name');
+        const prepRemaining = state.prep_remaining || 0;
+        if (prepOverlay) {
+            if (prepRemaining > 0 && status === 'playing') {
+                prepOverlay.style.display = 'flex';
+                if (prepCountdown) prepCountdown.textContent = prepRemaining;
+                if (prepBlockName && block) prepBlockName.textContent = block.name || '';
+            } else {
+                prepOverlay.style.display = 'none';
+            }
+        }
+
         // Session name
         const sessionNameEl = document.getElementById('display-session-name');
         if (sessionNameEl && state.session_name) sessionNameEl.textContent = state.session_name;
@@ -121,6 +136,7 @@
         // Block dots
         updateBlockDots(blockIdx, totalBlocks);
     }
+
 
     function updateBlockDisplay(block, nextBlock, blockIdx, totalBlocks) {
         if (!block) return;

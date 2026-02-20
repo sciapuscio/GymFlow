@@ -8,6 +8,8 @@ const GFLive = (() => {
     let ticker = null;
     let currentPhase = 'work'; // work | rest
     let phaseElapsed = 0;
+    // Prep phase (PREPARATE countdown before block timer starts)
+    let prepRemaining = 0;
 
     function init(data) {
         session = data;
@@ -35,9 +37,19 @@ const GFLive = (() => {
         if (ticker) clearInterval(ticker);
         isPlaying = true;
         ticker = setInterval(() => {
+            _elapsedTick++;
+
+            // ── PREP PHASE ──────────────────────────────────────────────────────
+            if (prepRemaining > 0) {
+                prepRemaining--;
+                renderClock();
+                sendElapsedUpdate(); // push prep state to display every tick
+                return;
+            }
+
+            // ── NORMAL BLOCK TICK ───────────────────────────────────────────────
             elapsed++;
             phaseElapsed++;
-            _elapsedTick++;
             renderClock();
             // Push elapsed to server every 3s so display stays in sync
             if (_elapsedTick % 3 === 0) sendElapsedUpdate();
@@ -69,7 +81,8 @@ const GFLive = (() => {
         const remaining = Math.max(0, dur - elapsed);
 
         const clockEl = document.getElementById('live-clock');
-        if (clockEl) clockEl.textContent = formatDuration(remaining);
+        // Show prep countdown in the clock on the instructor panel too
+        if (clockEl) clockEl.textContent = prepRemaining > 0 ? `PREP ${prepRemaining}s` : formatDuration(remaining);
 
         // Block progress bar
         const pct = dur > 0 ? Math.min(100, (elapsed / dur) * 100) : 0;
@@ -174,25 +187,30 @@ const GFLive = (() => {
         updateControls();
     }
 
-    // Throttled: fires every 3 seconds to keep display in sync without flooding the server
+    // Fires every 3s normally; every tick during prep phase for responsive PREPARATE display
     async function sendElapsedUpdate() {
         if (!session?.id || !isPlaying) return;
         try {
-            await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=update_elapsed`, { elapsed });
+            await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=update_elapsed`,
+                { elapsed, prep_remaining: prepRemaining });
         } catch (e) { /* ignore — non-critical */ }
     }
 
     async function togglePlay() {
         if (isPlaying) {
+            prepRemaining = 0;
             stopTicker();
             await liveControl('pause');
         } else {
             // Reset so Spotify fires for current block on resume/play
             _lastAutoPlayUri = null;
+            // Set prep phase from block config before starting ticker
+            const b = currentBlock();
+            prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
             startTicker();
             await liveControl('play');
-            // Trigger Spotify for the currently active block
-            autoPlayBlockSpotify(currentBlock());
+            // Trigger Spotify immediately (music starts, display shows PREPARATE)
+            autoPlayBlockSpotify(b);
         }
         updateControls();
     }
@@ -200,9 +218,15 @@ const GFLive = (() => {
     async function skipForward() {
         stopTicker();
         elapsed = 0;
+        prepRemaining = 0;
         currentIdx = Math.min(currentIdx + 1, blocks.length - 1);
         await liveControl('skip');
-        if (session.status !== 'finished') startTicker();
+        if (session.status !== 'finished') {
+            // Set prep for next block if it has a spotify_intro
+            const b = blocks[currentIdx];
+            prepRemaining = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
+            startTicker();
+        }
         updateBlockDisplay();
     }
 

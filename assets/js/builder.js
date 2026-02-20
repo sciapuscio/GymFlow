@@ -220,6 +220,7 @@ const GFBuilder = (() => {
         const hasExercises = !['rest', 'briefing'].includes(block.type);
         const spUri = block.spotify_uri || '';
         const spName = block.spotify_name || '';
+        const spIntro = block.spotify_intro || 0;
         el.innerHTML = `
       ${commonFields}
       ${typeFields}
@@ -240,6 +241,12 @@ const GFBuilder = (() => {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.293a.75.75 0 01-1.032.25c-2.828-1.727-6.39-2.118-10.584-1.16a.75.75 0 01-.332-1.463c4.588-1.044 8.52-.596 11.698 1.34a.75.75 0 01.25 1.033zm1.47-3.27a.937.937 0 01-1.29.312c-3.236-1.99-8.168-2.567-11.993-1.404a.938.938 0 11-.546-1.795c4.374-1.328 9.81-.685 13.518 1.597a.937.937 0 01.31 1.29zm.126-3.402c-3.882-2.308-10.29-2.52-14.002-1.394a1.125 1.125 0 11-.656-2.154c4.26-1.295 11.343-1.046 15.822 1.613a1.125 1.125 0 11-1.164 1.935z"/></svg>
             <span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1DB954">${spName}</span>
             <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px;color:rgba(255,255,255,.4)" onclick="spBlockClear(${idx})">✕</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <label style="font-size:11px;color:var(--gf-text-dim);white-space:nowrap">⏱ Intro (s)</label>
+            <input type="number" min="0" max="60" class="form-control" style="width:70px;font-size:12px;padding:4px 8px" value="${spIntro}" placeholder="0"
+              oninput="GFBuilder.setBlockProp(${idx},'spotify_intro',+this.value)" title="Segundos de intro antes de empezar el timer (pantalla PREPARATE)">
+            <span style="font-size:10px;color:var(--gf-text-dim)">seg de PREPARATE</span>
           </div>
         ` : ''}
         <div style="display:flex;gap:6px">
@@ -388,16 +395,23 @@ const GFBuilder = (() => {
         updateCanvas(blockIdx);
     }
 
+    function setBlockProp(blockIdx, key, val) {
+        if (!blocks[blockIdx]) return;
+        blocks[blockIdx][key] = val;
+        updateCanvas(blockIdx);
+    }
+
     return {
         get blocks() { return blocks; },
         init, loadBlocks, addBlockByType, selectBlock,
         updateBlock, updateConfig, removeBlock, duplicateBlock,
         removeExFromBlock, addExerciseToSelected, randomFill,
-        filterMuscle, setBlockSpotify,
+        filterMuscle, setBlockSpotify, setBlockProp,
         exerciseDragStart, blockDragStart, blockDragEnd,
         canvasDragOver, canvasDrop, jumpToBlock,
     };
 })();
+
 
 // Expose global functions used inline
 window.addBlockByType = t => GFBuilder.addBlockByType(t);

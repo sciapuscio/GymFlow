@@ -106,8 +106,40 @@ if (!$sala) {
         <div class="idle-ready-text">Preparándose</div>
     </div>
 
+    <!-- PREPARATE OVERLAY (shown during spotify intro countdown) -->
+    <div id="prep-overlay"
+        style="display:none;position:fixed;inset:0;background:#0a0a0f;z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:24px">
+        <div
+            style="font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,6vw,80px);letter-spacing:.15em;color:rgba(255,107,53,0.7);text-transform:uppercase">
+            ¡PREPARATE!
+        </div>
+        <div id="prep-countdown"
+            style="font-family:'Bebas Neue',sans-serif;font-size:clamp(140px,25vw,280px);line-height:1;color:#ff6b35;text-shadow:0 0 120px rgba(255,107,53,0.6);animation:prepPulse 1s ease-in-out infinite">
+            10
+        </div>
+        <div id="prep-block-name"
+            style="font-size:clamp(16px,2.5vw,28px);font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:.08em;text-transform:uppercase">
+        </div>
+        <style>
+            @keyframes prepPulse {
+
+                0%,
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+
+                50% {
+                    transform: scale(1.04);
+                    opacity: .85;
+                }
+            }
+        </style>
+    </div>
+
     <!-- LIVE SESSION SCREEN (hidden initially) -->
     <div class="live-screen" id="live-screen" style="display:none">
+
 
         <!-- Top bar -->
         <div>
