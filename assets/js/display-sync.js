@@ -157,7 +157,15 @@
             } else if (block.type === 'briefing') {
                 exEl.textContent = block.config?.title || block.name || 'BRIEFING';
             } else if (exs.length) {
-                exEl.textContent = exs[0]?.name || exs[0] || block.name;
+                // For tabata/interval: start with the exercise for the current round
+                let exIdx = 0;
+                if ((block.type === 'tabata' || block.type === 'interval') && exs.length > 1) {
+                    const cfg = block.config || {};
+                    const roundDur = (cfg.work || 20) + (cfg.rest || 10);
+                    exIdx = Math.floor(localElapsed / roundDur) % exs.length;
+                }
+                exEl.dataset.roundIdx = exIdx;
+                exEl.textContent = exs[exIdx]?.name || exs[exIdx] || block.name;
                 exEl.style.animation = 'none';
                 requestAnimationFrame(() => exEl.style.animation = '');
             } else {
@@ -267,6 +275,20 @@
                     if (restCountdown) restCountdown.textContent = restRemaining;
                 } else {
                     restOverlay.style.display = 'none';
+                }
+            }
+
+            // Cycle exercise per round
+            const exs = block.exercises || [];
+            if (exs.length > 1 && inWork) {
+                const roundIndex = Math.floor(elapsed / roundDur);
+                const exEl = document.getElementById('display-exercise-name');
+                if (exEl && exEl.dataset.roundIdx !== String(roundIndex % exs.length)) {
+                    exEl.dataset.roundIdx = roundIndex % exs.length;
+                    const ex = exs[roundIndex % exs.length];
+                    exEl.textContent = ex?.name || ex || block.name;
+                    exEl.style.animation = 'none';
+                    requestAnimationFrame(() => exEl.style.animation = '');
                 }
             }
         } else {
