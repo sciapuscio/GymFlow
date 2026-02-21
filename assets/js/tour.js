@@ -33,6 +33,11 @@
     function getStep() { return parseInt(localStorage.getItem(STEP_KEY) || '0', 10); }
     function setStep(n) { localStorage.setItem(STEP_KEY, String(n)); }
 
+    // If the tour starts on admin_dashboard (the beginning of the flow), always
+    // reset progress so the welcome modal is shown, not a mid-tour step leftover
+    // from a previous incomplete session or testing.
+    if (PAGE === 'admin_dashboard') { setStep(0); }
+
     // ── Tour step definitions ───────────────────────────────────────────────────
     const STEPS = [
         {
