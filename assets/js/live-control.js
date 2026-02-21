@@ -68,9 +68,9 @@ const GFLive = (() => {
             if (block?.spotify_uri) {
                 autoPlayBlockSpotify(block);
             } else {
-                // New block has no track (Rest, Briefing, etc.) — always stop
+                // New block has no track (Rest, Briefing, etc.) — fade out and stop
                 _lastAutoPlayUri = null;
-                spotifyPause();
+                spotifyFadeAndPause(2);
             }
         });
 
@@ -119,10 +119,9 @@ const GFLive = (() => {
                     spotifySetVolume(100);
                     autoPlayBlockSpotify(b);
                 } else {
-                    // New block has no track — always stop
+                    // New block has no track — fade out and stop
                     _lastAutoPlayUri = null;
-                    spotifyPause();
-                    spotifySetVolume(100);
+                    spotifyFadeAndPause(2);
                 }
             }
         }
@@ -260,9 +259,9 @@ const GFLive = (() => {
         if (!session) return;
 
         if (isPlaying) {
-            // PAUSE
+            // PAUSE — fade out then pause
             prepRemaining = 0;
-            spotifyPause();
+            spotifyFadeAndPause(2);
             emit('control:pause');
         } else {
             const b = currentBlock();
@@ -299,13 +298,17 @@ const GFLive = (() => {
     async function skipForward() {
         const prevBlock = blocks[currentIdx];
         emit('control:skip');
-        // Spotify: if next block has no track, stop music
+        // Spotify: if next block has no track, fade out and stop
         const nextBlock = blocks[currentIdx + 1];
-        if (prevBlock?.spotify_uri && !nextBlock?.spotify_uri) spotifyAutoPause();
+        if (prevBlock?.spotify_uri && !nextBlock?.spotify_uri) {
+            _cancelFade();
+            spotifyFadeAndPause(2);
+        }
     }
 
     async function stopSession() {
-        spotifyAutoPause();
+        _cancelFade();
+        spotifyFadeAndPause(3);
         emit('control:stop');
         showToast('Sesión finalizada', 'success');
         if (session) session.status = 'finished';
@@ -352,34 +355,33 @@ const GFLive = (() => {
     }
 
     // ── Volume Fade ──────────────────────────────────────────────────────────
-    // Fades volume from 100 → 0 over `remainingSecs` seconds,
+    // Fades volume 100→0 over `durationSec` seconds using 5 evenly-spaced steps,
     // then pauses Spotify and restores volume to 100.
-    function _startFadeOut(remainingSecs) {
-        if (_fadingOut) return;
+    //
+    // Rate-limit safety: 5 volume calls + 1 pause + 1 restore = 7 API calls over
+    // ~(durationSec + 0.7)s. Spotify allows this comfortably even on frequent stops.
+    function spotifyFadeAndPause(durationSec = 2) {
+        if (_fadingOut) return;   // already fading — let it finish
         _fadingOut = true;
 
-        // Step every 3s — drastically reduces volume API calls (Spotify rate-limits this endpoint hard).
-        // A 30s fade = 10 calls instead of 30. Still sounds smooth enough live.
-        const STEP_MS = 3000;
-        const totalSteps = Math.max(1, Math.round(remainingSecs * 1000 / STEP_MS));
+        const STEPS = 5;
+        const STEP_MS = Math.max(200, Math.round((durationSec * 1000) / STEPS));
         let step = 0;
-
-        console.log(`[GFLive] Starting volume fade-out over ${remainingSecs}s (${totalSteps} steps)`);
 
         _fadeInterval = setInterval(() => {
             step++;
-            const vol = Math.round(100 * (1 - step / totalSteps));
+            const vol = Math.round(100 * (1 - step / STEPS));
             spotifySetVolume(Math.max(0, vol));
 
-            if (step >= totalSteps) {
+            if (step >= STEPS) {
                 clearInterval(_fadeInterval);
                 _fadeInterval = null;
-                _fadingOut = false;
                 _fadePauseTimeout = setTimeout(() => {
                     _fadePauseTimeout = null;
+                    _fadingOut = false;
                     spotifyPause();
-                    setTimeout(() => spotifySetVolume(100), 1500);
-                }, 300);
+                    setTimeout(() => spotifySetVolume(100), 500);
+                }, 200);
             }
         }, STEP_MS);
     }
@@ -388,8 +390,9 @@ const GFLive = (() => {
         if (_fadeInterval) {
             clearInterval(_fadeInterval);
             _fadeInterval = null;
+            // Restore volume immediately so the next track starts at full volume
+            spotifySetVolume(100);
         }
-        // Cancel the pending pause call too — prevents it from interrupting the next track
         if (_fadePauseTimeout) {
             clearTimeout(_fadePauseTimeout);
             _fadePauseTimeout = null;
