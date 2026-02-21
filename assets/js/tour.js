@@ -42,18 +42,34 @@
             welcome: true,
             emoji: '🎉',
             title: '¡Bienvenido a GymFlow!',
-            subtitle: 'Tu gimnasio está listo. En 4 pasos rápidos te mostramos cómo sacarle el máximo provecho.',
+            subtitle: 'Tu gimnasio está listo. En 5 pasos rápidos te mostramos cómo sacarle el máximo provecho.',
             preview: [
-                { num: 1, icon: '⚡', text: 'Panel del Instructor — tu centro de operaciones' },
-                { num: 2, icon: '🎵', text: 'Spotify Premium — sincronizá música con tu clase' },
-                { num: 3, icon: '🏗️', text: 'Builder — diseñá bloques y sesiones' },
-                { num: 4, icon: '🎯', text: 'Doble clic — cómo interactuar con el Builder' },
+                { num: 1, icon: '🎨', text: 'Branding — dale identidad a tu gimnasio' },
+                { num: 2, icon: '⚡', text: 'Panel del Instructor — tu centro de operaciones' },
+                { num: 3, icon: '🎵', text: 'Spotify Premium — sincronizá música con tu clase' },
+                { num: 4, icon: '🏗️', text: 'Builder — diseñá bloques y sesiones' },
+                { num: 5, icon: '🎯', text: 'Doble clic — cómo interactuar con el Builder' },
             ],
             nextLabel: 'Empezar el tour →',
             nextStep: 1,
         },
         {
-            // Step 1 — Highlight Instructor link in sidebar
+            // Step 1 — Branding button in page header
+            page: 'admin_dashboard',
+            selector: 'button.btn-secondary',
+            emoji: '🎨',
+            title: 'Branding de tu Gimnasio',
+            body: 'Lo primero es darle identidad a tu espacio. Subí el <strong>logo</strong>, elegí tus <strong>colores</strong> y escribí el nombre que verán tus alumnos en pantalla.',
+            arrow: 'bottom',
+            nextLabel: 'Personalizar ahora →',
+            nextStep: 2,
+            onNext: function () {
+                const modal = document.getElementById('branding-modal');
+                if (modal) modal.classList.add('open');
+            },
+        },
+        {
+            // Step 2 — Highlight Instructor link in sidebar
             page: 'admin_dashboard',
             selector: 'a.nav-item[href*="instructor/dashboard"]',
             emoji: '⚡',
@@ -258,7 +274,7 @@
         if (step.finish) {
             nextAction = `onclick="window._gfTour.finish()"`;
         } else if (step.nextHref) {
-            nextAction = `onclick="localStorage.setItem('${STEP_KEY}','${idx + 1}');location.href='${step.nextHref}'"`;
+            nextAction = `onclick="window._gfTour.runOnNext(${idx});localStorage.setItem('${STEP_KEY}','${idx + 1}');location.href='${step.nextHref}'"`;
         } else {
             nextAction = `onclick="window._gfTour.next()"`;
         }
@@ -303,6 +319,8 @@
     window._gfTour = {
         next() {
             clearHighlight();
+            const step = STEPS[currentIdx];
+            if (step && typeof step.onNext === 'function') step.onNext();
             const nextIdx = currentIdx + 1;
             if (nextIdx < STEPS.length && STEPS[nextIdx].page === PAGE) {
                 currentIdx = nextIdx;
@@ -311,6 +329,10 @@
                 setStep(nextIdx);
                 finish();
             }
+        },
+        runOnNext(idx) {
+            const step = STEPS[idx];
+            if (step && typeof step.onNext === 'function') step.onNext();
         },
         dismiss,
         finish,
