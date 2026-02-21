@@ -67,11 +67,9 @@ const GFLive = (() => {
         socket.on('session:block_change', ({ block }) => {
             if (block?.spotify_uri) {
                 autoPlayBlockSpotify(block);
-            } else {
-                // New block has no track (Rest, Briefing, etc.) — fade out and stop
-                _lastAutoPlayUri = null;
-                spotifyFadeAndPause(2);
             }
+            // Note: stopping music when next block has no track is handled
+            // exclusively by applyTick to avoid double volume API calls.
         });
 
         socket.on('error', (msg) => {
@@ -99,6 +97,9 @@ const GFLive = (() => {
         const blockChanged = currentIdx !== prevIdx;
 
         if (tick.status === 'finished') {
+            // Stop music when session ends — must happen before isPlaying turns false,
+            // otherwise the if(isPlaying) guard below would skip it.
+            if (_lastAutoPlayUri) spotifyFadeAndPause(2);
             showToast('Sesión finalizada', 'info');
         }
 
@@ -111,11 +112,10 @@ const GFLive = (() => {
 
         // Spotify: on block change, play new track or stop if no track assigned
         if (blockChanged) {
-            _cancelFade();          // stop any running fade
+            _cancelFade();
             if (isPlaying) {
                 const b = blocks[currentIdx];
                 if (b?.spotify_uri) {
-                    // Restore volume before playing new track
                     spotifySetVolume(100);
                     autoPlayBlockSpotify(b);
                 } else {
