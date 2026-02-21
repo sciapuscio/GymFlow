@@ -54,8 +54,9 @@
         const idleLabel = document.getElementById('idle-class-label');
 
         const exs = block.exercises || [];
+        // Show all exercises joined — matches what students will do
         const label = exs.length
-            ? (exs[0]?.name || (typeof exs[0] === 'string' ? exs[0] : null) || block.name)
+            ? exs.map(ex => ex?.name || (typeof ex === 'string' ? ex : '')).filter(Boolean).join(' · ') || block.name
             : block.name;
 
         if (idleLabel) idleLabel.textContent = label || '';
@@ -195,12 +196,15 @@
             } else if (block.type === 'briefing') {
                 exEl.textContent = block.config?.title || block.name || 'BRIEFING';
             } else if (exs.length) {
-                // For tabata/interval: start with the exercise for the current round
                 let exIdx = 0;
                 if ((block.type === 'tabata' || block.type === 'interval') && exs.length > 1) {
+                    // Timed round-based types: advance per round duration
                     const cfg = block.config || {};
                     const roundDur = (cfg.work || 20) + (cfg.rest || 10);
                     exIdx = Math.floor(localElapsed / roundDur) % exs.length;
+                } else if (['amrap', 'emom', 'fortime', 'series'].includes(block.type) && exs.length > 1) {
+                    // List-based types: cycle every 20 s so stickman + name stays fresh
+                    exIdx = Math.floor(localElapsed / 20) % exs.length;
                 }
                 exEl.dataset.roundIdx = exIdx;
                 exEl.textContent = exs[exIdx]?.name || exs[exIdx] || block.name;
@@ -233,6 +237,9 @@
                     const cfg = block.config || {};
                     const roundDur = (cfg.work || 20) + (cfg.rest || 10);
                     return Math.floor(localElapsed / roundDur) % exs.length;
+                }
+                if (['amrap', 'emom', 'fortime', 'series'].includes(block.type) && exs.length > 1) {
+                    return Math.floor(localElapsed / 20) % exs.length;
                 }
                 return 0;
             })();
@@ -298,7 +305,7 @@
         if (!container) return;
 
         const exs = block?.exercises || [];
-        const rotatingTypes = ['tabata', 'interval', 'circuit'];
+        const rotatingTypes = ['tabata', 'interval', 'circuit', 'amrap', 'emom', 'fortime', 'series'];
         const showList = exs.length >= 2 && rotatingTypes.includes(block.type);
 
         if (!showList) {
@@ -307,12 +314,15 @@
             return;
         }
 
-        // Determine which exercise is currently active
+        // Determine which exercise is currently highlighted
         let activeIdx = 0;
         if (block.type === 'tabata' || block.type === 'interval') {
             const cfg = block.config || {};
             const roundDur = (cfg.work || 20) + (cfg.rest || 10);
             activeIdx = Math.floor(localElapsed / roundDur) % exs.length;
+        } else if (['amrap', 'emom', 'fortime', 'series'].includes(block.type)) {
+            // Cycle highlight every 20 s to match stickman
+            activeIdx = Math.floor(localElapsed / 20) % exs.length;
         }
 
         container.style.display = 'flex';
