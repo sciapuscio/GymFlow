@@ -355,43 +355,35 @@ const GFLive = (() => {
     }
 
     // ── Volume Fade ──────────────────────────────────────────────────────────
-    // Fades volume 100→0 over `durationSec` seconds using 5 evenly-spaced steps,
-    // then pauses Spotify and restores volume to 100.
-    //
-    // Rate-limit safety: 5 volume calls + 1 pause + 1 restore = 7 API calls over
-    // ~(durationSec + 0.7)s. Spotify allows this comfortably even on frequent stops.
+    // 2-step fade: 100 → 30 → 0, then pause, then restore.
+    // Total API calls: 2 volume + 1 pause + 1 restore = 4 calls over ~(durationSec + 0.7)s.
+    // Uses chained setTimeout (NOT setInterval) to avoid any timer overlap risk.
+    // Spotify's /volume endpoint is aggressive on rate-limits — keep calls minimal.
     function spotifyFadeAndPause(durationSec = 2) {
-        if (_fadingOut) return;   // already fading — let it finish
+        if (_fadingOut) return;
         _fadingOut = true;
 
-        const STEPS = 5;
-        const STEP_MS = Math.max(200, Math.round((durationSec * 1000) / STEPS));
-        let step = 0;
+        const halfMs = Math.max(400, Math.round((durationSec * 1000) / 2));
 
-        _fadeInterval = setInterval(() => {
-            step++;
-            const vol = Math.round(100 * (1 - step / STEPS));
-            spotifySetVolume(Math.max(0, vol));
+        spotifySetVolume(30); // Step 1: drop to 30%
 
-            if (step >= STEPS) {
-                clearInterval(_fadeInterval);
-                _fadeInterval = null;
-                _fadePauseTimeout = setTimeout(() => {
-                    _fadePauseTimeout = null;
-                    _fadingOut = false;
-                    spotifyPause();
-                    setTimeout(() => spotifySetVolume(100), 500);
-                }, 200);
-            }
-        }, STEP_MS);
+        _fadePauseTimeout = setTimeout(() => {
+            spotifySetVolume(0); // Step 2: drop to 0%
+
+            _fadePauseTimeout = setTimeout(() => {
+                _fadePauseTimeout = null;
+                _fadingOut = false;
+                spotifyPause();
+                setTimeout(() => spotifySetVolume(100), 500); // Restore for next track
+            }, halfMs);
+        }, halfMs);
     }
 
     function _cancelFade() {
         if (_fadeInterval) {
             clearInterval(_fadeInterval);
             _fadeInterval = null;
-            // Restore volume immediately so the next track starts at full volume
-            spotifySetVolume(100);
+            spotifySetVolume(100); // Restore immediately so next track starts at full volume
         }
         if (_fadePauseTimeout) {
             clearTimeout(_fadePauseTimeout);
