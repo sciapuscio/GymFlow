@@ -42,13 +42,14 @@
             welcome: true,
             emoji: '🎉',
             title: '¡Bienvenido a GymFlow!',
-            subtitle: 'Tu gimnasio está listo. En 5 pasos rápidos te mostramos cómo sacarle el máximo provecho.',
+            subtitle: 'Tu gimnasio está listo. En 6 pasos rápidos te mostramos cómo sacarle el máximo provecho.',
             preview: [
                 { num: 1, icon: '🎨', text: 'Branding — dale identidad a tu gimnasio' },
                 { num: 2, icon: '⚡', text: 'Panel del Instructor — tu centro de operaciones' },
-                { num: 3, icon: '🎵', text: 'Spotify Premium — sincronizá música con tu clase' },
-                { num: 4, icon: '🏗️', text: 'Builder — diseñá bloques y sesiones' },
-                { num: 5, icon: '🎯', text: 'Doble clic — cómo interactuar con el Builder' },
+                { num: 3, icon: '📺', text: 'Display — la pantalla que ven tus alumnos' },
+                { num: 4, icon: '🎵', text: 'Spotify Premium — sincronizá música con tu clase' },
+                { num: 5, icon: '🏗️', text: 'Builder — diseñá bloques y sesiones' },
+                { num: 6, icon: '🎯', text: 'Doble clic — cómo interactuar con el Builder' },
             ],
             nextLabel: 'Empezar el tour →',
             nextStep: 1,
@@ -91,7 +92,7 @@
             nextHref: BASE + '/pages/instructor/dashboard.php',
         },
         {
-            // Step 2 — Instructor dashboard header
+            // Step 3 — Instructor dashboard header
             page: 'instructor_dashboard',
             selector: '.page-header',
             emoji: '🎛️',
@@ -99,10 +100,19 @@
             body: 'Desde acá gestionás tus sesiones, bloques y plantillas. Podés crear una sesión, <strong>guardarla para reutilizarla las veces que quieras</strong>, y lanzarla en vivo para que tus alumnos la vean en pantalla.',
             arrow: 'bottom',
             nextLabel: 'Siguiente →',
-            nextStep: 3,
         },
         {
-            // Step 3 — Spotify / Profile link
+            // Step 4 — Display window for students
+            page: 'instructor_dashboard',
+            selector: 'a[href*="display/sala"]',
+            emoji: '📺',
+            title: 'Ventana para tus Alumnos',
+            body: 'Cada sala tiene su propia pantalla. Hacé clic en <strong>Display</strong> para abrir la ventana que proyectás en la TV del gimnasio — tus alumnos ven el timer, los ejercicios y la música en tiempo real.',
+            arrow: 'bottom',
+            nextLabel: 'Siguiente →',
+        },
+        {
+            // Step 5 — Spotify / Profile link
             page: 'instructor_dashboard',
             selector: 'a.nav-item[href*="profile"]',
             emoji: '🎵',
@@ -111,7 +121,6 @@
             arrow: 'right',
             extraBtn: { label: '🎵 Conectar Spotify', href: BASE + '/pages/instructor/profile.php' },
             nextLabel: 'Omitir este paso',
-            nextStep: 4,
         },
         {
             // Step 4 — Builder link
