@@ -152,13 +152,19 @@ const GFBuilder = (() => {
         if (!el || !block) return;
 
         const cfg = block.config || {};
+        const repTypes = ['amrap', 'emom', 'fortime', 'circuit', 'series'];
+        const showRepsInput = repTypes.includes(block.type);
         const exList = (block.exercises || []).map((ex, ei) => `
-      <div class="block-exercise-item">
-        <span class="handle">⠿</span>
-        <span class="ex-name">${ex.name || ex}</span>
-        <button class="btn btn-icon btn-danger" style="width:26px;height:26px;font-size:12px" onclick="GFBuilder.removeExFromBlock(${idx},${ei})">×</button>
-      </div>
-    `).join('');
+  <div class="block-exercise-item">
+    <span class="handle">⠿</span>
+    <span class="ex-name" style="flex:1">${ex.name || ex}</span>
+    ${showRepsInput ? `<input type="number" class="form-control"
+      style="width:58px;padding:4px 6px;text-align:center;flex-shrink:0;font-size:12px"
+      value="${ex.reps ?? 10}" min="1" max="999" placeholder="reps" title="Repeticiones"
+      onchange="GFBuilder.updateExReps(${idx},${ei},+this.value)">` : ''}
+    <button class="btn btn-icon btn-danger" style="width:26px;height:26px;font-size:12px" onclick="GFBuilder.removeExFromBlock(${idx},${ei})">×</button>
+  </div>
+`).join('');
 
         const commonFields = `
       <div class="form-group">
@@ -301,6 +307,11 @@ const GFBuilder = (() => {
         }
     }
 
+    function updateExReps(blockIdx, exIdx, reps) {
+        if (!blocks[blockIdx]?.exercises?.[exIdx]) return;
+        blocks[blockIdx].exercises[exIdx].reps = Math.max(1, reps || 1);
+    }
+
     function addExerciseToSelected(exId) {
         if (selectedIdx === null) return showToast('Seleccioná un bloque primero', 'info');
         const ex = exercises.find(e => e.id == exId);
@@ -405,7 +416,7 @@ const GFBuilder = (() => {
         get blocks() { return blocks; },
         init, loadBlocks, addBlockByType, selectBlock,
         updateBlock, updateConfig, removeBlock, duplicateBlock,
-        removeExFromBlock, addExerciseToSelected, randomFill,
+        removeExFromBlock, updateExReps, addExerciseToSelected, randomFill,
         filterMuscle, setBlockSpotify, setBlockProp,
         exerciseDragStart, blockDragStart, blockDragEnd,
         canvasDragOver, canvasDrop, jumpToBlock,

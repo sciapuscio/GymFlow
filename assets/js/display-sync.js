@@ -339,7 +339,11 @@
 
         container.style.display = 'flex';
         container.innerHTML = exs.map((ex, i) => {
-            const name = ex?.name || ex || '?';
+            const exName = ex?.name || (typeof ex === 'string' ? ex : '?');
+            // Show reps prefix for list-based blocks (amrap/fortime/series/emom)
+            const showReps = ['amrap', 'emom', 'fortime', 'series'].includes(block.type);
+            const repsPrefix = (showReps && ex?.reps) ? `${ex.reps} × ` : '';
+            const name = repsPrefix + exName;
             const isActive = i === activeIdx;
             return `<span style="
                 display:inline-flex;align-items:center;
