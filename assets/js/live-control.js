@@ -355,28 +355,24 @@ const GFLive = (() => {
     }
 
     // ── Volume Fade ──────────────────────────────────────────────────────────
-    // 2-step fade: 100 → 30 → 0, then pause, then restore.
-    // Total API calls: 2 volume + 1 pause + 1 restore = 4 calls over ~(durationSec + 0.7)s.
-    // Uses chained setTimeout (NOT setInterval) to avoid any timer overlap risk.
-    // Spotify's /volume endpoint is aggressive on rate-limits — keep calls minimal.
+    // Spotify's API has NO native fade parameter — you can only set an instant volume level.
+    // To avoid rate-limit bans, we use the minimum possible calls:
+    //   1 × setVolume(0)  → silence immediately
+    //   1 × pause         → stop playback after `durationSec` ms
+    //   1 × setVolume(100) → restore for the next track
+    // The "fade" is instant-to-zero, but inaudible since silence precedes the pause.
     function spotifyFadeAndPause(durationSec = 2) {
         if (_fadingOut) return;
         _fadingOut = true;
 
-        const halfMs = Math.max(400, Math.round((durationSec * 1000) / 2));
-
-        spotifySetVolume(30); // Step 1: drop to 30%
+        spotifySetVolume(0); // ← single volume API call
 
         _fadePauseTimeout = setTimeout(() => {
-            spotifySetVolume(0); // Step 2: drop to 0%
-
-            _fadePauseTimeout = setTimeout(() => {
-                _fadePauseTimeout = null;
-                _fadingOut = false;
-                spotifyPause();
-                setTimeout(() => spotifySetVolume(100), 500); // Restore for next track
-            }, halfMs);
-        }, halfMs);
+            _fadePauseTimeout = null;
+            _fadingOut = false;
+            spotifyPause();
+            setTimeout(() => spotifySetVolume(100), 500); // restore for next track
+        }, durationSec * 1000);
     }
 
     function _cancelFade() {
