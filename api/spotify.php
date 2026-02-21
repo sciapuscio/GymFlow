@@ -187,13 +187,39 @@ if ($action === 'now-playing') {
         $instructorId = (int) ($sess['instructor_id'] ?? $user['id']);
     }
 
+    // ── APCu cache: share the Spotify response across all polling clients ────
+    // Both live.php and sala.php poll now-playing independently; without caching
+    // they can easily burn through Spotify's rate limit together.
+    // Cache per instructor for 5 seconds — short enough for a live session,
+    // cheap enough to avoid 429s on sustained polling.
+    $cacheKey = "sp_now_playing_{$instructorId}";
+    $useCache = function_exists('apcu_fetch');
+    if ($useCache) {
+        $cached = apcu_fetch($cacheKey, $found);
+        if ($found) {
+            jsonResponse($cached);
+        }
+    }
+
     $data = spotifyCall($instructorId, 'GET', '/me/player/currently-playing');
 
+    // If Spotify is rate-limiting us, return a minimal response so the
+    // frontend can apply backoff instead of hammering the endpoint.
+    if (($data['_http_status'] ?? 0) === 429) {
+        $resp = ['playing' => false, 'status' => 429];
+        if ($useCache)
+            apcu_store($cacheKey, $resp, 15); // cache the 429 for 15s
+        jsonResponse($resp);
+    }
+
     if (empty($data['item'])) {
-        jsonResponse(['playing' => false]);
+        $resp = ['playing' => false];
+        if ($useCache)
+            apcu_store($cacheKey, $resp, 5);
+        jsonResponse($resp);
     }
     $track = $data['item'];
-    jsonResponse([
+    $resp = [
         'playing' => $data['is_playing'] ?? false,
         'track' => $track['name'] ?? '',
         'artists' => implode(', ', array_column($track['artists'] ?? [], 'name')),
@@ -202,7 +228,10 @@ if ($action === 'now-playing') {
         'progress_ms' => $data['progress_ms'] ?? 0,
         'duration_ms' => $track['duration_ms'] ?? 0,
         'uri' => $track['uri'] ?? '',
-    ]);
+    ];
+    if ($useCache)
+        apcu_store($cacheKey, $resp, 5);
+    jsonResponse($resp);
 }
 
 // ─── PLAY ─────────────────────────────────────────────────────────────────────

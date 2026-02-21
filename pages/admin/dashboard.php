@@ -33,6 +33,22 @@ $sc = db()->prepare("SELECT COUNT(*) FROM gym_sessions WHERE gym_id = ?");
 $sc->execute([$gymId]);
 $sessionCount = (int) $sc->fetchColumn();
 
+$sub = getGymSubscription($gymId);
+
+// Compute subscription display state
+$subBanner = null;
+if ($sub && $user['role'] !== 'superadmin') {
+    $today = new DateTime();
+    $periodEnd = $sub['current_period_end'] ? new DateTime($sub['current_period_end']) : null;
+    $daysLeft = $periodEnd ? (int) $today->diff($periodEnd)->days * ($today <= $periodEnd ? 1 : -1) : null;
+
+    if ($sub['plan'] === 'trial' && $daysLeft !== null && $daysLeft >= 0) {
+        $subBanner = ['type' => 'trial', 'days' => $daysLeft, 'end' => $sub['current_period_end']];
+    } elseif ($daysLeft !== null && $daysLeft <= 7 && $daysLeft >= 0) {
+        $subBanner = ['type' => 'expiring', 'days' => $daysLeft, 'end' => $sub['current_period_end']];
+    }
+}
+
 layout_header('Admin Panel — ' . $gym['name'], 'admin', $user);
 nav_section('Admin');
 nav_item(BASE_URL . '/pages/admin/dashboard.php', 'Dashboard', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', 'admin', 'admin');
@@ -113,13 +129,62 @@ layout_footer($user);
                 </svg>
             </div>
             <div>
-                <div class="stat-value" style="font-size:16px;color:<?php echo htmlspecialchars($gym['primary_color']) ?>">
+                <div class="stat-value"
+                    style="font-size:16px;color:<?php echo htmlspecialchars($gym['primary_color']) ?>">
                     <?php echo htmlspecialchars($gym['primary_color']) ?>
                 </div>
                 <div class="stat-label">Color Primario</div>
             </div>
         </div>
     </div>
+
+    <?php if ($subBanner):
+        $isTrial = $subBanner['type'] === 'trial';
+        $isExpiring = $subBanner['type'] === 'expiring';
+        $days = $subBanner['days'];
+        $endFmt = (new DateTime($subBanner['end']))->format('d/m/Y');
+        $color = $isTrial ? '#f59e0b' : '#ef4444';
+        $bg = $isTrial ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)';
+        $border = $isTrial ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.22)';
+        $icon = $isTrial ? '⏳' : '🔔';
+        $bannerId = 'sub-banner-' . $gymId;
+        if ($isTrial) {
+            $msg = $days === 0
+                ? 'Tu período de prueba <strong>vence hoy</strong>.'
+                : "Tu período de prueba vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (el {$endFmt}).";
+        } else {
+            $msg = "Tu suscripción vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (el {$endFmt}). Renovar antes de esa fecha para no perder acceso.";
+        }
+        ?>
+        <div id="sub-banner" style="
+        margin-bottom:20px;
+        padding:14px 18px;
+        border-radius:12px;
+        background:<?php echo $bg ?>;
+        border:1px solid <?php echo $border ?>;
+        display:flex;align-items:center;gap:14px;
+        font-size:14px;
+    ">
+            <span style="font-size:20px;flex-shrink:0"><?php echo $icon ?></span>
+            <div style="flex:1;line-height:1.5">
+                <?php echo $msg ?>
+            </div>
+            <a href="<?php echo BASE_URL ?>/pages/admin/billing.php" style="flex-shrink:0;font-size:13px;font-weight:600;color:<?php echo $color ?>;text-decoration:none;border:1px solid <?php echo $border ?>;
+                  padding:6px 14px;border-radius:8px;white-space:nowrap;transition:background .2s"
+                onmouseover="this.style.background='<?php echo $bg ?>'" onmouseout="this.style.background='transparent'">
+                Ver ciclos →
+            </a>
+            <button
+                onclick="document.getElementById('sub-banner').style.display='none';sessionStorage.setItem('<?php echo $bannerId ?>','1')"
+                style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.3);font-size:18px;line-height:1;padding:0 2px;flex-shrink:0"
+                title="Cerrar">×</button>
+        </div>
+        <script>
+            if (sessionStorage.getItem('<?php echo $bannerId ?>')) {
+                document.getElementById('sub-banner').style.display = 'none';
+            }
+        </script>
+    <?php endif; ?>
 
     <div class="grid grid-2">
 
@@ -183,7 +248,8 @@ layout_footer($user);
                                 <td style="font-size:12px;color:var(--gf-text-muted)">
                                     <?php echo htmlspecialchars($u['email']) ?>
                                 </td>
-                                <td><span class="badge <?php echo $u['role'] === 'admin' ? 'badge-orange' : 'badge-accent' ?>">
+                                <td><span
+                                        class="badge <?php echo $u['role'] === 'admin' ? 'badge-orange' : 'badge-accent' ?>">
                                         <?php echo $u['role'] ?>
                                     </span></td>
                                 <td><button class="btn btn-danger btn-sm"
@@ -258,17 +324,58 @@ layout_footer($user);
         <form onsubmit="saveBranding(event)">
             <div class="param-row">
                 <div class="form-group"><label class="form-label">Color Primario</label><input type="color"
-                        class="form-control" id="b-primary" value="<?php echo htmlspecialchars($gym['primary_color']) ?>">
+                        class="form-control" id="b-primary"
+                        value="<?php echo htmlspecialchars($gym['primary_color']) ?>">
                 </div>
                 <div class="form-group"><label class="form-label">Color Secundario</label><input type="color"
-                        class="form-control" id="b-secondary" value="<?php echo htmlspecialchars($gym['secondary_color']) ?>">
+                        class="form-control" id="b-secondary"
+                        value="<?php echo htmlspecialchars($gym['secondary_color']) ?>">
                 </div>
             </div>
-            <div class="form-group"><label class="form-label">Logo (URL o subir)</label><input class="form-control"
-                    id="b-logo" placeholder="https://... o subir"
-                    value="<?php echo htmlspecialchars($gym['logo_path'] ?? '') ?>"></div>
             <div class="form-group"><label class="form-label">Nombre del Gimnasio</label><input class="form-control"
                     id="b-name" value="<?php echo htmlspecialchars($gym['name']) ?>"></div>
+
+            <!-- ── Logo uploader ── -->
+            <div class="form-group">
+                <label class="form-label">Logo del Gimnasio</label>
+                <div id="logo-drop-zone" onclick="document.getElementById('logo-file-input').click()"
+                    ondragover="event.preventDefault();this.style.borderColor='var(--gf-accent)'"
+                    ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'" ondrop="handleLogoDrop(event)"
+                    style="border:2px dashed rgba(255,255,255,0.15);border-radius:12px;padding:24px;cursor:pointer;text-align:center;transition:border-color .2s;background:rgba(255,255,255,0.02)">
+                    <?php if (!empty($gym['logo_path'])): ?>
+                        <img id="logo-preview" src="<?php echo BASE_URL . htmlspecialchars($gym['logo_path']) ?>" alt="Logo"
+                            style="max-height:80px;max-width:220px;object-fit:contain;display:block;margin:0 auto 12px">
+                        <div id="logo-drop-hint" style="font-size:12px;color:rgba(255,255,255,0.35)">Clic o arrastrá para
+                            reemplazar</div>
+                    <?php else: ?>
+                        <img id="logo-preview" src="" alt=""
+                            style="max-height:80px;max-width:220px;object-fit:contain;display:none;margin:0 auto 12px">
+                        <div id="logo-drop-hint" style="font-size:13px;color:rgba(255,255,255,0.4)">
+                            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                style="margin:0 auto 8px;display:block;opacity:.4">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            Clic o arrastrá tu logo aquí<br>
+                            <span style="font-size:11px;color:rgba(255,255,255,0.25)">PNG, JPG, SVG — máx. 2 MB</span>
+                        </div>
+                    <?php endif; ?>
+                    <input id="logo-file-input" type="file" accept="image/*" style="display:none"
+                        onchange="previewAndUploadLogo(this.files[0])">
+                </div>
+                <!-- Status row -->
+                <div id="logo-actions"
+                    style="margin-top:8px;display:<?php echo !empty($gym['logo_path']) ? 'flex' : 'none' ?>;gap:8px;align-items:center">
+                    <span id="logo-filename"
+                        style="font-size:12px;color:rgba(255,255,255,0.4);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                        <?php echo htmlspecialchars($gym['logo_path'] ?? '') ?>
+                    </span>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeLogo()">✕ Eliminar</button>
+                </div>
+                <div id="logo-upload-status" style="font-size:12px;margin-top:6px;display:none;color:var(--gf-accent)">
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Guardar Branding</button>
         </form>
     </div>
@@ -277,6 +384,7 @@ layout_footer($user);
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script>
     const GYM_ID = <?php echo $gymId ?>;
+    let currentLogoPath = <?php echo json_encode($gym['logo_path'] ?? null) ?>;
 
     async function createSala(e) {
         e.preventDefault();
@@ -309,11 +417,127 @@ layout_footer($user);
 
     async function saveBranding(e) {
         e.preventDefault();
-        const data = { primary_color: document.getElementById('b-primary').value, secondary_color: document.getElementById('b-secondary').value, logo_path: document.getElementById('b-logo').value, name: document.getElementById('b-name').value };
+        const data = {
+            primary_color: document.getElementById('b-primary').value,
+            secondary_color: document.getElementById('b-secondary').value,
+            logo_path: currentLogoPath, // Use the dynamically updated logo path
+            name: document.getElementById('b-name').value
+        };
         await GF.put(`${window.GF_BASE}/api/gyms.php?id=${GYM_ID}`, data);
         showToast('Branding guardado', 'success');
         setTimeout(() => location.reload(), 800);
     }
+
+    // Logo Uploader Functions
+    const logoPreview = document.getElementById('logo-preview');
+    const logoDropHint = document.getElementById('logo-drop-hint');
+    const logoFileInput = document.getElementById('logo-file-input');
+    const logoActions = document.getElementById('logo-actions');
+    const logoFilename = document.getElementById('logo-filename');
+    const logoUploadStatus = document.getElementById('logo-upload-status');
+
+    function updateLogoDisplay(path, filename = '') {
+        if (path) {
+            logoPreview.src = path.startsWith('http') ? path : `${window.GF_BASE}${path}`;
+            logoPreview.style.display = 'block';
+            logoDropHint.innerHTML = 'Clic o arrastrá para reemplazar';
+            logoDropHint.style.fontSize = '12px';
+            logoDropHint.style.color = 'rgba(255,255,255,0.35)';
+            logoActions.style.display = 'flex';
+            logoFilename.textContent = filename || path.split('/').pop();
+        } else {
+            logoPreview.src = '';
+            logoPreview.style.display = 'none';
+            logoDropHint.innerHTML = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                 style="margin:0 auto 8px;display:block;opacity:.4">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            Clic o arrastrá tu logo aquí<br>
+                            <span style="font-size:11px;color:rgba(255,255,255,0.25)">PNG, JPG, SVG — máx. 2 MB</span>`;
+            logoDropHint.style.fontSize = '13px';
+            logoDropHint.style.color = 'rgba(255,255,255,0.4)';
+            logoActions.style.display = 'none';
+            logoFilename.textContent = '';
+        }
+    }
+
+    async function uploadLogo(file) {
+        if (!file) return;
+
+        logoUploadStatus.style.display = 'block';
+        logoUploadStatus.textContent = 'Subiendo...';
+        logoUploadStatus.style.color = 'var(--gf-accent)';
+
+        const formData = new FormData();
+        formData.append('logo', file);
+
+        try {
+            const response = await fetch(`${window.GF_BASE}/api/gyms.php?id=${GYM_ID}&logo=1`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (response.ok && result.path) {
+                currentLogoPath = result.path;
+                updateLogoDisplay(currentLogoPath, file.name);
+                logoUploadStatus.textContent = '✓ Logo subido con éxito';
+                logoUploadStatus.style.color = '#10b981';
+            } else {
+                throw new Error(result.error || 'Error al subir el logo');
+            }
+        } catch (error) {
+            console.error('[Logo] Upload error:', error);
+            logoUploadStatus.textContent = `✕ ${error.message}`;
+            logoUploadStatus.style.color = '#ef4444';
+        } finally {
+            setTimeout(() => { logoUploadStatus.style.display = 'none'; }, 3000);
+        }
+    }
+
+    function previewAndUploadLogo(file) {
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                logoPreview.src = e.target.result;
+                logoPreview.style.display = 'block';
+                logoDropHint.innerHTML = 'Clic o arrastrá para reemplazar';
+                logoDropHint.style.fontSize = '12px';
+                logoDropHint.style.color = 'rgba(255,255,255,0.35)';
+                logoActions.style.display = 'flex';
+                logoFilename.textContent = file.name;
+            };
+            reader.readAsDataURL(file);
+            uploadLogo(file);
+        }
+    }
+
+    function handleLogoDrop(event) {
+        event.preventDefault();
+        document.getElementById('logo-drop-zone').style.borderColor = 'rgba(255,255,255,0.15)';
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            previewAndUploadLogo(files[0]);
+        }
+    }
+
+    function removeLogo(clearPath = true) {
+        logoFileInput.value = ''; // Clear the file input
+        updateLogoDisplay(null);
+        if (clearPath) {
+            currentLogoPath = null;
+        }
+        logoUploadStatus.style.display = 'none';
+    }
+
+    // Initialize logo display on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        if (currentLogoPath) {
+            updateLogoDisplay(currentLogoPath);
+        }
+    });
 
     // Close modal on backdrop click
     document.querySelectorAll('.modal-overlay').forEach(m => {

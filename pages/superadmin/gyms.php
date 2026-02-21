@@ -6,7 +6,26 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 $user = requireAuth('superadmin');
 
-$gymnList = db()->query("SELECT g.*, COUNT(DISTINCT u.id) as user_count, COUNT(DISTINCT s.id) as sala_count FROM gyms g LEFT JOIN users u ON u.gym_id = g.id AND u.role != 'superadmin' LEFT JOIN salas s ON s.gym_id = g.id GROUP BY g.id ORDER BY g.name")->fetchAll();
+$gymnList = db()->query(
+    "SELECT g.*, 
+            COUNT(DISTINCT u.id) as user_count, 
+            COUNT(DISTINCT s.id) as sala_count,
+            gs.plan, gs.status as sub_status,
+            gs.current_period_end,
+            gs.trial_ends_at,
+            CASE
+                WHEN gs.id IS NULL THEN 'no_sub'
+                WHEN gs.status = 'suspended' THEN 'suspended'
+                WHEN gs.current_period_end < CURDATE() THEN 'expired'
+                WHEN gs.current_period_end <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 'expiring'
+                ELSE 'active'
+            END as sub_computed
+     FROM gyms g
+     LEFT JOIN users u ON u.gym_id = g.id AND u.role != 'superadmin'
+     LEFT JOIN salas s ON s.gym_id = g.id
+     LEFT JOIN gym_subscriptions gs ON gs.gym_id = g.id
+     GROUP BY g.id ORDER BY g.name"
+)->fetchAll();
 
 layout_header('Gimnasios — SuperAdmin', 'superadmin', $user);
 nav_section('Super Admin');
@@ -16,10 +35,77 @@ nav_item(BASE_URL . '/pages/superadmin/users.php', 'Usuarios', '<svg width="18" 
 layout_footer($user);
 ?>
 
+<style>
+    .sub-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+
+    .sub-active {
+        background: rgba(16, 185, 129, .12);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, .25);
+    }
+
+    .sub-expiring {
+        background: rgba(245, 158, 11, .12);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, .25);
+    }
+
+    .sub-expired {
+        background: rgba(239, 68, 68, .12);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, .25);
+    }
+
+    .sub-suspended {
+        background: rgba(107, 114, 128, .12);
+        color: #6b7280;
+        border: 1px solid rgba(107, 114, 128, .25);
+    }
+
+    .sub-no_sub {
+        background: rgba(107, 114, 128, .12);
+        color: #6b7280;
+        border: 1px solid rgba(107, 114, 128, .25);
+    }
+
+    .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .dot-active {
+        background: #10b981;
+    }
+
+    .dot-expiring {
+        background: #f59e0b;
+    }
+
+    .dot-expired {
+        background: #ef4444;
+    }
+
+    .dot-suspended,
+    .dot-no_sub {
+        background: #6b7280;
+    }
+</style>
+
 <div class="page-header">
     <h1 style="font-size:20px;font-weight:700">Gimnasios</h1>
-    <button class="btn btn-primary ml-auto" onclick="document.getElementById('gym-modal').classList.add('open')">+ Nuevo
-        Gimnasio</button>
+    <button class="btn btn-primary ml-auto" onclick="openNewGymModal()">+ Nuevo Gimnasio</button>
 </div>
 
 <div class="page-body">
@@ -29,16 +115,26 @@ layout_footer($user);
                 <thead>
                     <tr>
                         <th>Nombre</th>
-                        <th>Slug</th>
                         <th>Usuarios</th>
                         <th>Salas</th>
-                        <th>Color</th>
+                        <th>Plan</th>
+                        <th>Vencimiento</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($gymnList as $g): ?>
+                    <?php foreach ($gymnList as $g):
+                        $sc = $g['sub_computed'] ?? 'no_sub';
+                        $labels = [
+                            'active' => 'Activo',
+                            'expiring' => 'Por vencer',
+                            'expired' => 'Vencido',
+                            'suspended' => 'Suspendido',
+                            'no_sub' => 'Sin suscripción',
+                        ];
+                        $planLabels = ['trial' => 'Trial', 'monthly' => 'Mensual', 'annual' => 'Anual'];
+                        ?>
                         <tr>
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px">
@@ -46,31 +142,49 @@ layout_footer($user);
                                         style="width:32px;height:32px;border-radius:8px;background:<?php echo htmlspecialchars($g['primary_color']) ?>26;display:flex;align-items:center;justify-content:center;font-weight:700;color:<?php echo htmlspecialchars($g['primary_color']) ?>;font-size:12px">
                                         <?php echo strtoupper(substr($g['name'], 0, 2)) ?>
                                     </div>
-                                    <strong>
-                                        <?php echo htmlspecialchars($g['name']) ?>
-                                    </strong>
+                                    <div>
+                                        <strong><?php echo htmlspecialchars($g['name']) ?></strong>
+                                        <div style="font-size:11px;color:var(--gf-text-muted)">
+                                            <?php echo htmlspecialchars($g['slug']) ?></div>
+                                    </div>
                                 </div>
                             </td>
-                            <td style="color:var(--gf-text-muted); font-size:13px">
-                                <?php echo htmlspecialchars($g['slug']) ?>
+                            <td><?php echo $g['user_count'] ?></td>
+                            <td><?php echo $g['sala_count'] ?></td>
+                            <td style="font-size:13px;color:var(--gf-text-muted)">
+                                <?php echo $planLabels[$g['plan'] ?? ''] ?? '—' ?></td>
+                            <td style="font-size:13px">
+                                <?php if ($g['current_period_end']): ?>
+                                    <?php
+                                    $d = new DateTime($g['current_period_end']);
+                                    echo $d->format('d/m/Y');
+                                    $daysLeft = (new DateTime())->diff($d)->days * ((new DateTime()) <= $d ? 1 : -1);
+                                    if ($daysLeft >= 0 && $daysLeft <= 14):
+                                        ?>
+                                        <span style="font-size:11px;color:#f59e0b;margin-left:6px">(<?php echo $daysLeft ?>d)</span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span style="color:var(--gf-text-muted)">—</span>
+                                <?php endif; ?>
                             </td>
                             <td>
-                                <?php echo $g['user_count'] ?>
+                                <span class="sub-badge sub-<?php echo $sc ?>">
+                                    <span class="dot dot-<?php echo $sc ?>"></span>
+                                    <?php echo $labels[$sc] ?? $sc ?>
+                                </span>
                             </td>
-                            <td>
-                                <?php echo $g['sala_count'] ?>
-                            </td>
-                            <td><span
-                                    style="display:inline-block;width:16px;height:16px;border-radius:4px;background:<?php echo htmlspecialchars($g['primary_color']) ?>"></span>
-                                <?php echo htmlspecialchars($g['primary_color']) ?>
-                            </td>
-                            <td><span class="badge <?php echo $g['active'] ? 'badge-work' : 'badge-danger' ?>">
-                                    <?php echo $g['active'] ? 'Activo' : 'Inactivo' ?>
-                                </span></td>
                             <td class="flex gap-2">
                                 <a href="<?php echo BASE_URL ?>/pages/admin/dashboard.php?gym_id=<?php echo $g['id'] ?>"
                                     class="btn btn-ghost btn-sm">Panel</a>
-                                <button class="btn btn-<?php echo $g['active'] ? 'danger' : 'primary' ?> btn-sm"
+                                <button class="btn btn-secondary btn-sm" onclick="openSubModal(<?php echo htmlspecialchars(json_encode([
+                                    'id' => $g['id'],
+                                    'name' => $g['name'],
+                                    'plan' => $g['plan'] ?? 'trial',
+                                    'status' => $g['sub_status'] ?? 'active',
+                                    'end' => $g['current_period_end'] ?? '',
+                                    'notes' => '',
+                                ])) ?>)">Ciclo</button>
+                                <button class="btn <?php echo $g['active'] ? 'btn-danger' : 'btn-primary' ?> btn-sm"
                                     onclick="toggleGym(<?php echo $g['id'] ?>, <?php echo (int) !$g['active'] ?>)">
                                     <?php echo $g['active'] ? 'Desactivar' : 'Activar' ?>
                                 </button>
@@ -83,7 +197,7 @@ layout_footer($user);
     </div>
 </div>
 
-<!-- New Gym Modal -->
+<!-- ── New Gym Modal ────────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="gym-modal">
     <div class="modal" style="max-width:500px">
         <div class="modal-header">
@@ -106,13 +220,68 @@ layout_footer($user);
                 <div class="form-group"><label class="form-label">Color Secundario</label><input type="color"
                         class="form-control" id="g-secondary" value="#ff6b35"></div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Gimnasio</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Gimnasio (Trial 30
+                días)</button>
         </form>
+    </div>
+</div>
+
+<!-- ── Subscription Modal ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="sub-modal">
+    <div class="modal" style="max-width:480px">
+        <div class="modal-header">
+            <h3 class="modal-title">Ciclo de facturación — <span id="sub-gym-name"></span></h3>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')"><svg
+                    width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="param-row">
+                <div class="form-group">
+                    <label class="form-label">Plan</label>
+                    <select class="form-control" id="sub-plan">
+                        <option value="trial">Trial</option>
+                        <option value="monthly">Mensual</option>
+                        <option value="annual">Anual</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Estado</label>
+                    <select class="form-control" id="sub-status">
+                        <option value="active">Activo</option>
+                        <option value="suspended">Suspendido</option>
+                        <option value="expired">Expirado</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Vencimiento</label>
+                <input type="date" class="form-control" id="sub-end">
+            </div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-secondary" style="flex:1" onclick="extendDays(30)">+ 30 días</button>
+                <button class="btn btn-secondary" style="flex:1" onclick="extendDays(90)">+ 3 meses</button>
+                <button class="btn btn-secondary" style="flex:1" onclick="extendDays(365)">+ 1 año</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notas internas</label>
+                <textarea class="form-control" id="sub-notes" rows="2"
+                    placeholder="Pagado por transferencia el 15/02..."></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveSub()">Guardar cambios</button>
+        </div>
     </div>
 </div>
 
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script>
+    let _subGymId = null;
+
+    function openNewGymModal() {
+        document.getElementById('gym-modal').classList.add('open');
+    }
+
     async function toggleGym(id, newActive) {
         await GF.put(`${window.GF_BASE}/api/gyms.php?id=${id}`, { active: newActive });
         location.reload();
@@ -120,16 +289,50 @@ layout_footer($user);
 
     async function createGym(e) {
         e.preventDefault();
-        const name = document.getElementById('g-name').value;
-        const data = { name, slug: document.getElementById('g-slug').value, primary_color: document.getElementById('g-primary').value, secondary_color: document.getElementById('g-secondary').value };
+        const data = {
+            name: document.getElementById('g-name').value,
+            slug: document.getElementById('g-slug').value,
+            primary_color: document.getElementById('g-primary').value,
+            secondary_color: document.getElementById('g-secondary').value,
+        };
         await GF.post(window.GF_BASE + '/api/gyms.php', data);
-        showToast('Gimnasio creado', 'success');
         location.reload();
     }
 
     document.getElementById('g-name').addEventListener('input', function () {
-        document.getElementById('g-slug').value = this.value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+        document.getElementById('g-slug').value = this.value.toLowerCase()
+            .replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
     });
+
+    function openSubModal(gym) {
+        _subGymId = gym.id;
+        document.getElementById('sub-gym-name').textContent = gym.name;
+        document.getElementById('sub-plan').value = gym.plan || 'trial';
+        document.getElementById('sub-status').value = gym.status || 'active';
+        document.getElementById('sub-end').value = gym.end || '';
+        document.getElementById('sub-notes').value = gym.notes || '';
+        document.getElementById('sub-modal').classList.add('open');
+    }
+
+    function extendDays(days) {
+        const cur = document.getElementById('sub-end').value;
+        const base = cur && cur >= new Date().toISOString().slice(0, 10) ? new Date(cur) : new Date();
+        base.setDate(base.getDate() + days);
+        document.getElementById('sub-end').value = base.toISOString().slice(0, 10);
+        document.getElementById('sub-status').value = 'active';
+    }
+
+    async function saveSub() {
+        if (!_subGymId) return;
+        await GF.put(`${window.GF_BASE}/api/subscriptions.php?gym_id=${_subGymId}`, {
+            plan: document.getElementById('sub-plan').value,
+            status: document.getElementById('sub-status').value,
+            current_period_end: document.getElementById('sub-end').value,
+            notes: document.getElementById('sub-notes').value,
+        });
+        document.getElementById('sub-modal').classList.remove('open');
+        location.reload();
+    }
 
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });

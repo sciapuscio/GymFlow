@@ -429,7 +429,8 @@
         'Pull-ups': 'pull_v', 'Dominadas': 'pull_v',
         'Chest-to-Bar Pull-ups': 'pull_v', 'Dominadas Pecho a Barra': 'pull_v',
         'Lat Pulldown': 'pull_v', 'Jalón al Pecho': 'pull_v',
-        'Muscle UP': 'pull_v', 'Toes-to-Bar': 'pull_v', 'Pies a la Barra': 'pull_v',
+        'Muscle UP': 'muscle_up', 'Musscle UP': 'muscle_up',
+        'Toes-to-Bar': 'pull_v', 'Pies a la Barra': 'pull_v',
         'Ring Dips': 'pull_v', 'Fondos en Anillas': 'pull_v',
         // Pull horizontal
         'Bent Over Row': 'pull_h', 'Remo Inclinado': 'pull_h',
@@ -468,6 +469,7 @@
 
     // ── Archetype definitions ──────────────────────────────────────────────────
     const ARCHETYPES = {
+        muscle_up: { frames: [P.pullv_hang, P.pullv_top, P.pressv_rack, P.pressv_top, P.pressv_rack, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 3200, restCycleDuration: 5000 },
         squat: { frames: [P.squat_up, P.squat_down, P.squat_up], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
         lunge: { frames: [P.stand, P.lunge_l, P.stand, P.lunge_r], restFrames: [P.stand], cycleDuration: 2600, restCycleDuration: 5000 },
         hinge: { frames: [P.hinge_top, P.hinge_bottom, P.hinge_top], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000 },

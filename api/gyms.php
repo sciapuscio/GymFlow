@@ -35,8 +35,22 @@ if ($method === 'GET' && $id) {
     jsonResponse($gym);
 }
 
+// Upload logo — must come BEFORE the generic POST handler
+if ($method === 'POST' && isset($_GET['logo']) && $id) {
+    $user = requireAuth('superadmin', 'admin');
+    requireGymAccess($user, $id);
+    if (isset($_FILES['logo'])) {
+        $path = uploadFile($_FILES['logo'], 'logos/gyms');
+        if ($path) {
+            db()->prepare("UPDATE gyms SET logo_path = ? WHERE id = ?")->execute([$path, $id]);
+            jsonResponse(['path' => $path]);
+        }
+    }
+    jsonError('Upload failed');
+}
+
 // POST — create gym (superadmin)
-if ($method === 'POST') {
+if ($method === 'POST' && !isset($_GET['logo'])) {
     $user = requireAuth('superadmin');
     $data = getBody();
 
@@ -58,7 +72,17 @@ if ($method === 'POST') {
         $data['spotify_mode'] ?? 'disabled',
     ]);
     $newId = db()->lastInsertId();
+
+    // Auto-create a 30-day trial subscription for the new gym
+    $trialEnd = date('Y-m-d', strtotime('+30 days'));
+    db()->prepare(
+        "INSERT IGNORE INTO gym_subscriptions 
+            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end)
+         VALUES (?, 'trial', 'active', ?, CURDATE(), ?)"
+    )->execute([$newId, $trialEnd, $trialEnd]);
+
     jsonResponse(['id' => $newId, 'slug' => $slug], 201);
+
 }
 
 // PUT — update gym
@@ -69,7 +93,7 @@ if ($method === 'PUT' && $id) {
 
     $fields = [];
     $params = [];
-    $allowed = ['name', 'primary_color', 'secondary_color', 'font_family', 'font_display', 'spotify_mode', 'spotify_client_id', 'spotify_client_secret', 'active'];
+    $allowed = ['name', 'primary_color', 'secondary_color', 'font_family', 'font_display', 'spotify_mode', 'spotify_client_id', 'spotify_client_secret', 'active', 'logo_path'];
     foreach ($allowed as $f) {
         if (isset($data[$f])) {
             $fields[] = "$f = ?";
@@ -90,16 +114,4 @@ if ($method === 'DELETE' && $id) {
     jsonResponse(['success' => true]);
 }
 
-// Upload logo
-if ($method === 'POST' && isset($_GET['logo']) && $id) {
-    $user = requireAuth('superadmin', 'admin');
-    requireGymAccess($user, $id);
-    if (isset($_FILES['logo'])) {
-        $path = uploadFile($_FILES['logo'], 'logos/gyms');
-        if ($path) {
-            db()->prepare("UPDATE gyms SET logo_path = ? WHERE id = ?")->execute([$path, $id]);
-            jsonResponse(['path' => $path]);
-        }
-    }
-    jsonError('Upload failed');
-}
+// (logo upload handled above)

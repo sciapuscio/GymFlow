@@ -292,6 +292,11 @@ if (!$sala) {
 
     <!-- Finished screen -->
     <div class="finished-screen" id="finished-screen" style="display:none">
+        <?php if ($sala['gym_logo']): ?>
+            <img src="<?php echo BASE_URL . htmlspecialchars($sala['gym_logo']) ?>"
+                alt="<?php echo htmlspecialchars($sala['gym_name']) ?>" class="finished-gym-logo"
+                onerror="this.style.display='none'">
+        <?php endif; ?>
         <div class="finished-icon">🏆</div>
         <div class="finished-title">¡EXCELENTE!</div>
         <div class="finished-subtitle">Sesión completada</div>
@@ -311,11 +316,17 @@ if (!$sala) {
     <script src="<?php echo BASE_URL ?>/assets/js/display-sync.js"></script>
     <script>
         // Spotify now-playing widget
+        // Polls at 15s intervals — decorative widget, doesn't need high reactivity.
+        // Backs off to 60s if Spotify returns 429 (rate limited).
+        let spDisplay429 = false;
         async function spPollDisplay() {
+            const interval = spDisplay429 ? 60000 : 15000;
+            spDisplay429 = false;
             try {
                 const r = await fetch(BASE + '/api/spotify.php?action=now-playing&sala_id=' + SALA_ID, { credentials: 'include' });
                 if (!r.ok) { setTimeout(spPollDisplay, 8000); return; }
                 const d = await r.json();
+                if (d?.status === 429) { spDisplay429 = true; setTimeout(spPollDisplay, interval); return; }
                 const widget = document.getElementById('sp-widget');
                 if (d.playing && d.track) {
                     document.getElementById('sp-track').textContent = d.track;
@@ -330,10 +341,10 @@ if (!$sala) {
                     widget.style.display = 'none';
                 }
             } catch (e) { }
-            setTimeout(spPollDisplay, 4000);
+            setTimeout(spPollDisplay, interval);
         }
-        // Start polling after 3s so session loads first
-        setTimeout(spPollDisplay, 3000);
+        // Start polling after 5s so session loads first
+        setTimeout(spPollDisplay, 5000);
     </script>
     <script src="<?php echo BASE_URL ?>/assets/js/exercise-poses.js"></script>
     <script src="<?php echo BASE_URL ?>/assets/js/stickman.js"></script>

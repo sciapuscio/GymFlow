@@ -64,19 +64,19 @@ body.state-idle {
 }
 
 .idle-gym-logo {
-    max-width: 240px;
-    max-height: 120px;
+    max-width: clamp(280px, 38vw, 560px);
+    max-height: clamp(140px, 18vh, 280px);
     object-fit: contain;
-    filter: drop-shadow(0 0 40px rgba(0, 245, 212, 0.3));
+    filter: drop-shadow(0 0 60px rgba(0, 245, 212, 0.3));
     animation: logoFloat 4s ease infinite;
 }
 
 .idle-gym-logo-placeholder {
     font-family: var(--font-display);
-    font-size: 80px;
+    font-size: clamp(100px, 16vw, 220px);
     letter-spacing: 0.06em;
     color: var(--d-accent);
-    text-shadow: 0 0 60px rgba(0, 245, 212, 0.4);
+    text-shadow: 0 0 80px rgba(0, 245, 212, 0.4);
     animation: logoFloat 4s ease infinite;
 }
 
@@ -94,24 +94,24 @@ body.state-idle {
 
 .idle-sala-name {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: clamp(52px, 9vw, 140px);
     letter-spacing: 0.2em;
-    color: rgba(255, 255, 255, 0.45);
+    color: rgba(255, 255, 255, 0.55);
     text-transform: uppercase;
 }
 
 .idle-ready-text {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.3);
-    letter-spacing: 0.15em;
+    font-size: clamp(28px, 4vw, 64px);
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     animation: breathe 3s ease infinite;
 }
 
 .idle-class-label {
-    font-size: 22px;
+    font-size: clamp(32px, 5vw, 80px);
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 @keyframes breathe {
@@ -195,14 +195,14 @@ body.state-idle {
 }
 
 .display-gym-logo {
-    height: 40px;
-    max-width: 160px;
+    height: clamp(44px, 5vh, 64px);
+    max-width: 240px;
     object-fit: contain;
 }
 
 .display-gym-name {
     font-family: var(--font-display);
-    font-size: 26px;
+    font-size: clamp(28px, 3vw, 48px);
     letter-spacing: 0.12em;
     color: var(--d-accent);
 }
@@ -212,7 +212,7 @@ body.state-idle {
 }
 
 .display-sala-name {
-    font-size: 14px;
+    font-size: clamp(14px, 1.6vw, 22px);
     font-weight: 700;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -220,7 +220,7 @@ body.state-idle {
 }
 
 .display-session-name {
-    font-size: 12px;
+    font-size: clamp(12px, 1.2vw, 18px);
     color: rgba(255, 255, 255, 0.3);
     margin-top: 2px;
 }
@@ -243,7 +243,7 @@ body.state-idle {
 /* Main content area */
 .display-main {
     display: grid;
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr clamp(340px, 28vw, 480px);
     align-items: center;
     padding: 20px 40px;
     gap: 40px;
@@ -283,10 +283,10 @@ body.state-idle {
 /* Clock */
 .display-clock {
     font-family: var(--font-display);
-    font-size: min(18vw, 200px);
+    font-size: min(20vw, 320px);
     line-height: 0.85;
     color: var(--d-accent);
-    text-shadow: 0 0 80px rgba(0, 245, 212, 0.3);
+    text-shadow: 0 0 100px rgba(0, 245, 212, 0.35);
     letter-spacing: 0.02em;
     transition: color 0.4s ease;
     font-variant-numeric: tabular-nums;
@@ -294,13 +294,13 @@ body.state-idle {
 
 .state-rest .display-clock {
     color: #6b8fff;
-    text-shadow: 0 0 80px rgba(61, 90, 254, 0.3);
+    text-shadow: 0 0 100px rgba(61, 90, 254, 0.35);
 }
 
 /* Exercise name */
 .display-exercise-name {
     font-family: var(--font-display);
-    font-size: min(5vw, 64px);
+    font-size: clamp(40px, 6.5vw, 100px);
     letter-spacing: 0.05em;
     color: rgba(255, 255, 255, 0.95);
     text-transform: uppercase;
@@ -329,7 +329,7 @@ body.state-idle {
 }
 
 .display-block-meta {
-    font-size: 18px;
+    font-size: clamp(18px, 2.2vw, 34px);
     color: rgba(255, 255, 255, 0.55);
     font-weight: 500;
 }
@@ -384,13 +384,13 @@ body.state-idle {
 
 .display-rounds-value {
     font-family: var(--font-display);
-    font-size: 60px;
+    font-size: clamp(60px, 7vw, 110px);
     line-height: 1;
     color: rgba(255, 255, 255, 0.9);
 }
 
 .display-rounds-total {
-    font-size: 20px;
+    font-size: clamp(20px, 2vw, 32px);
     color: rgba(255, 255, 255, 0.35);
 }
 
@@ -422,14 +422,14 @@ body.state-idle {
 
 .display-next-name {
     font-family: var(--font-display);
-    font-size: 28px;
+    font-size: clamp(28px, 3.5vw, 52px);
     letter-spacing: 0.05em;
     color: rgba(255, 255, 255, 0.7);
     margin-bottom: 8px;
 }
 
 .display-next-duration {
-    font-size: 14px;
+    font-size: clamp(14px, 1.5vw, 22px);
     color: rgba(255, 255, 255, 0.35);
 }
 
@@ -537,6 +537,16 @@ body.state-idle {
 .finished-icon {
     font-size: 80px;
     animation: bounceIn 0.6s ease;
+}
+
+/* Gym logo above trophy on finished screen */
+.finished-gym-logo {
+    max-width: 300px;
+    max-height: 100px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 30px color-mix(in srgb, var(--d-accent) 45%, transparent));
+    animation: logoFloat 4s ease infinite, fadeIn 1.2s ease;
+    margin-bottom: 8px;
 }
 
 @keyframes bounceIn {

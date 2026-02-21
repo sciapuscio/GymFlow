@@ -345,7 +345,111 @@ layout_footer($user);
         object-fit: cover;
         flex-shrink: 0;
     }
+
+    /* ── Toast Notifications ───────────────────────────────────────────────── */
+    #gf-toast-container {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+    }
+
+    .gf-toast {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        max-width: 300px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
+        backdrop-filter: blur(8px);
+        pointer-events: auto;
+        animation: gf-toast-in .25s cubic-bezier(.34, 1.56, .64, 1) forwards;
+        border: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .gf-toast.hiding {
+        animation: gf-toast-out .3s ease forwards;
+    }
+
+    .gf-toast-icon {
+        font-size: 15px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    .gf-toast-body {
+        flex: 1;
+        line-height: 1.4;
+    }
+
+    .gf-toast-title {
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .gf-toast-msg {
+        font-weight: 400;
+        opacity: .85;
+    }
+
+    .gf-toast.error {
+        background: rgba(220, 38, 38, .85);
+        color: #fff;
+    }
+
+    .gf-toast.warning {
+        background: rgba(217, 119, 6, .85);
+        color: #fff;
+    }
+
+    .gf-toast.info {
+        background: rgba(37, 99, 235, .85);
+        color: #fff;
+    }
+
+    .gf-toast.success {
+        background: rgba(5, 150, 105, .85);
+        color: #fff;
+    }
+
+    @keyframes gf-toast-in {
+        from {
+            opacity: 0;
+            transform: translateX(40px) scale(.92);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    @keyframes gf-toast-out {
+        from {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            max-height: 120px;
+            margin: 0;
+        }
+
+        to {
+            opacity: 0;
+            transform: translateX(40px) scale(.9);
+            max-height: 0;
+            margin: -8px 0 0;
+        }
+    }
 </style>
+
+<!-- Toast container -->
+<div id="gf-toast-container"></div>
 
 <script src="http://localhost:3001/socket.io/socket.io.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
@@ -363,14 +467,64 @@ layout_footer($user);
         if (SPOTIFY_CONNECTED) spPollNowPlaying();
     });
 
+    // ── Toast Notifications ──────────────────────────────────────────────────
+    function gfToast(type, title, msg, duration = 4000) {
+        const container = document.getElementById('gf-toast-container');
+        const toast = document.createElement('div');
+        toast.className = `gf-toast ${type}`;
+        const icons = { error: '🚫', warning: '⚠️', info: 'ℹ️', success: '✅' };
+        toast.innerHTML = `
+            <span class="gf-toast-icon">${icons[type] || 'ℹ️'}</span>
+            <div class="gf-toast-body">
+                <div class="gf-toast-title">${title}</div>
+                ${msg ? `<div class="gf-toast-msg">${msg}</div>` : ''}
+            </div>`;
+        container.appendChild(toast);
+        const dismiss = () => {
+            toast.classList.add('hiding');
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        };
+        toast.addEventListener('click', dismiss);
+        setTimeout(dismiss, duration);
+    }
+
+    // Maps Spotify HTTP status codes to human-readable messages
+    function spCheckStatus(res, action = '') {
+        const st = res?.status ?? 0;
+        if (!st || st === 200 || st === 204) return; // all good
+        const labels = {
+            429: ['Límite de Spotify', 'Demasiadas solicitudes. Esperá unos segundos.'],
+            403: ['Sin permiso', 'Tu cuenta Spotify no permite esta acción (¿es Premium?).'],
+            404: ['Sin dispositivo activo', 'Abrí Spotify en tu celular o PC y reproducí algo primero.'],
+            401: ['Sesión expirada', 'Reconectá tu cuenta Spotify desde Mi Perfil.'],
+        };
+        const [title, msg] = labels[st] || [`Error Spotify ${st}`, action ? `Falló al ejecutar: ${action}` : ''];
+        const type = st === 429 ? 'warning' : st === 404 ? 'info' : 'error';
+        gfToast(type, title, msg);
+    }
+
     // ── Spotify Controls ─────────────────────────────────────────────────────
     let spPlaying = false;
     let spPollTimer = null;
+    let sp429Streak = 0;       // consecutive 429 responses
+    let spRefreshPending = false; // debounce rapid refresh calls
 
     async function spPollNowPlaying() {
         clearTimeout(spPollTimer);
+        let nextInterval = 10000; // base: 10s (down from 3s)
         try {
             const d = await GF.get(window.GF_BASE + '/api/spotify.php?action=now-playing');
+
+            // 429 backoff: 30s → 60s → 120s (cap)
+            if (d?.status === 429) {
+                sp429Streak++;
+                nextInterval = Math.min(120000, 30000 * sp429Streak);
+                spCheckStatus(d, 'now-playing');
+                spPollTimer = setTimeout(spPollNowPlaying, nextInterval);
+                return;
+            }
+            sp429Streak = 0;
+
             const np = document.getElementById('sp-now-playing');
             if (d.playing && d.track) {
                 document.getElementById('sp-track').textContent = d.track;
@@ -387,21 +541,29 @@ layout_footer($user);
             const ico = document.getElementById('sp-play-ico');
             spPlaying = d.playing;
             ico.innerHTML = d.playing
-                ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'  // pause icon
-                : '<path d="M8 5v14l11-7z"/>';                     // play icon
+                ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+                : '<path d="M8 5v14l11-7z"/>';
         } catch (e) { }
-        spPollTimer = setTimeout(spPollNowPlaying, 3000);
+        spPollTimer = setTimeout(spPollNowPlaying, nextInterval);
     }
-    // Called immediately after autoplay fires so the UI reflects the new track fast
-    function spRefreshNow() { setTimeout(spPollNowPlaying, 1200); }
+
+    // Debounced refresh: after an action (play/skip) do ONE refresh 1.5s later,
+    // ignoring any additional refresh calls that arrive in that window.
+    function spRefreshNow() {
+        if (spRefreshPending) return;
+        spRefreshPending = true;
+        setTimeout(() => { spRefreshPending = false; spPollNowPlaying(); }, 1500);
+    }
 
     async function spTogglePlay() {
-        await GF.post(window.GF_BASE + '/api/spotify.php?action=' + (spPlaying ? 'pause' : 'play'), {});
+        const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=' + (spPlaying ? 'pause' : 'play'), {});
+        spCheckStatus(res, spPlaying ? 'pause' : 'play');
         setTimeout(spPollNowPlaying, 600);
     }
 
     async function spControl(action) {
-        await GF.post(window.GF_BASE + '/api/spotify.php?action=' + action, {});
+        const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=' + action, {});
+        spCheckStatus(res, action);
         setTimeout(spPollNowPlaying, 800);
     }
 
@@ -411,6 +573,11 @@ layout_footer($user);
         const res = document.getElementById('sp-results');
         res.innerHTML = '<div style="font-size:11px;color:var(--gf-text-muted);padding:6px">Buscando...</div>';
         const d = await GF.get(window.GF_BASE + '/api/spotify.php?action=search&type=track,playlist&q=' + encodeURIComponent(q));
+        if (d?.status && d.status !== 200 && d.status !== 204) {
+            spCheckStatus(d, 'search');
+            res.innerHTML = '';
+            return;
+        }
         res.innerHTML = '';
         const tracks = d.tracks?.items || [];
         const playlists = d.playlists?.items || [];
@@ -432,7 +599,8 @@ layout_footer($user);
 
     async function spPlay(uri, isContext = false) {
         const body = isContext ? { context_uri: uri } : { uris: [uri] };
-        await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
+        const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
+        spCheckStatus(res, 'play');
         document.getElementById('sp-search').value = '';
         document.getElementById('sp-results').innerHTML = '';
         setTimeout(spPollNowPlaying, 1000);

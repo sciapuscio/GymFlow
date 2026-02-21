@@ -49,8 +49,28 @@ function requireAuth(string ...$roles): array
         http_response_code(403);
         die(json_encode(['error' => 'Forbidden']));
     }
+
+    // ── Subscription gate (skipped for superadmin) ───────────────────────────
+    if ($user['role'] !== 'superadmin' && !empty($user['gym_id'])) {
+        $sub = getGymSubscription((int) $user['gym_id']);
+        $blocked = !$sub
+            || $sub['status'] === 'suspended'
+            || ($sub['status'] !== 'active')
+            || (!empty($sub['current_period_end']) && $sub['current_period_end'] < date('Y-m-d'));
+
+        if ($blocked) {
+            if ($isBrowser) {
+                header('Location: ' . BASE_URL . '/pages/expired.php');
+                exit;
+            }
+            http_response_code(402);
+            die(json_encode(['error' => 'Subscription expired', 'code' => 'SUBSCRIPTION_EXPIRED']));
+        }
+    }
+
     return $user;
 }
+
 
 function requireGymAccess(array $user, int $gymId): void
 {
@@ -99,3 +119,13 @@ function getGymBranding(int $gymId): array
     $stmt->execute([$gymId]);
     return $stmt->fetch() ?: [];
 }
+
+function getGymSubscription(int $gymId): ?array
+{
+    $stmt = db()->prepare(
+        "SELECT * FROM gym_subscriptions WHERE gym_id = ? LIMIT 1"
+    );
+    $stmt->execute([$gymId]);
+    return $stmt->fetch() ?: null;
+}
+

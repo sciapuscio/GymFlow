@@ -15,6 +15,11 @@ const GFLive = (() => {
     // Spotify
     let _lastAutoPlayUri = null;
 
+    // Volume fade-out state
+    let _fadeInterval = null;   // setInterval handle for volume steps
+    let _fadePauseTimeout = null; // setTimeout handle for the final pause call
+    let _fadingOut = false;     // true while fade is in progress
+
     // Stickman (mini, instructor panel)
     let stickMini = null;
 
@@ -105,14 +110,20 @@ const GFLive = (() => {
         _updateStickman();
 
         // Spotify: on block change, play new track or stop if no track assigned
-        if (blockChanged && isPlaying) {
-            const b = blocks[currentIdx];
-            if (b?.spotify_uri) {
-                autoPlayBlockSpotify(b);
-            } else {
-                // New block has no track — always stop
-                _lastAutoPlayUri = null;
-                spotifyPause();
+        if (blockChanged) {
+            _cancelFade();          // stop any running fade
+            if (isPlaying) {
+                const b = blocks[currentIdx];
+                if (b?.spotify_uri) {
+                    // Restore volume before playing new track
+                    spotifySetVolume(100);
+                    autoPlayBlockSpotify(b);
+                } else {
+                    // New block has no track — always stop
+                    _lastAutoPlayUri = null;
+                    spotifyPause();
+                    spotifySetVolume(100);
+                }
             }
         }
     }
@@ -268,7 +279,10 @@ const GFLive = (() => {
                         ? { context_uri: b.spotify_uri, position_ms: positionMs }
                         : { uris: [b.spotify_uri], position_ms: positionMs };
                     GF.post(window.GF_BASE + '/api/spotify.php?action=play', body)
-                        .then(() => { if (typeof spRefreshNow === 'function') setTimeout(spRefreshNow, 1200); })
+                        .then((res) => {
+                            if (typeof spCheckStatus === 'function') spCheckStatus(res, 'resume');
+                            if (typeof spRefreshNow === 'function') setTimeout(spRefreshNow, 1200);
+                        })
                         .catch(() => { });
                 }
             } else {
@@ -331,6 +345,55 @@ const GFLive = (() => {
         _lastAutoPlayUri = null;
         GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
     }
+    function spotifySetVolume(vol) {
+        GF.post(window.GF_BASE + '/api/spotify.php?action=volume&vol=' + vol, {}).catch(() => { });
+    }
+
+    // ── Volume Fade ──────────────────────────────────────────────────────────
+    // Fades volume from 100 → 0 over `remainingSecs` seconds,
+    // then pauses Spotify and restores volume to 100.
+    function _startFadeOut(remainingSecs) {
+        if (_fadingOut) return;
+        _fadingOut = true;
+
+        // Step every 3s — drastically reduces volume API calls (Spotify rate-limits this endpoint hard).
+        // A 30s fade = 10 calls instead of 30. Still sounds smooth enough live.
+        const STEP_MS = 3000;
+        const totalSteps = Math.max(1, Math.round(remainingSecs * 1000 / STEP_MS));
+        let step = 0;
+
+        console.log(`[GFLive] Starting volume fade-out over ${remainingSecs}s (${totalSteps} steps)`);
+
+        _fadeInterval = setInterval(() => {
+            step++;
+            const vol = Math.round(100 * (1 - step / totalSteps));
+            spotifySetVolume(Math.max(0, vol));
+
+            if (step >= totalSteps) {
+                clearInterval(_fadeInterval);
+                _fadeInterval = null;
+                _fadingOut = false;
+                _fadePauseTimeout = setTimeout(() => {
+                    _fadePauseTimeout = null;
+                    spotifyPause();
+                    setTimeout(() => spotifySetVolume(100), 1500);
+                }, 300);
+            }
+        }, STEP_MS);
+    }
+
+    function _cancelFade() {
+        if (_fadeInterval) {
+            clearInterval(_fadeInterval);
+            _fadeInterval = null;
+        }
+        // Cancel the pending pause call too — prevents it from interrupting the next track
+        if (_fadePauseTimeout) {
+            clearTimeout(_fadePauseTimeout);
+            _fadePauseTimeout = null;
+        }
+        _fadingOut = false;
+    }
     async function autoPlayBlockSpotify(block) {
         if (!block?.spotify_uri) return;
         if (!isPlaying) return;
@@ -339,16 +402,12 @@ const GFLive = (() => {
         try {
             const isPlaylist = block.spotify_uri.startsWith('spotify:playlist:') || block.spotify_uri.startsWith('spotify:album:');
             const body = isPlaylist ? { context_uri: block.spotify_uri } : { uris: [block.spotify_uri] };
-            await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
+            const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
+            // Show toast if Spotify returned a non-success status (e.g. 429, 404…)
+            if (typeof spCheckStatus === 'function') spCheckStatus(res, 'auto-play');
             if (typeof spRefreshNow === 'function') spRefreshNow();
-            // Retry after 2s: when previous track ended naturally, Spotify device goes to
-            // "paused" state. First call selects the track but doesn't start it.
-            // A second play (empty body = resume) forces the player to actually start.
-            setTimeout(async () => {
-                if (_lastAutoPlayUri === block.spotify_uri && isPlaying) {
-                    GF.post(window.GF_BASE + '/api/spotify.php?action=play', {}).catch(() => { });
-                }
-            }, 2000);
+            // NOTE: the blind 2s retry was removed — it always fired even on successful plays,
+            // doubling play requests. The PHP backend already auto-picks the best device on 404.
         } catch (e) { /* Spotify not available */ }
     }
 
