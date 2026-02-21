@@ -94,11 +94,12 @@ try {
     db()->beginTransaction();
 
     // 1. Create gym
+    $instructorsCount = trim($data['instructors_count'] ?? '');
     $stmt = db()->prepare(
-        "INSERT INTO gyms (name, slug, primary_color, secondary_color, font_family, font_display, spotify_mode, active)
-         VALUES (?, ?, '#e5ff3d', '#6c63ff', 'Inter', 'Outfit', 'disabled', 1)"
+        "INSERT INTO gyms (name, slug, city, phone, gym_type, instructors_count, primary_color, secondary_color, font_family, font_display, spotify_mode, active)
+         VALUES (?, ?, ?, ?, ?, ?, '#e5ff3d', '#6c63ff', 'Inter', 'Outfit', 'disabled', 1)"
     );
-    $stmt->execute([sanitize($gymName), $slug]);
+    $stmt->execute([sanitize($gymName), $slug, sanitize($city), sanitize($phone), sanitize($gymType), sanitize($instructorsCount)]);
     $gymId = (int) db()->lastInsertId();
 
     // 2. Create admin user (role = admin, linked to this gym)
@@ -149,8 +150,6 @@ try {
     $expires = date('Y-m-d H:i:s', time() + SESSION_LIFETIME);
     db()->prepare("INSERT INTO sessions_auth (user_id, token, expires_at) VALUES (?,?,?)")
         ->execute([$userId, $token, $expires]);
-    db()->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")
-        ->execute([$userId]);
 
     db()->commit();
 

@@ -33,3 +33,11 @@ if ($method === 'GET' && $action === 'me') {
     unset($user['password_hash']);
     jsonResponse($user);
 }
+
+// Mark first login → clears tour trigger
+if ($method === 'POST' && $action === 'first_login') {
+    $user = requireAuth();
+    db()->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")
+        ->execute([$user['id']]);
+    jsonResponse(['success' => true]);
+}

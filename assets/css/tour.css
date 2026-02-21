@@ -1,0 +1,381 @@
+/* ============================================================
+   GymFlow — Onboarding Tour Styles
+   Loaded globally via layout.php for admin/instructor roles
+   ============================================================ */
+
+/* ---- Overlay ---- */
+#gf-tour-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99990;
+    pointer-events: none;
+    transition: opacity .4s ease;
+}
+
+#gf-tour-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Dark backdrop with spotlight hole via radial gradient mask */
+#gf-tour-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99991;
+    background: rgba(5, 6, 10, 0.82);
+    backdrop-filter: blur(1px);
+    pointer-events: all;
+    transition: clip-path .45s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Spotlight: the rect around the highlighted element punched out */
+#gf-tour-backdrop.spotlit {
+    /* overridden by JS with exact coords */
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%,
+            0% 0%);
+}
+
+/* ---- Tooltip card ---- */
+#gf-tour-tip {
+    position: fixed;
+    z-index: 99999;
+    width: 320px;
+    background: #1a1d27;
+    border: 1px solid rgba(229, 255, 61, 0.2);
+    border-radius: 16px;
+    padding: 22px 24px 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(229, 255, 61, 0.08);
+    pointer-events: all;
+    transition: top .35s cubic-bezier(.4, 0, .2, 1), left .35s cubic-bezier(.4, 0, .2, 1), opacity .3s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+#gf-tour-tip.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Progress dots */
+.tour-progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.tour-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    transition: background .25s, transform .25s;
+}
+
+.tour-dot.active {
+    background: #e5ff3d;
+    transform: scale(1.3);
+}
+
+.tour-dot.done {
+    background: rgba(229, 255, 61, 0.4);
+}
+
+/* Badge */
+.tour-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #e5ff3d;
+    background: rgba(229, 255, 61, 0.08);
+    border: 1px solid rgba(229, 255, 61, 0.2);
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 12px;
+}
+
+.tour-badge-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #e5ff3d;
+    animation: tour-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes tour-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(229, 255, 61, .5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(229, 255, 61, 0);
+    }
+}
+
+/* Content */
+.tour-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f0f2f8;
+    margin-bottom: 8px;
+    line-height: 1.3;
+    font-family: 'Inter', sans-serif;
+}
+
+.tour-body {
+    font-size: 0.85rem;
+    color: #8892a4;
+    line-height: 1.65;
+    margin-bottom: 18px;
+}
+
+.tour-body strong {
+    color: #c8d0e0;
+    font-weight: 600;
+}
+
+.tour-body code {
+    background: rgba(229, 255, 61, 0.08);
+    color: #e5ff3d;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+}
+
+/* Emoji icon area */
+.tour-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* Actions */
+.tour-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tour-btn-primary {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #e5ff3d;
+    color: #0a0b0f;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    border: none;
+    border-radius: 100px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+}
+
+.tour-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(229, 255, 61, 0.3);
+}
+
+.tour-btn-secondary {
+    background: transparent;
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    color: #8892a4;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-radius: 100px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: all .2s;
+    white-space: nowrap;
+}
+
+.tour-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #c8d0e0;
+}
+
+.tour-skip {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: auto;
+    transition: color .2s;
+    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
+}
+
+.tour-skip:hover {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Pointer/arrow on the tip */
+#gf-tour-tip::before {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #1a1d27;
+    border: 1px solid rgba(229, 255, 61, 0.2);
+    transform: rotate(45deg);
+    z-index: -1;
+    transition: top .35s, left .35s, bottom .35s, right .35s;
+}
+
+#gf-tour-tip[data-arrow="top"]::before {
+    top: -6px;
+    left: 24px;
+    border-bottom: none;
+    border-right: none;
+}
+
+#gf-tour-tip[data-arrow="bottom"]::before {
+    bottom: -6px;
+    left: 24px;
+    border-top: none;
+    border-left: none;
+}
+
+#gf-tour-tip[data-arrow="left"]::before {
+    left: -6px;
+    top: 20px;
+    border-right: none;
+    border-bottom: none;
+}
+
+#gf-tour-tip[data-arrow="right"]::before {
+    right: -6px;
+    top: 20px;
+    border-left: none;
+    border-top: none;
+}
+
+#gf-tour-tip[data-arrow="none"]::before {
+    display: none;
+}
+
+/* ---- Highlight ring around target element ---- */
+.gf-tour-highlight {
+    position: relative;
+    z-index: 99992 !important;
+    outline: 2px solid rgba(229, 255, 61, 0.5) !important;
+    outline-offset: 4px !important;
+    border-radius: 8px;
+    box-shadow: 0 0 0 4px rgba(229, 255, 61, 0.12) !important;
+    pointer-events: none !important;
+}
+
+/* Welcome modal (Step 0 — big) */
+#gf-tour-welcome {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    pointer-events: all;
+    /* CRITICAL: prevents clicks from falling through to backdrop */
+}
+
+.tour-welcome-card {
+    background: #1a1d27;
+    border: 1px solid rgba(229, 255, 61, 0.2);
+    border-radius: 24px;
+    padding: 48px 44px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7);
+    animation: tour-welcome-in .45s cubic-bezier(.34, 1.56, .64, 1);
+    position: relative;
+}
+
+@keyframes tour-welcome-in {
+    from {
+        transform: scale(0.85) translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.tour-welcome-emoji {
+    font-size: 3.5rem;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.tour-welcome-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #f0f2f8;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    font-family: 'Inter', sans-serif;
+}
+
+.tour-welcome-title span {
+    color: #e5ff3d;
+}
+
+.tour-welcome-sub {
+    font-size: 0.92rem;
+    color: #8892a4;
+    line-height: 1.7;
+    margin-bottom: 32px;
+}
+
+.tour-steps-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    margin-bottom: 32px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.tour-step-preview-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    color: #8892a4;
+}
+
+.tour-step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(229, 255, 61, 0.1);
+    border: 1px solid rgba(229, 255, 61, 0.25);
+    color: #e5ff3d;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tour-welcome-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}

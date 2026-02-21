@@ -22,6 +22,9 @@ function layout_header(string $title, string $activeNav = '', ?array $user = nul
         <?php if (strpos($activeNav, 'builder') !== false || $activeNav === 'live'): ?>
             <link rel="stylesheet" href="<?php echo $base ?>/assets/css/builder.css">
         <?php endif; ?>
+        <?php if (isset($user) && in_array($user['role'] ?? '', ['admin', 'instructor'])): ?>
+            <link rel="stylesheet" href="<?php echo $base ?>/assets/css/tour.css">
+        <?php endif; ?>
         <style>
             /* Dynamic branding from gym */
             :root {
@@ -124,6 +127,29 @@ function layout_footer(array $user): void
                     });
                 </script>
                 <?php
+                // ── Onboarding tour (admin + instructor only) ──────────────────────
+                $tourRole = $user['role'] ?? '';
+                if (in_array($tourRole, ['admin', 'instructor'])) {
+                    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+                    $tourPage = null;
+                    $tourNeeded = empty($user['last_login']); // NULL = new user
+                    if (str_contains($scriptName, 'admin/dashboard'))
+                        $tourPage = 'admin_dashboard';
+                    elseif (str_contains($scriptName, 'instructor/dashboard'))
+                        $tourPage = 'instructor_dashboard';
+                    elseif (str_contains($scriptName, 'instructor/builder'))
+                        $tourPage = 'builder';
+                    if ($tourPage):
+                        ?>
+                        <script>
+                            window.GF_TOUR_PAGE = '<?php echo $tourPage; ?>';
+                            window.GF_TOUR_NEEDED = <?php echo $tourNeeded ? 'true' : 'false'; ?>;
+                        </script>
+                        <script src="<?php echo defined('BASE_URL') ? BASE_URL : '' ?>/assets/js/tour.js"></script>
+                        <?php
+                    endif;
+                }
+    // ── end tour ───────────────────────────────────────────────────────
 }
 
 function layout_end(): void
