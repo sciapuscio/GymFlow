@@ -128,7 +128,8 @@ async function loadSession(sessionId) {
         sessionId: parseInt(row.id),
         salaId: parseInt(row.sala_id),
         sessionName: row.name,
-        status: row.status || 'idle',
+        // On fresh server load, never auto-resume 'playing' — require explicit control:play
+        status: row.status === 'playing' ? 'paused' : (row.status || 'idle'),
         blocks: JSON.parse(row.blocks_json || '[]'),
         currentBlockIndex: parseInt(row.current_block_index) || 0,
         elapsed,
@@ -311,6 +312,8 @@ io.on('connection', (socket) => {
         st.currentBlockIndex = Math.max(0, Math.min(index, st.blocks.length - 1));
         st.elapsed = 0;
         st.prepRemaining = 0;
+        // Keep current status — only control:play should start the session
+        // If was playing, keep playing the new block; otherwise stay idle/paused
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,

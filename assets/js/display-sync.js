@@ -65,6 +65,9 @@
             if (liveScreen) liveScreen.style.display = 'none';
             if (finishedScreen) finishedScreen.style.display = 'none';
             if (pausedOverlay) pausedOverlay.classList.remove('visible');
+            // Show current block name on idle screen if one is loaded
+            const idleLabel = document.getElementById('idle-class-label');
+            if (idleLabel && block) idleLabel.textContent = block.name || '';
             stopTicker();
             return;
         }

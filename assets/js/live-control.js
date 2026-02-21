@@ -313,7 +313,9 @@ const GFLive = (() => {
     }
 
     async function jumpToBlock(idx) {
-        emit('control:goto', { index: idx });
+        const b = blocks[idx];
+        const prep = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
+        emit('control:goto', { index: idx, prep_remaining: prep });
     }
 
     async function setSala(salaId) {
