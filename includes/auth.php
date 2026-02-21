@@ -99,7 +99,10 @@ function login(string $email, string $password): ?array
     db()->prepare("INSERT INTO sessions_auth (user_id, token, expires_at) VALUES (?,?,?)")
         ->execute([$user['id'], $token, $expires]);
 
-    db()->prepare("UPDATE users SET last_login = NOW() WHERE id = ?")
+    // Only update last_login if the user has logged in before.
+    // New users (last_login IS NULL) keep NULL so the onboarding tour fires.
+    // The tour's dismiss/finish calls ?action=first_login which sets it.
+    db()->prepare("UPDATE users SET last_login = NOW() WHERE id = ? AND last_login IS NOT NULL")
         ->execute([$user['id']]);
 
     unset($user['password_hash']);
