@@ -199,13 +199,14 @@
                 exEl.textContent = block.config?.title || block.name || 'BRIEFING';
             } else if (exs.length) {
                 let exIdx = 0;
-                if ((block.type === 'tabata' || block.type === 'interval') && exs.length > 1) {
-                    // Alternating single-exercise per timed round
+                if ((block.type === 'tabata' || block.type === 'interval') && exs.length > 0) {
+                    // Alternating exercise per timed round (works for 1 or more exercises)
                     const cfg = block.config || {};
                     const roundDur = (cfg.work || 20) + (cfg.rest || 10);
                     exIdx = Math.floor(localElapsed / roundDur) % exs.length;
                     exEl.dataset.roundIdx = exIdx;
-                    exEl.textContent = exs[exIdx]?.name || exs[exIdx] || block.name;
+                    const ex = exs[exIdx];
+                    exEl.textContent = ex?.name || (typeof ex === 'string' ? ex : null) || block.name;
                     exEl.style.animation = 'none';
                     requestAnimationFrame(() => exEl.style.animation = '');
                 } else if (['amrap', 'emom', 'fortime', 'series'].includes(block.type)) {
@@ -214,7 +215,8 @@
                 } else {
                     // Single exercise or circuit station
                     exEl.dataset.roundIdx = 0;
-                    exEl.textContent = exs[0]?.name || exs[0] || block.name;
+                    const ex = exs[0];
+                    exEl.textContent = ex?.name || (typeof ex === 'string' ? ex : null) || block.name;
                     exEl.style.animation = 'none';
                     requestAnimationFrame(() => exEl.style.animation = '');
                 }
@@ -414,15 +416,18 @@
 
             // Cycle exercise per round
             const exs = block.exercises || [];
-            if (exs.length > 1 && inWork) {
+            if (exs.length > 0 && inWork) {
                 const roundIndex = Math.floor(elapsed / roundDur);
                 const exEl = document.getElementById('display-exercise-name');
-                if (exEl && exEl.dataset.roundIdx !== String(roundIndex % exs.length)) {
-                    exEl.dataset.roundIdx = roundIndex % exs.length;
-                    const ex = exs[roundIndex % exs.length];
-                    exEl.textContent = ex?.name || ex || block.name;
-                    exEl.style.animation = 'none';
-                    requestAnimationFrame(() => exEl.style.animation = '');
+                if (exEl) {
+                    const newIdx = roundIndex % exs.length;
+                    if (exEl.dataset.roundIdx !== String(newIdx)) {
+                        exEl.dataset.roundIdx = newIdx;
+                        const ex = exs[newIdx];
+                        exEl.textContent = ex?.name || (typeof ex === 'string' ? ex : null) || block.name;
+                        exEl.style.animation = 'none';
+                        requestAnimationFrame(() => exEl.style.animation = '');
+                    }
                 }
             }
         } else {
