@@ -54,12 +54,14 @@
         const idleLabel = document.getElementById('idle-class-label');
 
         const exs = block.exercises || [];
-        // Show all exercises joined — matches what students will do
-        const label = exs.length
+        const exList = exs.length
             ? exs.map(ex => ex?.name || (typeof ex === 'string' ? ex : '')).filter(Boolean).join(' · ') || block.name
             : block.name;
+        const typeLabels = { interval: 'WORK', tabata: 'TABATA', amrap: 'AMRAP', emom: 'EMOM', fortime: 'FOR TIME', series: 'SERIES', circuit: 'CIRCUITO', rest: 'DESCANSO', briefing: 'BRIEFING' };
+        const typeStr = typeLabels[block.type] || (block.type || '').toUpperCase();
 
-        if (idleLabel) idleLabel.textContent = label || '';
+        if (idleLabel) idleLabel.innerHTML =
+            `<span style="display:block;font-size:.45em;letter-spacing:.25em;color:var(--d-accent,#cbf73f);margin-bottom:.15em">${typeStr}</span>${exList}`;
         if (liveScreen) liveScreen.style.display = 'none';
         if (prepOverlay) prepOverlay.style.display = 'none';
         if (pausedOverlay) pausedOverlay.classList.remove('visible');
