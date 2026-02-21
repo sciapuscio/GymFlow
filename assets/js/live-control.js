@@ -298,8 +298,10 @@ const GFLive = (() => {
                 }
             } else {
                 // FRESH START
+                // Priority: block preset (spotify_intro) > global widget (_gfPrepTime)
                 _lastAutoPlayUri = null;
-                const prep = window._gfPrepTime || 0;
+                const blockPrep = (b?.spotify_intro > 0) ? (b.spotify_intro | 0) : null;
+                const prep = blockPrep !== null ? blockPrep : (window._gfPrepTime || 0);
                 emit('control:play', { prep_remaining: prep });
                 autoPlayBlockSpotify(b);
             }
@@ -328,7 +330,10 @@ const GFLive = (() => {
     }
 
     async function jumpToBlock(idx) {
-        const prep = window._gfPrepTime || 0;
+        const b = blocks[idx];
+        // Priority: block preset (spotify_intro) > global widget (_gfPrepTime)
+        const blockPrep = (b?.spotify_intro > 0) ? (b.spotify_intro | 0) : null;
+        const prep = blockPrep !== null ? blockPrep : (window._gfPrepTime || 0);
         emit('control:goto', { index: idx, prep_remaining: prep });
     }
 
