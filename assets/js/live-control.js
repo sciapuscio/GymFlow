@@ -299,7 +299,7 @@ const GFLive = (() => {
             } else {
                 // FRESH START
                 _lastAutoPlayUri = null;
-                const prep = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
+                const prep = window._gfPrepTime || 0;
                 emit('control:play', { prep_remaining: prep });
                 autoPlayBlockSpotify(b);
             }
@@ -328,8 +328,7 @@ const GFLive = (() => {
     }
 
     async function jumpToBlock(idx) {
-        const b = blocks[idx];
-        const prep = (b?.spotify_intro > 0 && b?.spotify_uri) ? (b.spotify_intro | 0) : 0;
+        const prep = window._gfPrepTime || 0;
         emit('control:goto', { index: idx, prep_remaining: prep });
     }
 

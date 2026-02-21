@@ -138,10 +138,21 @@ layout_footer($user);
                         </svg>
                     </button>
                 </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <span
+                        style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gf-text-muted)">Prep</span>
+                    <div id="prep-selector" style="display:flex;gap:4px">
+                        <button class="prep-btn" onclick="setPrepTime(0)" data-sec="0">0s</button>
+                        <button class="prep-btn" onclick="setPrepTime(5)" data-sec="5">5s</button>
+                        <button class="prep-btn" onclick="setPrepTime(10)" data-sec="10">10s</button>
+                        <button class="prep-btn" onclick="setPrepTime(15)" data-sec="15">15s</button>
+                        <button class="prep-btn" onclick="setPrepTime(30)" data-sec="30">30s</button>
+                    </div>
+                </div>
                 <div style="display:flex;gap:8px">
                     <button class="btn btn-secondary btn-sm" onclick="liveControl('extend',{seconds:30})">+30s</button>
                     <button class="btn btn-secondary btn-sm" onclick="liveControl('extend',{seconds:60})">+1min</button>
-                    <button class="btn btn-danger btn-sm" onclick="liveControl('stop')">⏹ Terminar</button>
+                    <button class="btn btn-danger btn-sm" onclick="liveControl('stop')">&#9209; Terminar</button>
                 </div>
             </div>
 
@@ -323,6 +334,30 @@ layout_footer($user);
         background: var(--gf-accent);
     }
 
+    .prep-btn {
+        background: var(--gf-surface-2);
+        border: 1px solid var(--gf-border);
+        color: var(--gf-text-muted);
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 9px;
+        cursor: pointer;
+        transition: all .15s;
+        line-height: 1;
+    }
+
+    .prep-btn:hover {
+        border-color: var(--gf-accent);
+        color: var(--gf-accent);
+    }
+
+    .prep-btn.active {
+        background: var(--gf-accent);
+        border-color: var(--gf-accent);
+        color: #000;
+    }
+
     .sp-result-item {
         display: flex;
         align-items: center;
@@ -465,7 +500,19 @@ layout_footer($user);
     document.addEventListener('DOMContentLoaded', () => {
         GFLive.init(SESSION_DATA);
         if (SPOTIFY_CONNECTED) spPollNowPlaying();
+        // Init prep time from localStorage
+        const savedPrep = parseInt(localStorage.getItem('gf_prep_time') || '0', 10);
+        setPrepTime(isNaN(savedPrep) ? 0 : savedPrep);
     });
+
+    // ── Prep Time Selector ──────────────────────────────────────────────────
+    function setPrepTime(sec) {
+        window._gfPrepTime = sec;
+        localStorage.setItem('gf_prep_time', String(sec));
+        document.querySelectorAll('.prep-btn').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.sec) === sec);
+        });
+    }
 
     // ── Toast Notifications ──────────────────────────────────────────────────
     function gfToast(type, title, msg, duration = 4000) {
