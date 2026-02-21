@@ -153,6 +153,13 @@
 
     // Find first step for this page starting from saved progress
     const currentSaved = getStep();
+
+    // The tour welcome lives exclusively on admin_dashboard (step 0).
+    // If the user hasn't started the tour yet (savedStep === 0) but they're
+    // visiting a different page (e.g. navigating directly to instructor/dashboard),
+    // don't run the tour here — it will start properly when they visit admin_dashboard.
+    if (currentSaved === 0 && PAGE !== 'admin_dashboard') return;
+
     const startIdx = STEPS.findIndex((s, i) => s.page === PAGE && i >= currentSaved);
     if (startIdx === -1) return;
 
