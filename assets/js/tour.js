@@ -62,10 +62,21 @@
             body: 'Lo primero es darle identidad a tu espacio. Subí el <strong>logo</strong>, elegí tus <strong>colores</strong> y escribí el nombre que verán tus alumnos en pantalla.',
             arrow: 'bottom',
             nextLabel: 'Personalizar ahora →',
-            nextStep: 2,
+            pauseOnNext: true, // pause tour while branding modal is open
             onNext: function () {
                 const modal = document.getElementById('branding-modal');
-                if (modal) modal.classList.add('open');
+                if (!modal) return;
+                modal.classList.add('open');
+                // Pause the tour overlay so the modal is fully accessible
+                window._gfTour.pause();
+                // Resume + advance when the modal closes (class removed)
+                const obs = new MutationObserver(() => {
+                    if (!modal.classList.contains('open')) {
+                        obs.disconnect();
+                        window._gfTour.resume();
+                    }
+                });
+                obs.observe(modal, { attributes: true, attributeFilter: ['class'] });
             },
         },
         {
@@ -321,6 +332,9 @@
             clearHighlight();
             const step = STEPS[currentIdx];
             if (step && typeof step.onNext === 'function') step.onNext();
+            // If step requests a pause (e.g. opens a modal), don't advance yet;
+            // resume() will handle advancing once the modal closes.
+            if (step && step.pauseOnNext) return;
             const nextIdx = currentIdx + 1;
             if (nextIdx < STEPS.length && STEPS[nextIdx].page === PAGE) {
                 currentIdx = nextIdx;
@@ -333,6 +347,28 @@
         runOnNext(idx) {
             const step = STEPS[idx];
             if (step && typeof step.onNext === 'function') step.onNext();
+        },
+        // Hides tour overlay without dismissing (used while a modal is open)
+        pause() {
+            clearHighlight();
+            overlay.style.transition = 'opacity .2s';
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+        },
+        // Restores overlay and advances to the next step
+        resume() {
+            overlay.style.transition = 'opacity .3s';
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = '';
+            setTransitioning();
+            const nextIdx = currentIdx + 1;
+            if (nextIdx < STEPS.length && STEPS[nextIdx].page === PAGE) {
+                currentIdx = nextIdx;
+                showStep(currentIdx);
+            } else {
+                setStep(nextIdx);
+                finish();
+            }
         },
         dismiss,
         finish,
