@@ -351,15 +351,11 @@
         // Hides tour overlay without dismissing (used while a modal is open)
         pause() {
             clearHighlight();
-            overlay.style.transition = 'opacity .2s';
-            overlay.style.opacity = '0';
-            overlay.style.pointerEvents = 'none';
+            overlay.style.display = 'none';
         },
         // Restores overlay and advances to the next step
         resume() {
-            overlay.style.transition = 'opacity .3s';
-            overlay.style.opacity = '1';
-            overlay.style.pointerEvents = '';
+            overlay.style.display = '';
             setTransitioning();
             const nextIdx = currentIdx + 1;
             if (nextIdx < STEPS.length && STEPS[nextIdx].page === PAGE) {
