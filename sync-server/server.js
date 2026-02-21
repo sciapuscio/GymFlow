@@ -307,20 +307,16 @@ io.on('connection', (socket) => {
         const sala_id = socket.data.salaId;
         const st = sessionStates.get(sala_id);
         if (!st) return;
-        const wasPlaying = st.status === 'playing';
         stopTimer(sala_id);
         st.currentBlockIndex = Math.max(0, Math.min(index, st.blocks.length - 1));
         st.elapsed = 0;
         st.prepRemaining = 0;
-        // Keep current status — only control:play should start the session
-        // If was playing, keep playing the new block; otherwise stay idle/paused
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
             block: st.blocks[st.currentBlockIndex],
             next_block: st.blocks[st.currentBlockIndex + 1] || null,
         });
-        if (wasPlaying) startTimer(sala_id);
         broadcast(sala_id);
     });
 
