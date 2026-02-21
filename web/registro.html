@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Empezar gratis 30 días – GymFlow</title>
+    <meta name="description"
+        content="Registrá tu gimnasio en GymFlow y empezá tu prueba gratuita de 30 días. Sin tarjeta de crédito." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        /* ---- TOKENS ---- */
+        :root {
+            --bg: #0a0b0f;
+            --bg2: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #1f2335;
+            --border: rgba(255, 255, 255, 0.08);
+            --border2: rgba(255, 255, 255, 0.14);
+            --primary: #e5ff3d;
+            --primary2: #d4f020;
+            --accent: #6c63ff;
+            --text: #f0f2f8;
+            --muted: #8892a4;
+            --dim: #5a6478;
+            --error: #ff5f5f;
+            --success: #4ade80;
+            --grad-primary: linear-gradient(135deg, #e5ff3d 0%, #b8f200 100%);
+            --grad-text: linear-gradient(135deg, #e5ff3d 20%, #6c63ff 80%);
+            --grad-hero: linear-gradient(160deg, #0a0b0f 0%, #0d1020 60%, #0a0b0f 100%);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --radius: 16px;
+            --radius-lg: 24px;
+            --trans: 0.25s ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- LAYOUT ---- */
+        .page {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 100vh;
+        }
+
+        /* LEFT PANEL — branding */
+        .panel-left {
+            background: var(--grad-hero);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 48px;
+            overflow: hidden;
+        }
+
+        .panel-left::before {
+            content: '';
+            position: absolute;
+            top: -15%;
+            left: -15%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(ellipse, rgba(108, 99, 255, 0.18) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: orb-float 14s ease-in-out infinite;
+        }
+
+        .panel-left::after {
+            content: '';
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(229, 255, 61, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: orb-float 18s ease-in-out infinite reverse;
+        }
+
+        @keyframes orb-float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(20px, -20px);
+            }
+        }
+
+        .left-logo {
+            position: relative;
+            z-index: 1;
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .left-logo .gym {
+            color: var(--text);
+        }
+
+        .left-logo .flow {
+            color: var(--primary);
+        }
+
+        .left-content {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px 0;
+        }
+
+        .left-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-display);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--primary);
+            background: rgba(229, 255, 61, 0.08);
+            border: 1px solid rgba(229, 255, 61, 0.2);
+            border-radius: 100px;
+            padding: 6px 16px;
+            margin-bottom: 24px;
+        }
+
+        .badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(229, 255, 61, .5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px rgba(229, 255, 61, 0);
+            }
+        }
+
+        .left-title {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 3.5vw, 3rem);
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .grad-text {
+            background: var(--grad-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .left-sub {
+            font-size: 1rem;
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 40px;
+            max-width: 380px;
+        }
+
+        /* perks list */
+        .perks {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .perk {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .perk-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: 10px;
+            background: rgba(229, 255, 61, 0.1);
+            border: 1px solid rgba(229, 255, 61, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .perk-text strong {
+            display: block;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .perk-text span {
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
+        .left-footer {
+            position: relative;
+            z-index: 1;
+            font-size: 0.8rem;
+            color: var(--dim);
+        }
+
+        .left-footer a {
+            color: var(--muted);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        /* RIGHT PANEL — form */
+        .panel-right {
+            background: var(--bg2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 48px;
+            border-left: 1px solid var(--border);
+        }
+
+        .form-wrapper {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .form-header {
+            margin-bottom: 36px;
+        }
+
+        .form-header h2 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+
+        .form-header p {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        /* STEPS */
+        .steps-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 36px;
+        }
+
+        .step-dot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-family: var(--font-display);
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 2px solid var(--border2);
+            color: var(--muted);
+            transition: all var(--trans);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .step-dot.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #0a0b0f;
+        }
+
+        .step-dot.done {
+            border-color: var(--primary);
+            background: rgba(229, 255, 61, 0.1);
+            color: var(--primary);
+        }
+
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            margin: 0 8px;
+            transition: background var(--trans);
+        }
+
+        .step-line.active {
+            background: rgba(229, 255, 61, 0.4);
+        }
+
+        .step-label {
+            font-size: 0.72rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--dim);
+            text-align: center;
+            margin-top: 6px;
+        }
+
+        .steps-labels {
+            display: flex;
+            gap: 0;
+            margin-bottom: 32px;
+        }
+
+        .step-label-item {
+            flex: 1;
+            font-size: 0.72rem;
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--dim);
+            text-align: center;
+        }
+
+        .step-label-item.active {
+            color: var(--primary);
+        }
+
+        .step-label-item.done {
+            color: var(--muted);
+        }
+
+        /* FORM FIELDS */
+        .form-step {
+            display: none;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        label {
+            display: block;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            letter-spacing: 0.02em;
+        }
+
+        label .req {
+            color: var(--primary);
+            margin-left: 2px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            background: var(--surface);
+            border: 1.5px solid var(--border2);
+            border-radius: 10px;
+            padding: 13px 16px;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            color: var(--text);
+            outline: none;
+            transition: all var(--trans);
+            -webkit-appearance: none;
+        }
+
+        input::placeholder {
+            color: var(--dim);
+        }
+
+        option {
+            background-color: #1a1d27;
+            color: #f0f2f8;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+            background: rgba(229, 255, 61, 0.03);
+            box-shadow: 0 0 0 3px rgba(229, 255, 61, 0.1);
+        }
+
+        input.error,
+        select.error {
+            border-color: var(--error);
+            box-shadow: 0 0 0 3px rgba(255, 95, 95, 0.1);
+        }
+
+        .field-error {
+            font-size: 0.78rem;
+            color: var(--error);
+            margin-top: 6px;
+            display: none;
+        }
+
+        .field-error.show {
+            display: block;
+        }
+
+        /* password strength */
+        .pass-strength {
+            margin-top: 8px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--border2);
+            overflow: hidden;
+        }
+
+        .pass-strength-bar {
+            height: 100%;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.3s, background 0.3s;
+        }
+
+        .pass-hint {
+            font-size: 0.75rem;
+            color: var(--dim);
+            margin-top: 4px;
+        }
+
+        /* select arrow */
+        .select-wrap {
+            position: relative;
+        }
+
+        .select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid var(--muted);
+            pointer-events: none;
+        }
+
+        /* BUTTONS */
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            background: linear-gradient(135deg, #e5ff3d 0%, #b8f200 100%);
+            color: #0a0b0f;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1rem;
+            border: none;
+            border-radius: 100px;
+            padding: 15px 32px;
+            cursor: pointer;
+            transition: all var(--trans);
+            box-shadow: 0 4px 24px rgba(229, 255, 61, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(229, 255, 61, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            border: 1.5px solid var(--border2);
+            color: var(--muted);
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 100px;
+            padding: 11px 24px;
+            cursor: pointer;
+            transition: all var(--trans);
+        }
+
+        .btn-back:hover {
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .form-actions .btn-primary {
+            flex: 1;
+        }
+
+        /* SPINNER */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 0, 0, 0.3);
+            border-top-color: #0a0b0f;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* GLOBAL ALERT */
+        .alert {
+            display: none;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .alert.error {
+            background: rgba(255, 95, 95, 0.1);
+            border: 1px solid rgba(255, 95, 95, 0.3);
+            color: var(--error);
+            display: block;
+        }
+
+        .alert.success {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            color: var(--success);
+            display: block;
+        }
+
+        /* SUCCESS STATE */
+        .success-screen {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .success-screen.show {
+            display: block;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(229, 255, 61, 0.1);
+            border: 2px solid rgba(229, 255, 61, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: var(--primary);
+        }
+
+        .success-screen h3 {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+        }
+
+        .success-screen p {
+            font-size: 0.95rem;
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .redirect-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .redirect-bar-fill {
+            height: 100%;
+            background: var(--grad-primary);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 3s linear;
+        }
+
+        .redirect-note {
+            font-size: 0.82rem;
+            color: var(--dim);
+        }
+
+        /* form divider */
+        .section-divider {
+            font-family: var(--font-display);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--dim);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 28px 0 20px;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .login-link {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 24px;
+        }
+
+        .login-link a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-left {
+                display: none;
+            }
+
+            .panel-right {
+                padding: 40px 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page">
+
+        <!-- ======================== LEFT — BRANDING ======================== -->
+        <div class="panel-left">
+            <a href="index.html" class="left-logo">
+                <span class="gym">Gym</span><span class="flow">Flow</span>
+            </a>
+
+            <div class="left-content">
+                <div class="left-badge">
+                    <span class="badge-dot"></span>
+                    Prueba gratuita · 30 días
+                </div>
+                <h1 class="left-title">
+                    Tu gimnasio.<br />
+                    <span class="grad-text">Profesionalizado.</span><br />
+                    Hoy.
+                </h1>
+                <p class="left-sub">
+                    En menos de 2 minutos tu gimnasio va a estar corriendo en GymFlow. Sin tarjeta, sin compromiso.
+                </p>
+                <div class="perks">
+                    <div class="perk">
+                        <div class="perk-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </div>
+                        <div class="perk-text">
+                            <strong>30 días de prueba gratis</strong>
+                            <span>Sin tarjeta de crédito requerida</span>
+                        </div>
+                    </div>
+                    <div class="perk">
+                        <div class="perk-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <div class="perk-text">
+                            <strong>Activación inmediata</strong>
+                            <span>Empezá a usar la app en segundos</span>
+                        </div>
+                    </div>
+                    <div class="perk">
+                        <div class="perk-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" />
+                                <path d="M8 21h8M12 17v4" />
+                            </svg>
+                        </div>
+                        <div class="perk-text">
+                            <strong>Sala principal incluida</strong>
+                            <span>Lista para usar desde el primer día</span>
+                        </div>
+                    </div>
+                    <div class="perk">
+                        <div class="perk-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                        </div>
+                        <div class="perk-text">
+                            <strong>Cancelás cuando querés</strong>
+                            <span>Sin permanencia ni penalidades</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="left-footer">
+                ¿Ya tenés cuenta? <a href="../index.php">Iniciá sesión</a>
+            </div>
+        </div>
+
+        <!-- ======================== RIGHT — FORM ======================== -->
+        <div class="panel-right">
+            <div class="form-wrapper">
+
+                <div class="form-header">
+                    <h2>Crear cuenta gratis</h2>
+                    <p>Completá los datos de tu gimnasio y tu cuenta de administrador.</p>
+                </div>
+
+                <!-- Steps indicator -->
+                <div class="steps-indicator" id="stepsIndicator">
+                    <div class="step-dot active" id="dot1">1</div>
+                    <div class="step-line" id="line1"></div>
+                    <div class="step-dot" id="dot2">2</div>
+                    <div class="step-line" id="line2"></div>
+                    <div class="step-dot" id="dot3">3</div>
+                </div>
+                <div class="steps-labels">
+                    <div class="step-label-item active" id="lbl1">Tu gimnasio</div>
+                    <div class="step-label-item" id="lbl2">Tu cuenta</div>
+                    <div class="step-label-item" id="lbl3">Confirmar</div>
+                </div>
+
+                <!-- Global alert -->
+                <div class="alert" id="globalAlert" role="alert"></div>
+
+                <!-- SUCCESS SCREEN -->
+                <div class="success-screen" id="successScreen">
+                    <div class="success-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <h3>¡Bienvenido a GymFlow! 🎉</h3>
+                    <p id="successMsg">Tu gimnasio fue creado exitosamente. Tu prueba gratuita de 30 días ha comenzado.
+                        Redirigiendo al panel...</p>
+                    <div class="redirect-bar">
+                        <div class="redirect-bar-fill" id="redirectBar"></div>
+                    </div>
+                    <p class="redirect-note">Serás redirigido automáticamente en 3 segundos.</p>
+                </div>
+
+                <!-- FORM -->
+                <form id="registerForm" novalidate>
+
+                    <!-- STEP 1 — Gym data -->
+                    <div class="form-step active" id="step1">
+
+                        <div class="field-group">
+                            <label for="gym_name">Nombre del gimnasio <span class="req">*</span></label>
+                            <input type="text" id="gym_name" name="gym_name"
+                                placeholder="Ej: CrossFit Norte, FitBox Palermo..." autocomplete="organization"
+                                maxlength="120" />
+                            <div class="field-error" id="err_gym_name"></div>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-group">
+                                <label for="city">Ciudad</label>
+                                <input type="text" id="city" name="city" placeholder="Buenos Aires"
+                                    autocomplete="address-level2" maxlength="80" />
+                            </div>
+                            <div class="field-group">
+                                <label for="phone">Teléfono / WhatsApp</label>
+                                <input type="tel" id="phone" name="phone" placeholder="+54 11 1234-5678"
+                                    autocomplete="tel" maxlength="30" />
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="gym_type">Tipo de entrenamiento principal</label>
+                            <div class="select-wrap">
+                                <select id="gym_type" name="gym_type">
+                                    <option value="">— Seleccioná una opción —</option>
+                                    <option value="functional">Entrenamiento Funcional</option>
+                                    <option value="hiit">HIIT</option>
+                                    <option value="tabata">Tabata</option>
+                                    <option value="crossfit">Cross Training / CrossFit</option>
+                                    <option value="circuit">Circuitos</option>
+                                    <option value="mixed">Combinación de varios</option>
+                                    <option value="other">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="instructors_count">¿Cuántos instructores tiene el gimnasio?</label>
+                            <div class="select-wrap">
+                                <select id="instructors_count" name="instructors_count">
+                                    <option value="1">Solo yo (1 instructor)</option>
+                                    <option value="2-3">2-3 instructores</option>
+                                    <option value="4-10">4-10 instructores</option>
+                                    <option value="10+">Más de 10 instructores</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-primary" id="btnStep1">
+                                <span>Continuar</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M5 12h14" />
+                                    <path d="m12 5 7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2 — Admin account -->
+                    <div class="form-step" id="step2">
+
+                        <div class="field-group">
+                            <label for="admin_name">Tu nombre completo <span class="req">*</span></label>
+                            <input type="text" id="admin_name" name="admin_name" placeholder="Ej: Juan González"
+                                autocomplete="name" maxlength="100" />
+                            <div class="field-error" id="err_admin_name"></div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="admin_email">Email <span class="req">*</span></label>
+                            <input type="email" id="admin_email" name="admin_email" placeholder="tu@email.com"
+                                autocomplete="email" maxlength="150" />
+                            <div class="field-error" id="err_admin_email"></div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="admin_password">Contraseña <span class="req">*</span></label>
+                            <input type="password" id="admin_password" name="admin_password"
+                                placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+                            <div class="pass-strength">
+                                <div class="pass-strength-bar" id="passBar"></div>
+                            </div>
+                            <p class="pass-hint" id="passHint">Mínimo 8 caracteres</p>
+                            <div class="field-error" id="err_admin_password"></div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="admin_password2">Confirmar contraseña <span class="req">*</span></label>
+                            <input type="password" id="admin_password2" name="admin_password2"
+                                placeholder="Repetí tu contraseña" autocomplete="new-password" />
+                            <div class="field-error" id="err_admin_password2"></div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-back" id="btnBack1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M19 12H5" />
+                                    <path d="m12 19-7-7 7-7" />
+                                </svg>
+                                Atrás
+                            </button>
+                            <button type="button" class="btn-primary" id="btnStep2">
+                                <span>Continuar</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M5 12h14" />
+                                    <path d="m12 5 7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 — Confirm -->
+                    <div class="form-step" id="step3">
+
+                        <!-- Summary card -->
+                        <div
+                            style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;margin-bottom:24px;">
+                            <div
+                                style="font-family:var(--font-display);font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:16px;">
+                                Resumen de tu registro</div>
+
+                            <div style="display:grid;gap:12px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Gimnasio</span>
+                                    <strong style="font-family:var(--font-display);font-weight:700;"
+                                        id="sum_gym"></strong>
+                                </div>
+                                <div style="height:1px;background:var(--border);"></div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Tipo</span>
+                                    <span style="font-size:.9rem;" id="sum_type"></span>
+                                </div>
+                                <div style="height:1px;background:var(--border);"></div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Administrador</span>
+                                    <strong style="font-family:var(--font-display);font-weight:700;"
+                                        id="sum_name"></strong>
+                                </div>
+                                <div style="height:1px;background:var(--border);"></div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Email</span>
+                                    <span style="font-size:.88rem;color:var(--muted);" id="sum_email"></span>
+                                </div>
+                                <div style="height:1px;background:var(--border);"></div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Plan</span>
+                                    <span
+                                        style="font-family:var(--font-display);font-weight:700;color:var(--primary);">Prueba
+                                        gratuita · 30 días</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p style="font-size:.8rem;color:var(--dim);line-height:1.6;margin-bottom:8px;">
+                            Al crear tu cuenta aceptás los <a href="#" style="color:var(--muted)">Términos de
+                                Servicio</a> y la <a href="#" style="color:var(--muted)">Política de Privacidad</a> de
+                            GymFlow.
+                            Tu prueba gratuita de 30 días inicia hoy y no requiere tarjeta de crédito.
+                        </p>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-back" id="btnBack2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M19 12H5" />
+                                    <path d="m12 19-7-7 7-7" />
+                                </svg>
+                                Atrás
+                            </button>
+                            <button type="submit" class="btn-primary" id="btnSubmit">
+                                <div class="spinner" id="spinner"></div>
+                                <span id="submitLabel">Crear mi cuenta gratis</span>
+                                <svg id="submitIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                </form>
+
+                <!-- login link -->
+                <p class="login-link">
+                    ¿Ya tenés cuenta? <a href="../index.php">Iniciá sesión →</a>
+                </p>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            let currentStep = 1;
+
+            const gymTypeLabels = {
+                'functional': 'Entrenamiento Funcional',
+                'hiit': 'HIIT',
+                'tabata': 'Tabata',
+                'crossfit': 'Cross Training / CrossFit',
+                'circuit': 'Circuitos',
+                'mixed': 'Combinación de varios',
+                'other': 'Otro',
+                '': 'No especificado'
+            };
+
+            // ── Step navigation ──────────────────────────────────────────────────────────
+
+            function goToStep(n) {
+                document.getElementById('step' + currentStep).classList.remove('active');
+                currentStep = n;
+                document.getElementById('step' + currentStep).classList.add('active');
+                updateStepUI();
+                clearAlert();
+                // Scroll form top
+                document.querySelector('.panel-right').scrollTo({ top: 0, behavior: 'smooth' });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function updateStepUI() {
+                for (let i = 1; i <= 3; i++) {
+                    const dot = document.getElementById('dot' + i);
+                    const lbl = document.getElementById('lbl' + i);
+                    dot.classList.remove('active', 'done');
+                    lbl.classList.remove('active', 'done');
+                    if (i < currentStep) { dot.classList.add('done'); lbl.classList.add('done'); dot.innerHTML = '✓'; }
+                    else if (i === currentStep) { dot.classList.add('active'); lbl.classList.add('active'); dot.textContent = i; }
+                    else { dot.textContent = i; }
+                }
+                if (document.getElementById('line1')) {
+                    document.getElementById('line1').classList.toggle('active', currentStep > 1);
+                    document.getElementById('line2').classList.toggle('active', currentStep > 2);
+                }
+                // Populate summary on step 3
+                if (currentStep === 3) populateSummary();
+            }
+
+            function populateSummary() {
+                document.getElementById('sum_gym').textContent = val('gym_name') || '—';
+                document.getElementById('sum_type').textContent = gymTypeLabels[val('gym_type')] || 'No especificado';
+                document.getElementById('sum_name').textContent = val('admin_name') || '—';
+                document.getElementById('sum_email').textContent = val('admin_email') || '—';
+            }
+
+            // ── Helpers ───────────────────────────────────────────────────────────────────
+
+            function val(id) { return document.getElementById(id)?.value.trim() || ''; }
+            function setError(field, msg) {
+                const el = document.getElementById(field);
+                const err = document.getElementById('err_' + field);
+                if (el) el.classList.toggle('error', !!msg);
+                if (err) { err.textContent = msg || ''; err.classList.toggle('show', !!msg); }
+            }
+            function clearErrors() {
+                document.querySelectorAll('.field-error').forEach(e => { e.classList.remove('show'); e.textContent = ''; });
+                document.querySelectorAll('input.error, select.error').forEach(e => e.classList.remove('error'));
+            }
+            function showAlert(msg, type = 'error') {
+                const el = document.getElementById('globalAlert');
+                el.textContent = msg;
+                el.className = 'alert ' + type;
+            }
+            function clearAlert() {
+                const el = document.getElementById('globalAlert');
+                el.className = 'alert';
+            }
+
+            // ── Validation ────────────────────────────────────────────────────────────────
+
+            function validateStep1() {
+                clearErrors();
+                let ok = true;
+                if (!val('gym_name')) { setError('gym_name', 'El nombre del gimnasio es requerido.'); ok = false; }
+                return ok;
+            }
+
+            function validateStep2() {
+                clearErrors();
+                let ok = true;
+                if (!val('admin_name')) { setError('admin_name', 'Tu nombre es requerido.'); ok = false; }
+                const email = val('admin_email');
+                if (!email) { setError('admin_email', 'El email es requerido.'); ok = false; }
+                else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('admin_email', 'Email inválido.'); ok = false; }
+                const pass = document.getElementById('admin_password').value;
+                if (pass.length < 8) { setError('admin_password', 'La contraseña debe tener al menos 8 caracteres.'); ok = false; }
+                const pass2 = document.getElementById('admin_password2').value;
+                if (pass !== pass2) { setError('admin_password2', 'Las contraseñas no coinciden.'); ok = false; }
+                return ok;
+            }
+
+            // ── Password strength ─────────────────────────────────────────────────────────
+
+            document.getElementById('admin_password').addEventListener('input', function () {
+                const p = this.value;
+                const bar = document.getElementById('passBar');
+                const hint = document.getElementById('passHint');
+                let score = 0;
+                if (p.length >= 8) score++;
+                if (p.length >= 12) score++;
+                if (/[A-Z]/.test(p)) score++;
+                if (/[0-9]/.test(p)) score++;
+                if (/[^A-Za-z0-9]/.test(p)) score++;
+                const labels = ['', 'Muy débil', 'Débil', 'Regular', 'Buena', 'Excelente'];
+                const colors = ['', '#ff5f5f', '#ff9f43', '#ffd32a', '#2ecc71', '#00cec9'];
+                bar.style.width = (score * 20) + '%';
+                bar.style.background = colors[score] || 'transparent';
+                hint.textContent = p.length === 0 ? 'Mínimo 8 caracteres' : (labels[score] || '');
+            });
+
+            // ── Button handlers ───────────────────────────────────────────────────────────
+
+            document.getElementById('btnStep1').addEventListener('click', () => {
+                if (validateStep1()) goToStep(2);
+                else document.getElementById('gym_name').focus();
+            });
+
+            document.getElementById('btnBack1').addEventListener('click', () => goToStep(1));
+
+            document.getElementById('btnStep2').addEventListener('click', () => {
+                if (validateStep2()) goToStep(3);
+                else {
+                    const firstErr = document.querySelector('#step2 input.error');
+                    if (firstErr) firstErr.focus();
+                }
+            });
+
+            document.getElementById('btnBack2').addEventListener('click', () => goToStep(2));
+
+            // ── Form submit ───────────────────────────────────────────────────────────────
+
+            document.getElementById('registerForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                clearAlert();
+
+                const btn = document.getElementById('btnSubmit');
+                const spinner = document.getElementById('spinner');
+                const label = document.getElementById('submitLabel');
+                const icon = document.getElementById('submitIcon');
+
+                btn.disabled = true;
+                spinner.style.display = 'block';
+                label.textContent = 'Creando tu cuenta...';
+                icon.style.display = 'none';
+
+                const payload = {
+                    gym_name: val('gym_name'),
+                    city: val('city'),
+                    phone: val('phone'),
+                    gym_type: val('gym_type'),
+                    instructors_count: val('instructors_count'),
+                    admin_name: val('admin_name'),
+                    admin_email: val('admin_email'),
+                    admin_password: document.getElementById('admin_password').value,
+                    admin_password2: document.getElementById('admin_password2').value,
+                };
+
+                try {
+                    const res = await fetch('../api/register.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        credentials: 'include',
+                    });
+
+                    const json = await res.json();
+
+                    if (!res.ok) {
+                        // Show field errors if present
+                        if (json.fields) {
+                            Object.entries(json.fields).forEach(([field, msg]) => setError(field, msg));
+                            // Go back to relevant step
+                            if (json.fields.gym_name) goToStep(1);
+                            else if (json.fields.admin_name || json.fields.admin_email || json.fields.admin_password || json.fields.admin_password2) goToStep(2);
+                        }
+                        showAlert(json.error || 'Ocurrió un error. Intentá de nuevo.');
+                        btn.disabled = false;
+                        spinner.style.display = 'none';
+                        label.textContent = 'Crear mi cuenta gratis';
+                        icon.style.display = '';
+                        return;
+                    }
+
+                    // ── SUCCESS ──
+                    // Hide form, show success screen
+                    document.getElementById('registerForm').style.display = 'none';
+                    document.querySelector('.steps-indicator').style.display = 'none';
+                    document.querySelector('.steps-labels').style.display = 'none';
+                    document.querySelector('.login-link').style.display = 'none';
+                    document.querySelector('.form-header h2').textContent = '¡Listo!';
+                    document.querySelector('.form-header p').textContent = '';
+                    document.getElementById('successScreen').classList.add('show');
+                    if (json.gym_name) {
+                        document.getElementById('successMsg').textContent =
+                            `"${json.gym_name}" fue creado exitosamente. Tu prueba gratuita de 30 días ha comenzado. Redirigiendo al panel...`;
+                    }
+
+                    // Store token
+                    if (json.token) localStorage.setItem('gf_token', json.token);
+
+                    // Animate redirect bar then redirect
+                    setTimeout(() => {
+                        document.getElementById('redirectBar').style.width = '100%';
+                    }, 100);
+                    setTimeout(() => {
+                        window.location.href = json.redirect || '../index.php';
+                    }, 3200);
+
+                } catch (err) {
+                    showAlert('Error de conexión. Verificá tu internet e intentá de nuevo.');
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                    label.textContent = 'Crear mi cuenta gratis';
+                    icon.style.display = '';
+                }
+            });
+
+            // ── Real-time field feedback ──────────────────────────────────────────────────
+
+            ['gym_name', 'admin_name', 'admin_email', 'admin_password', 'admin_password2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('blur', () => {
+                        // Clear individual error on blur if now valid
+                        if (el.value.trim()) {
+                            el.classList.remove('error');
+                            const err = document.getElementById('err_' + id);
+                            if (err) { err.classList.remove('show'); err.textContent = ''; }
+                        }
+                    });
+                }
+            });
+
+        })();
+    </script>
+
+</body>
+
+</html>
