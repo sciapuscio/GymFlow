@@ -193,10 +193,15 @@ io.on('connection', (socket) => {
     socket.on('join:session', async ({ session_id, sala_id }) => {
         try {
             let st = sessionStates.get(sala_id);
-            if (!st) {
+            if (!st || st.sessionId !== session_id) {
+                // No cached state or different session — full load
                 st = await loadSession(session_id);
                 if (!st) { socket.emit('error', 'Session not found'); return; }
                 sessionStates.set(sala_id, st);
+            } else {
+                // State exists — always refresh blocks from DB so builder edits (reps, etc.) are visible
+                const fresh = await loadSession(session_id);
+                if (fresh) st.blocks = fresh.blocks;
             }
             socket.join(`sala:${sala_id}`);
             socket.data.salaId = sala_id;

@@ -241,6 +241,16 @@ if ($method === 'PUT' && $id) {
         jsonError('No fields');
     $params[] = $id;
     db()->prepare("UPDATE gym_sessions SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
+
+    // If blocks changed, tell the sync server to refresh its in-memory state
+    if (isset($data['blocks_json'])) {
+        @file_get_contents(
+            'http://localhost:3001/internal/reload?session_id=' . $id,
+            false,
+            stream_context_create(['http' => ['timeout' => 2, 'ignore_errors' => true]])
+        );
+    }
+
     jsonResponse(['success' => true]);
 }
 
