@@ -341,6 +341,8 @@
     // ── Close on backdrop click ──────────────────────────────────────────────────
     backdrop.addEventListener('click', () => {
         if (transitioning) return; // ignore clicks during step transitions
+        // Don't dismiss if any modal is currently open (e.g. branding modal)
+        if (document.querySelector('.modal-overlay.open')) return;
         dismiss();
     });
 
