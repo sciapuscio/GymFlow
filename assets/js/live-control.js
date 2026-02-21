@@ -124,6 +124,18 @@ const GFLive = (() => {
                     spotifyFadeAndPause(2);
                 }
             }
+        } else if (_lastAutoPlayUri && isPlaying && !_fadingOut) {
+            // Block-end fade: use server ticks (≈1Hz) as the fade timer.
+            // In the last 3 seconds, reduce volume proportionally — 1 API call/tick,
+            // 3 calls total. No setInterval needed, no rate-limit risk.
+            const b = blocks[currentIdx];
+            const dur = b ? blockDuration(b) : 0;
+            const remaining = dur > 0 ? Math.max(0, dur - elapsed) : 999;
+            if (remaining > 0 && remaining <= 3) {
+                // remaining=3→vol67, remaining=2→vol33, remaining=1→vol0
+                const vol = Math.round(((remaining - 1) / 3) * 100);
+                spotifySetVolume(Math.max(0, vol));
+            }
         }
     }
 
