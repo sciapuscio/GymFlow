@@ -3,6 +3,7 @@
     let currentState = null;
     let localElapsed = 0;  // filled by server ticks — no local ticker needed
     let stickWidget = null;  // StickmanWidget instance
+    let _previewBlock = null; // set by session:block_change while paused
 
     function init() {
         connectSocket();
@@ -28,11 +29,42 @@
         socket.on('session:state', (tick) => applyState(tick));
         socket.on('session:tick', (tick) => applyState(tick));
 
+        // When instructor jumps to a block while paused → show "¡PREPARATE! [exercise]"
+        // instead of leaving the PAUSA screen up. _previewBlock keeps this alive across ticks.
+        socket.on('session:block_change', ({ block }) => {
+            if (!block) return;
+            _previewBlock = block;
+            _showPreviewOverlay(block);
+        });
+
         socket.on('disconnect', () => {
             console.warn('[DisplaySync] Disconnected, reconnecting...');
         });
     }
 
+
+    function _showPreviewOverlay(block) {
+        // Show the idle screen with the exercise name — matches the "PREPARÁNDOSE" state
+        // the instructor sees before starting a session.
+        const idleScreen = document.getElementById('idle-screen');
+        const liveScreen = document.getElementById('live-screen');
+        const prepOverlay = document.getElementById('prep-overlay');
+        const pausedOverlay = document.getElementById('paused-overlay');
+        const ambientRings = document.getElementById('ambient-rings');
+        const idleLabel = document.getElementById('idle-class-label');
+
+        const exs = block.exercises || [];
+        const label = exs.length
+            ? (exs[0]?.name || (typeof exs[0] === 'string' ? exs[0] : null) || block.name)
+            : block.name;
+
+        if (idleLabel) idleLabel.textContent = label || '';
+        if (liveScreen) liveScreen.style.display = 'none';
+        if (prepOverlay) prepOverlay.style.display = 'none';
+        if (pausedOverlay) pausedOverlay.classList.remove('visible');
+        if (ambientRings) ambientRings.style.display = 'block';
+        if (idleScreen) idleScreen.style.display = 'flex';
+    }
 
     function applyState(state) {
         const prev = currentState;
@@ -81,25 +113,48 @@
             return;
         }
 
-        // Live or paused
-        if (idleScreen) idleScreen.style.display = 'none';
-        if (ambientRings) ambientRings.style.display = 'none';
-        if (liveScreen) liveScreen.style.display = 'grid';
-        if (finishedScreen) finishedScreen.style.display = 'none';
-        if (pausedOverlay) pausedOverlay.classList.toggle('visible', status === 'paused');
-
-        // PREPARATE overlay (Spotify intro countdown)
+        // PREPARATE overlay (Spotify intro countdown only)
         const prepOverlay = document.getElementById('prep-overlay');
         const prepCountdown = document.getElementById('prep-countdown');
         const prepBlockName = document.getElementById('prep-block-name');
         const prepRemaining = state.prep_remaining || 0;
-        if (prepOverlay) {
-            if (prepRemaining > 0 && status === 'playing') {
-                prepOverlay.style.display = 'flex';
-                if (prepCountdown) prepCountdown.textContent = prepRemaining;
-                if (prepBlockName && block) prepBlockName.textContent = block.name || '';
+
+        if (status === 'playing') {
+            // Clear block-jump preview as soon as playing starts
+            _previewBlock = null;
+            if (idleScreen) idleScreen.style.display = 'none';
+            if (ambientRings) ambientRings.style.display = 'none';
+            if (liveScreen) liveScreen.style.display = 'grid';
+            if (finishedScreen) finishedScreen.style.display = 'none';
+            if (pausedOverlay) pausedOverlay.classList.remove('visible');
+            if (prepOverlay) {
+                if (prepRemaining > 0) {
+                    // Spotify intro countdown
+                    if (prepCountdown) { prepCountdown.style.display = ''; prepCountdown.textContent = prepRemaining; }
+                    if (prepBlockName && block) {
+                        const exs = block.exercises || [];
+                        const firstName = exs.length
+                            ? (exs[0]?.name || (typeof exs[0] === 'string' ? exs[0] : null) || block.name)
+                            : block.name;
+                        prepBlockName.textContent = firstName || '';
+                    }
+                    prepOverlay.style.display = 'flex';
+                } else {
+                    prepOverlay.style.display = 'none';
+                }
+            }
+        } else if (status === 'paused') {
+            if (_previewBlock) {
+                // Block-jump: show idle screen with exercise name + PREPARÁNDOSE
+                _showPreviewOverlay(_previewBlock);
             } else {
-                prepOverlay.style.display = 'none';
+                // Normal mid-session pause: show live screen + PAUSA overlay
+                if (idleScreen) idleScreen.style.display = 'none';
+                if (ambientRings) ambientRings.style.display = 'none';
+                if (liveScreen) liveScreen.style.display = 'grid';
+                if (finishedScreen) finishedScreen.style.display = 'none';
+                if (prepOverlay) prepOverlay.style.display = 'none';
+                if (pausedOverlay) pausedOverlay.classList.add('visible');
             }
         }
 

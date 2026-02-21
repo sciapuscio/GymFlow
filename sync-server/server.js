@@ -303,14 +303,14 @@ io.on('connection', (socket) => {
     });
 
     // ── Control: GOTO ───────────────────────────────────────────────────────
-    socket.on('control:goto', async ({ index }) => {
+    socket.on('control:goto', async ({ index, prep_remaining = 0 }) => {
         const sala_id = socket.data.salaId;
         const st = sessionStates.get(sala_id);
         if (!st) return;
         stopTimer(sala_id);
         st.currentBlockIndex = Math.max(0, Math.min(index, st.blocks.length - 1));
         st.elapsed = 0;
-        st.prepRemaining = 0;
+        st.prepRemaining = prep_remaining; // honour prep sent by instructor
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
