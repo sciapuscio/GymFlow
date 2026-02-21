@@ -342,8 +342,12 @@ if ($action === 'save-credentials') {
     $secret = trim($data['client_secret'] ?? '');
     if (!$cid || !$secret)
         jsonError('Client ID y Secret son requeridos');
-    db()->prepare("UPDATE instructor_profiles SET spotify_client_id=?, spotify_client_secret=? WHERE user_id=?")
-        ->execute([$cid, $secret, $user['id']]);
+    db()->prepare("INSERT INTO instructor_profiles (user_id, spotify_client_id, spotify_client_secret)
+                   VALUES (?, ?, ?)
+                   ON DUPLICATE KEY UPDATE
+                       spotify_client_id = VALUES(spotify_client_id),
+                       spotify_client_secret = VALUES(spotify_client_secret)")
+        ->execute([$user['id'], $cid, $secret]);
     jsonResponse(['ok' => true]);
 }
 

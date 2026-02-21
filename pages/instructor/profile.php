@@ -82,8 +82,8 @@ layout_footer($user);
                     <strong style="color:var(--gf-text)">Redirect URI para tu app:</strong><br>
                     <code id="redirect-uri-code"
                         style="background:var(--gf-bg);padding:4px 8px;border-radius:6px;display:block;margin-top:6px;word-break:break-all">
-                            <?php echo 'https://' . $_SERVER['HTTP_HOST'] . BASE_URL . '/api/spotify.php?action=callback' ?>
-                        </code>
+                                <?php echo 'https://' . $_SERVER['HTTP_HOST'] . BASE_URL . '/api/spotify.php?action=callback' ?>
+                            </code>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Client ID</label>
@@ -145,8 +145,17 @@ layout_footer($user);
         const cid = document.getElementById('sp-client-id')?.value.trim();
         const secret = document.getElementById('sp-client-secret')?.value.trim();
         if (!cid || !secret) { showToast('Completá ambos campos', 'error'); return; }
-        await GF.post(window.GF_BASE + '/api/spotify.php?action=save-credentials', { client_id: cid, client_secret: secret });
-        showToast('Credenciales guardadas', 'success');
+        try {
+            const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=save-credentials', { client_id: cid, client_secret: secret });
+            if (res && res.ok) {
+                showToast('Credenciales guardadas', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast(res?.error || 'Error al guardar', 'error');
+            }
+        } catch (e) {
+            showToast('Error al guardar las credenciales', 'error');
+        }
     }
 
     async function connectSpotify() {
