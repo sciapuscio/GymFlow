@@ -425,6 +425,9 @@ layout_footer($user);
         };
         await GF.put(`${window.GF_BASE}/api/gyms.php?id=${GYM_ID}`, data);
         showToast('Branding guardado', 'success');
+        // Close modal first so the tour's MutationObserver can advance to the next step
+        // before the page reloads (otherwise the tour loops back to step 1).
+        document.getElementById('branding-modal').classList.remove('open');
         setTimeout(() => location.reload(), 800);
     }
 
