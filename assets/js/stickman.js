@@ -324,7 +324,7 @@
         var prog = segT - Math.floor(segT);
         var pose = lerpPose(frames[from], frames[to], prog);
         this._drawPose(pose, W, H);
-        if (this._equipment) this._drawEquipment(pose, W, H, elapsed);
+        if (this._equipment && !isRest) this._drawEquipment(pose, W, H, elapsed);
     };
 
     StickFigure.prototype._drawPose = function (pose, W, H) {
@@ -354,6 +354,16 @@
         ctx.beginPath();
         ctx.arc(pH[0], pH[1], headR, 0, Math.PI * 2);
         ctx.stroke();
+
+        // ── Ground shadow line under feet ──────────────────────────────
+        var ankleL = px('la');
+        var ankleR = px('ra');
+        var groundY = Math.max(ankleL[1], ankleR[1]) + lw * 0.5;
+        var groundX = (ankleL[0] + ankleR[0]) / 2;
+        ctx.beginPath();
+        ctx.ellipse(groundX, groundY, W * 0.22, H * 0.014, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.fill();
     };
 
     // ── Equipment prop renderer ───────────────────────────────────────────────
@@ -664,16 +674,16 @@
             ctx.beginPath();
             ctx.roundRect(rw12[0] - lw, rw12[1] - hLen / 2, lw * 2, hLen, 2);
             ctx.fill();
-            // Rope curve beneath feet — sinusoidal arc
-            var footY = Math.max(la3[1], ra3[1]) + H * 0.02;
+            // Rope curve beneath feet — clean sine arc that clears below foot level
+            var footY = Math.max(la3[1], ra3[1]) + H * 0.03;
             var footMidX = (la3[0] + ra3[0]) / 2;
-            var phase = (elapsed % 800) / 800;  // 0..1 oscillation
-            var ropeAmp = H * 0.06 * Math.abs(Math.sin(phase * Math.PI));
+            var phase = (elapsed % 800) / 800;
+            var ropeAmp = H * 0.09 * Math.abs(Math.sin(phase * Math.PI));
             ctx.beginPath();
             ctx.moveTo(lw12[0], lw12[1] + hLen / 2);
             ctx.bezierCurveTo(
-                la3[0], footY + ropeAmp,
-                ra3[0], footY + ropeAmp,
+                footMidX - W * 0.18, footY + ropeAmp,
+                footMidX + W * 0.18, footY + ropeAmp,
                 rw12[0], rw12[1] + hLen / 2
             );
             ctx.strokeStyle = ropeColor;
@@ -681,7 +691,84 @@
             ctx.lineCap = 'round';
             ctx.stroke();
         }
+
+        // ── DIP BAR (paralelas) ────────────────────────────────────────────────
+        else if (eq === 'dip_bar') {
+            var lw13 = px('lw'); var rw13 = px('rw');
+            var barColor = 'rgba(200,200,220,0.85)';
+            var postColor = 'rgba(160,160,180,0.70)';
+            // Bar sits slightly above the wrists (hands grip from above)
+            var barY = Math.min(lw13[1], rw13[1]) - H * 0.015;
+            var barL = lw13[0] - W * 0.08;  // extends a bit beyond each hand
+            var barR = rw13[0] + W * 0.08;
+            // Horizontal bar
+            ctx.beginPath();
+            ctx.moveTo(barL, barY);
+            ctx.lineTo(barR, barY);
+            ctx.strokeStyle = barColor;
+            ctx.lineWidth = lw * 1.2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            // Left post (vertical support)
+            ctx.beginPath();
+            ctx.moveTo(barL + W * 0.03, barY);
+            ctx.lineTo(barL + W * 0.03, barY + H * 0.18);
+            ctx.strokeStyle = postColor;
+            ctx.lineWidth = lw * 0.9;
+            ctx.stroke();
+            // Right post
+            ctx.beginPath();
+            ctx.moveTo(barR - W * 0.03, barY);
+            ctx.lineTo(barR - W * 0.03, barY + H * 0.18);
+            ctx.strokeStyle = postColor;
+            ctx.lineWidth = lw * 0.9;
+            ctx.stroke();
+            // Knobs at base of posts
+            disc(barL + W * 0.03, barY + H * 0.18, lw * 1.2, postColor);
+            disc(barR - W * 0.03, barY + H * 0.18, lw * 1.2, postColor);
+        }
+
+        // ── RINGS (anillas) ────────────────────────────────────────────────────
+        else if (eq === 'rings') {
+            var lw14 = px('lw'); var rw14 = px('rw');
+            var ringColor = 'rgba(210,190,130,0.90)';
+            var ropeRingColor = 'rgba(200,200,200,0.55)';
+            var ringR = Math.max(6, H * 0.055);
+            var ringLW = lw * 1.1;
+            // Subtle sway animation
+            var sway = Math.sin(elapsed / 1200) * W * 0.012;
+            // Ring centres: a bit above and around the wrists
+            var lRingX = lw14[0] + sway;
+            var lRingY = lw14[1] - ringR * 0.5;
+            var rRingX = rw14[0] + sway;
+            var rRingY = rw14[1] - ringR * 0.5;
+            // Suspension straps (from top of canvas)
+            var strapTopY = H * 0.04;
+            ctx.setLineDash([3, 4]);
+            ctx.beginPath();
+            ctx.moveTo(lRingX, strapTopY);
+            ctx.lineTo(lRingX, lRingY - ringR);
+            ctx.moveTo(rRingX, strapTopY);
+            ctx.lineTo(rRingX, rRingY - ringR);
+            ctx.strokeStyle = ropeRingColor;
+            ctx.lineWidth = lw * 0.7;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Left ring
+            ctx.beginPath();
+            ctx.arc(lRingX, lRingY, ringR, 0, Math.PI * 2);
+            ctx.strokeStyle = ringColor;
+            ctx.lineWidth = ringLW;
+            ctx.stroke();
+            // Right ring
+            ctx.beginPath();
+            ctx.arc(rRingX, rRingY, ringR, 0, Math.PI * 2);
+            ctx.strokeStyle = ringColor;
+            ctx.lineWidth = ringLW;
+            ctx.stroke();
+        }
     };
+
 
     // ── StickmanWidget ────────────────────────────────────────────────────────
     function StickmanWidget(containerEl, opts) {
@@ -697,8 +784,8 @@
     StickmanWidget.prototype._build = function () {
         var size = this.opts.size || 'normal';
         var isMini = size === 'mini';
-        var cW = isMini ? 70 : 130;
-        var cH = isMini ? 120 : 210;
+        var cW = isMini ? 70 : 160;
+        var cH = isMini ? 120 : 260;
         var html;
 
         if (isMini) {

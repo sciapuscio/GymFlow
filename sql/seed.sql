@@ -52,7 +52,7 @@ INSERT INTO exercises (gym_id, created_by, name, name_es, muscle_group, equipmen
 (NULL, NULL, 'Air Squats', 'Sentadillas', 'legs', '[]', 'beginner', '["legs","glutes"]', 30, 1),
 (NULL, NULL, 'Back Squat', 'Sentadilla con Barra', 'legs', '["barbell","rack"]', 'intermediate', '["legs","glutes","strength"]', 40, 1),
 (NULL, NULL, 'Front Squat', 'Sentadilla Frontal', 'legs', '["barbell","rack"]', 'advanced', '["legs","core","strength"]', 40, 1),
-(NULL, NULL, 'Wall Ball', 'Lanzamiento a la Pared', 'legs', '["wall ball"]', 'beginner', '["legs","shoulders"]', 30, 1),
+(NULL, NULL, 'Wall Ball', 'Lanzamiento a la Pared', 'legs', '["wall ball"]', 'intermediate', '["legs","shoulders","cardio"]', 30, 1),
 (NULL, NULL, 'Lunges', 'Estocadas', 'legs', '[]', 'beginner', '["legs","glutes","balance"]', 30, 1),
 (NULL, NULL, 'Bulgarian Split Squat', 'Sentadilla Búlgara', 'legs', '["bench"]', 'intermediate', '["legs","glutes","balance"]', 35, 1),
 (NULL, NULL, 'Box Step-Ups', 'Subidas al Cajón', 'legs', '["box"]', 'beginner', '["legs","glutes"]', 30, 1),
@@ -76,7 +76,7 @@ INSERT INTO exercises (gym_id, created_by, name, name_es, muscle_group, equipmen
 (NULL, NULL, 'Lateral Raises', 'Elevaciones Laterales', 'shoulders', '["dumbbells"]', 'beginner', '["shoulders"]', 35, 1),
 (NULL, NULL, 'Jerk', 'Split Jerk', 'shoulders', '["barbell"]', 'advanced', '["shoulders","legs","olympic"]', 40, 1),
 -- Arms
-(NULL, NULL, 'Ring Dips', 'Fondos en Anillas', 'arms', '["rings"]', 'advanced', '["arms","chest","stability"]', 30, 1),
+(NULL, NULL, 'Ring Dips', 'Fondos en Anillas', 'chest', '["rings"]', 'advanced', '["chest","arms","stability"]', 30, 1),
 (NULL, NULL, 'Bicep Curls', 'Curl de Bíceps', 'arms', '["dumbbells"]', 'beginner', '["arms"]', 35, 1),
 (NULL, NULL, 'Tricep Extensions', 'Extensiones de Tríceps', 'arms', '["dumbbells"]', 'beginner', '["arms"]', 35, 1),
 -- Core
@@ -90,8 +90,13 @@ INSERT INTO exercises (gym_id, created_by, name, name_es, muscle_group, equipmen
 (NULL, NULL, 'Clean & Jerk', 'Cargada y Envión', 'full_body', '["barbell"]', 'advanced', '["olympic","power","full_body"]', 45, 1),
 (NULL, NULL, 'Snatch', 'Arranque', 'full_body', '["barbell"]', 'advanced', '["olympic","power","full_body"]', 45, 1),
 (NULL, NULL, 'Power Clean', 'Cargada de Potencia', 'full_body', '["barbell"]', 'intermediate', '["olympic","power"]', 40, 1),
-(NULL, NULL, 'Kettlebell Swing', 'Balanceo con Pesa Rusa', 'full_body', '["kettlebell"]', 'beginner', '["full_body","cardio","power"]', 30, 1),
-(NULL, NULL, 'Thruster', 'Thruster', 'full_body', '["barbell"]', 'intermediate', '["full_body","legs","shoulders"]', 35, 1);
+(NULL, NULL, 'Kettlebell Swing', 'Balanceo con Pesa Rusa', 'full_body', '["kettlebell"]', 'beginner', '["full_body","cardio","power","hinge"]', 30, 1),
+(NULL, NULL, 'Thruster', 'Thruster', 'full_body', '["barbell"]', 'intermediate', '["full_body","legs","shoulders"]', 35, 1),
+-- Additional functional training essentials
+(NULL, NULL, 'Hip Thrust', 'Empuje de Cadera', 'glutes', '["barbell","bench"]', 'beginner', '["glutes","hinge","strength"]', 40, 1),
+(NULL, NULL, 'Farmer Carry', 'Cargada del Granjero', 'full_body', '["kettlebell"]', 'intermediate', '["full_body","grip","carry","core"]', 30, 1),
+(NULL, NULL, 'Hang Power Clean', 'Cargada de Potencia desde Colgado', 'full_body', '["barbell"]', 'intermediate', '["olympic","power","pull"]', 40, 1),
+(NULL, NULL, 'Push Jerk', 'Push Jerk', 'shoulders', '["barbell"]', 'advanced', '["shoulders","legs","olympic","power"]', 35, 1);
 
 -- ============================================================
 -- SAMPLE TEMPLATES

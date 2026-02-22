@@ -19,13 +19,14 @@
         },
         // ── SQUAT ──────────────────────────────────────────────────────────
         squat_up: {
-            head: [.50, .09], neck: [.50, .17],
-            ls: [.35, .23], rs: [.65, .23],
-            le: [.30, .34], re: [.70, .34],
-            lw: [.30, .42], rw: [.70, .42],
-            lh: [.42, .58], rh: [.58, .58],
-            lk: [.42, .76], rk: [.58, .76],
-            la: [.42, .94], ra: [.58, .94],
+            // Ready position: hip crease slightly open, arms in front at shoulder height
+            head: [.50, .11], neck: [.50, .19],
+            ls: [.36, .26], rs: [.64, .26],
+            le: [.32, .34], re: [.68, .34],
+            lw: [.32, .40], rw: [.68, .40],
+            lh: [.41, .61], rh: [.59, .61],
+            lk: [.40, .78], rk: [.60, .78],
+            la: [.41, .94], ra: [.59, .94],
         },
         squat_down: {
             head: [.50, .26], neck: [.50, .34],
@@ -96,10 +97,11 @@
         },
         // ── PUSH VERTICAL (press overhead) ─────────────────────────────────
         pressv_rack: {
+            // Front rack: elbows high and forward, wrists BELOW elbows (y > elbow y)
             head: [.50, .09], neck: [.50, .17],
             ls: [.35, .23], rs: [.65, .23],
-            le: [.30, .30], re: [.70, .30],
-            lw: [.37, .27], rw: [.63, .27],
+            le: [.33, .28], re: [.67, .28],
+            lw: [.38, .33], rw: [.62, .33],
             lh: [.42, .58], rh: [.58, .58],
             lk: [.42, .76], rk: [.58, .76],
             la: [.42, .94], ra: [.58, .94],
@@ -153,13 +155,14 @@
         },
         // ── KETTLEBELL SWING ────────────────────────────────────────────────
         swing_back: {
-            head: [.50, .18], neck: [.50, .26],
-            ls: [.32, .27], rs: [.68, .27],
-            le: [.34, .37], re: [.66, .37],
-            lw: [.43, .44], rw: [.57, .44],
-            lh: [.41, .53], rh: [.59, .53],
-            lk: [.38, .73], rk: [.62, .73],
-            la: [.38, .94], ra: [.62, .94],
+            // Hip hinge: knees narrower, torso hinged, arms swinging back between legs
+            head: [.50, .20], neck: [.50, .28],
+            ls: [.34, .29], rs: [.66, .29],
+            le: [.38, .38], re: [.62, .38],
+            lw: [.44, .46], rw: [.56, .46],
+            lh: [.41, .52], rh: [.59, .52],
+            lk: [.40, .72], rk: [.60, .72],
+            la: [.40, .93], ra: [.60, .93],
         },
         swing_top: {
             head: [.50, .09], neck: [.50, .17],
@@ -257,13 +260,14 @@
             la: [.42, .93], ra: [.58, .93],
         },
         plank_b: {
-            head: [.50, .19], neck: [.50, .24],
-            ls: [.36, .27], rs: [.64, .27],
-            le: [.35, .36], re: [.65, .36],
-            lw: [.32, .46], rw: [.68, .46],
-            lh: [.42, .54], rh: [.58, .54],
-            lk: [.42, .72], rk: [.58, .72],
-            la: [.42, .92], ra: [.58, .92],
+            // Breathing exhale: hips very slightly raised, back slightly rounded
+            head: [.50, .17], neck: [.50, .23],
+            ls: [.36, .26], rs: [.64, .26],
+            le: [.35, .35], re: [.65, .35],
+            lw: [.32, .45], rw: [.68, .45],
+            lh: [.42, .50], rh: [.58, .50],
+            lk: [.42, .70], rk: [.58, .70],
+            la: [.42, .90], ra: [.58, .90],
         },
         // ── OLYMPIC (clean phases) ──────────────────────────────────────────
         olympic_start: {
@@ -311,6 +315,80 @@
             lh: [.42, .57], rh: [.58, .57],
             lk: [.60, .76], rk: [.39, .70],
             la: [.60, .94], ra: [.40, .86],
+        },
+        // ── TOES-TO-BAR (kip) ────────────────────────────────────────────────
+        t2b_hang: {
+            // Dead hang, body slightly hollow
+            head: [.50, .17], neck: [.50, .24],
+            ls: [.35, .28], rs: [.65, .28],
+            le: [.35, .16], re: [.65, .16],
+            lw: [.35, .06], rw: [.65, .06],
+            lh: [.42, .64], rh: [.58, .64],
+            lk: [.42, .81], rk: [.58, .81],
+            la: [.42, .96], ra: [.58, .96],
+        },
+        t2b_top: {
+            // Feet at bar height: hips pike, legs parallel or above horizontal
+            head: [.50, .15], neck: [.50, .22],
+            ls: [.35, .26], rs: [.65, .26],
+            le: [.35, .14], re: [.65, .14],
+            lw: [.35, .05], rw: [.65, .05],
+            lh: [.42, .38], rh: [.58, .38],
+            lk: [.42, .22], rk: [.58, .22],
+            la: [.42, .08], ra: [.58, .08],
+        },
+        // ── CURL ────────────────────────────────────────────────────────────
+        curl_down: {
+            // Arms at sides, elbow extended
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.38, .24], rs: [.62, .24],
+            le: [.38, .42], re: [.62, .42],
+            lw: [.38, .60], rw: [.62, .60],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94],
+        },
+        curl_up: {
+            // Elbow fully flexed, forearm vertical, upper arm stays fixed
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.38, .24], rs: [.62, .24],
+            le: [.38, .42], re: [.62, .42],
+            lw: [.35, .24], rw: [.65, .24],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94],
+        },
+        // ── LATERAL RAISE ───────────────────────────────────────────────────
+        raise_side: {
+            // Arms abducted to shoulder height (90°), slight elbow bend
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.35, .23], rs: [.65, .23],
+            le: [.22, .22], re: [.78, .22],
+            lw: [.13, .26], rw: [.87, .26],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94],
+        },
+        // ── GHD ─────────────────────────────────────────────────────────────
+        ghd_sit: {
+            // Seated upright on GHD, hips at edge, knees secured
+            head: [.50, .09], neck: [.50, .17],
+            ls: [.35, .23], rs: [.65, .23],
+            le: [.30, .30], re: [.70, .30],
+            lw: [.29, .38], rw: [.71, .38],
+            lh: [.42, .55], rh: [.58, .55],
+            lk: [.38, .72], rk: [.62, .72],
+            la: [.36, .90], ra: [.64, .90],
+        },
+        ghd_back: {
+            // Full extension: torso parallel or past horizontal, arms behind head
+            head: [.50, .78], neck: [.50, .70],
+            ls: [.38, .62], rs: [.62, .62],
+            le: [.35, .50], re: [.65, .50],
+            lw: [.40, .42], rw: [.60, .42],
+            lh: [.42, .55], rh: [.58, .55],
+            lk: [.38, .72], rk: [.62, .72],
+            la: [.36, .90], ra: [.64, .90],
         },
     };
 
@@ -399,6 +477,14 @@
         'Carrera 400m': ['Cadencia alta > velocidad de zancada', 'Brazos a 90°', 'Respira rítmico'],
         'Shuttle Run': ['Frena con control', 'Toca el suelo', 'Acelera de cero cada vez'],
         'Carrera de Ida y Vuelta': ['Frena con control', 'Toca el suelo', 'Acelera de cero'],
+        // New exercises
+        'Hip Thrust': ['Espalda en el banco', 'Empuja con los talones', 'Glúteos al tope arriba'],
+        'Empuje de Cadera': ['Espalda en el banco', 'Empuja con los talones', 'Glúteos al tope arriba'],
+        'Farmer Carry': ['Hombros abajo y atrás', 'Core apretado', 'Pasos cortos y firmes'],
+        'Cargada del Granjero': ['Hombros abajo y atrás', 'Core apretado', 'Pasos cortos y firmes'],
+        'Hang Power Clean': ['Start desde la cadera', 'Triple extensión explosiva', 'Codos rápidos al frente'],
+        'Cargada de Potencia desde Colgado': ['Start desde la cadera', 'Triple extensión explosiva', 'Codos rápidos al frente'],
+        'Push Jerk': ['Dip corto y vertical', 'Empuja explosivo y baja bajo la barra', 'Pies paralelos al recuperar'],
     };
 
     // ── Archetype mapping ──────────────────────────────────────────────────────
@@ -430,9 +516,9 @@
         'Pull-ups': 'pull_v', 'Dominadas': 'pull_v',
         'Chest-to-Bar Pull-ups': 'pull_v', 'Dominadas Pecho a Barra': 'pull_v',
         'Lat Pulldown': 'pull_v', 'Jalón al Pecho': 'pull_v',
-        'Muscle UP': 'muscle_up', 'Musscle UP': 'muscle_up',
-        'Toes-to-Bar': 'pull_v', 'Pies a la Barra': 'pull_v',
-        'Ring Dips': 'pull_v', 'Fondos en Anillas': 'pull_v',
+        'Muscle UP': 'muscle_up', 'Muscle Up': 'muscle_up',
+        'Toes-to-Bar': 't2b', 'Pies a la Barra': 't2b',
+        'Ring Dips': 'dip', 'Fondos en Anillas': 'dip',
         // Pull horizontal
         'Bent Over Row': 'pull_h', 'Remo Inclinado': 'pull_h',
         'Ring Rows': 'pull_h', 'Remo en Anillas': 'pull_h',
@@ -440,7 +526,7 @@
         'Kettlebell Swing': 'swing', 'Balanceo con Pesa Rusa': 'swing',
         // Core dynamic
         'Sit-ups': 'core_dyn', 'Abdominales': 'core_dyn',
-        'GHD Sit-ups': 'core_dyn', 'Abdominales en GHD': 'core_dyn',
+        'GHD Sit-ups': 'ghd', 'Abdominales en GHD': 'ghd',
         'Russian Twists': 'core_dyn', 'Rotaciones Rusas': 'core_dyn',
         // Core iso
         'Plank': 'core_iso', 'Plancha': 'core_iso',
@@ -462,10 +548,14 @@
         'Clean & Jerk': 'olympic', 'Cargada y Envión': 'olympic',
         'Power Clean': 'olympic', 'Cargada de Potencia': 'olympic',
         'Snatch': 'olympic', 'Arranque': 'olympic',
-        // Arms
-        'Bicep Curls': 'pull_h', 'Curl de Bíceps': 'pull_h',
-        'Tricep Extensions': 'push_h', 'Extensiones de Tríceps': 'push_h',
-        'Lateral Raises': 'push_v', 'Elevaciones Laterales': 'push_v',
+        'Hang Power Clean': 'olympic', 'Cargada de Potencia desde Colgado': 'olympic',
+        'Push Jerk': 'push_v', 'Hip Thrust': 'hinge',
+        'Empuje de Cadera': 'hinge',
+        'Farmer Carry': 'hinge', 'Cargada del Granjero': 'hinge',
+        // Arms — each has its own distinct archetype
+        'Bicep Curls': 'curl', 'Curl de Bíceps': 'curl',
+        'Tricep Extensions': 'press_down', 'Extensiones de Tríceps': 'press_down',
+        'Lateral Raises': 'raise', 'Elevaciones Laterales': 'raise',
     };
 
     // ── Equipment per exercise ─────────────────────────────────────────────────
@@ -500,27 +590,49 @@
         'Wall Ball': 'wall_ball', 'Lanzamiento a la Pared': 'wall_ball',
         'Jump Rope': 'jump_rope', 'Soga': 'jump_rope',
         'Double Unders': 'jump_rope', 'Doble Comba': 'jump_rope',
+        // Bodyweight with apparatus
+        'Dips': 'dip_bar', 'Fondos': 'dip_bar',
+        'Ring Dips': 'rings', 'Fondos en Anillas': 'rings',
+        'Ring Push-ups': 'rings', 'Flexiones en Anillas': 'rings',
+        'Ring Rows': 'rings', 'Remo en Anillas': 'rings',
+        'Muscle UP': 'rings', 'Muscle Up': 'rings',
+        // New exercises
+        'Hang Power Clean': 'barbell_olympic', 'Cargada de Potencia desde Colgado': 'barbell_olympic',
+        'Push Jerk': 'barbell_press',
+        'Farmer Carry': 'kettlebell',
     };
+
 
     // ── Archetype definitions ──────────────────────────────────────────────────
     const ARCHETYPES = {
+        // ── Compound movements ────────────────────────────────────────────────
         muscle_up: { frames: [P.pullv_hang, P.pullv_top, P.pressv_rack, P.pressv_top, P.pressv_rack, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 3200, restCycleDuration: 5000 },
         squat: { frames: [P.squat_up, P.squat_down, P.squat_up], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
         lunge: { frames: [P.stand, P.lunge_l, P.stand, P.lunge_r], restFrames: [P.stand], cycleDuration: 2600, restCycleDuration: 5000 },
         hinge: { frames: [P.hinge_top, P.hinge_bottom, P.hinge_top], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000 },
+        olympic: { frames: [P.olympic_start, P.olympic_pull, P.olympic_catch, P.olympic_pull, P.olympic_start], restFrames: [P.stand], cycleDuration: 2400, restCycleDuration: 5000 },
+        // ── Push patterns ─────────────────────────────────────────────────────
         push_h: { frames: [P.pushh_up, P.pushh_down, P.pushh_up], restFrames: [P.pushh_up], cycleDuration: 1800, restCycleDuration: 5000 },
         push_v: { frames: [P.pressv_rack, P.pressv_top, P.pressv_rack], restFrames: [P.stand], cycleDuration: 2000, restCycleDuration: 5000 },
+        dip: { frames: [P.pressv_top, P.pushh_down, P.pressv_top], restFrames: [P.stand], cycleDuration: 1800, restCycleDuration: 5000 },
+        press_down: { frames: [P.pressv_top, P.pressv_rack, P.pressv_top], restFrames: [P.stand], cycleDuration: 1800, restCycleDuration: 5000 },
+        raise: { frames: [P.stand, P.raise_side, P.stand], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
+        // ── Pull patterns ─────────────────────────────────────────────────────
         pull_v: { frames: [P.pullv_hang, P.pullv_top, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 2400, restCycleDuration: 5000 },
         pull_h: { frames: [P.pullh_ext, P.pullh_cont, P.pullh_ext], restFrames: [P.pullh_ext], cycleDuration: 2000, restCycleDuration: 5000 },
-        swing: { frames: [P.swing_back, P.swing_top, P.swing_back], restFrames: [P.stand], cycleDuration: 1600, restCycleDuration: 5000 },
+        t2b: { frames: [P.t2b_hang, P.t2b_top, P.t2b_hang], restFrames: [P.pullv_hang], cycleDuration: 2000, restCycleDuration: 5000 },
+        curl: { frames: [P.curl_down, P.curl_up, P.curl_down], restFrames: [P.stand], cycleDuration: 1800, restCycleDuration: 5000 },
+        // ── Core ─────────────────────────────────────────────────────────────
         core_dyn: { frames: [P.situp_down, P.situp_up, P.situp_down], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
         core_iso: { frames: [P.plank, P.plank_b, P.plank], restFrames: [P.stand], cycleDuration: 4000, restCycleDuration: 5000 },
+        ghd: { frames: [P.ghd_sit, P.ghd_back, P.ghd_sit], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000 },
+        // ── Cardio & conditioning ─────────────────────────────────────────────
+        swing: { frames: [P.swing_back, P.swing_top, P.swing_back], restFrames: [P.stand], cycleDuration: 1600, restCycleDuration: 5000 },
         mc: { frames: [P.mc_l, P.mc_r], restFrames: [P.pushh_up], cycleDuration: 800, restCycleDuration: 5000 },
         run: { frames: [P.run_r, P.run_l], restFrames: [P.stand], cycleDuration: 700, restCycleDuration: 5000 },
         jump: { frames: [P.jump_crouch, P.jump_air, P.jump_crouch], restFrames: [P.stand], cycleDuration: 1200, restCycleDuration: 5000 },
         bike: { frames: [P.bike_a, P.bike_b], restFrames: [P.bike_a], cycleDuration: 900, restCycleDuration: 5000 },
         row: { frames: [P.pullh_ext, P.pullh_cont, P.pullh_ext], restFrames: [P.pullh_ext], cycleDuration: 1800, restCycleDuration: 5000 },
-        olympic: { frames: [P.olympic_start, P.olympic_pull, P.olympic_catch, P.olympic_pull, P.olympic_start], restFrames: [P.stand], cycleDuration: 2400, restCycleDuration: 5000 },
     };
 
     // ── Public API ─────────────────────────────────────────────────────────────

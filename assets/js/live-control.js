@@ -436,7 +436,9 @@ const GFLive = (() => {
     }
     async function autoPlayBlockSpotify(block) {
         if (!block?.spotify_uri) return;
-        if (!isPlaying) return;
+        // NOTE: do NOT check isPlaying here — when called from togglePlay's FRESH START
+        // path, the server tick hasn't arrived yet so isPlaying is still false.
+        // Callsites that care (applyTick) already guard with their own isPlaying check.
         if (block.spotify_uri === _lastAutoPlayUri) return;
         _lastAutoPlayUri = block.spotify_uri;
         try {
@@ -456,6 +458,7 @@ const GFLive = (() => {
         const colors = { interval: '#00f5d4', tabata: '#ff6b35', amrap: '#7c3aed', emom: '#0ea5e9', fortime: '#f59e0b', series: '#ec4899', circuit: '#10b981', rest: '#3d5afe', briefing: '#6b7280' };
         return colors[type] || '#888';
     }
+
 
     async function skipBackward() {
         emit('control:prev');
