@@ -74,6 +74,182 @@ if (!$sala) {
         }
     </style>
 
+    <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dseg7-classic">
+
+    <style>
+        /* ── CLOCK MODE — CrossFit Box Hardware Style ───────────────────────── */
+
+        /* WOD shrinks to top 75% when clock is active */
+        body.clock-active .live-screen {
+            height: 75vh !important;
+            max-height: 75vh !important;
+            box-sizing: border-box;
+        }
+
+        /* Smooth WOD transition */
+        .live-screen {
+            transition: height .3s cubic-bezier(.4, 0, .2, 1), max-height .3s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        /* ── Hardware panel shell ── */
+        .clock-panel {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 25vh;
+            min-height: 120px;
+            background: #000;
+            /* Subtle bezel: top highlight + inner shadow */
+            border-top: 3px solid #111;
+            box-shadow: inset 0 4px 24px rgba(0, 0, 0, .9),
+                inset 0 -2px 8px rgba(0, 0, 0, .6);
+            z-index: 120;
+            overflow: hidden;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.clock-active .clock-panel {
+            display: flex;
+        }
+
+        /* Inner row: everything laid out horizontally */
+        .clock-hw-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(8px, 3vw, 48px);
+            width: 100%;
+            padding: 0 clamp(16px, 5vw, 80px);
+        }
+
+        /* ── Round / sub-info column (left of phase) ── */
+        .clock-hw-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .clock-sub {
+            font-family: 'DSEG7 Classic', 'Bebas Neue', monospace;
+            font-size: clamp(10px, 2.2vh, 24px);
+            color: rgba(255, 36, 0, 0.35);
+            /* ghost red */
+            letter-spacing: .04em;
+            white-space: nowrap;
+            line-height: 1;
+        }
+
+        /* The actual (lit) sub-value */
+        .clock-sub [data-lit] {
+            color: #a0c4ff;
+            text-shadow: 0 0 8px rgba(0, 102, 255, 0.5);
+        }
+
+        .clock-progress-label {
+            font-size: clamp(9px, 1.4vh, 14px);
+            color: rgba(255, 255, 255, 0.18);
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        /* ── Phase label (LED blue — mode name) ── */
+        .clock-phase-wrapper {
+            position: relative;
+            line-height: 1;
+        }
+
+        /* Ghost (unlit) segments — same text behind, very dim */
+        .clock-phase-wrapper::before {
+            content: attr(data-ghost);
+            position: absolute;
+            inset: 0;
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: inherit;
+            color: rgba(0, 102, 255, 0.12);
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .clock-phase-label {
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: clamp(28px, 9vh, 100px);
+            line-height: 1;
+            color: #0a6fff;
+            text-shadow:
+                0 0 12px rgba(10, 111, 255, 0.9),
+                0 0 30px rgba(10, 111, 255, 0.5),
+                0 0 60px rgba(10, 111, 255, 0.2);
+            text-transform: uppercase;
+            white-space: nowrap;
+            letter-spacing: .06em;
+            font-variant-numeric: tabular-nums;
+            transition: color .25s, text-shadow .25s;
+        }
+
+        /* ── Time digits (LED red) ── */
+        .clock-digits-wrapper {
+            position: relative;
+            line-height: 1;
+        }
+
+        /* Ghost digits */
+        .clock-digits-wrapper::before {
+            content: attr(data-ghost);
+            position: absolute;
+            inset: 0;
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: inherit;
+            color: rgba(255, 36, 0, 0.12);
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+            letter-spacing: inherit;
+        }
+
+        .clock-digits {
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: clamp(54px, 17vh, 170px);
+            line-height: 1;
+            letter-spacing: .04em;
+            color: #ff2400;
+            text-shadow:
+                0 0 10px rgba(255, 36, 0, 1),
+                0 0 30px rgba(255, 36, 0, 0.7),
+                0 0 70px rgba(255, 36, 0, 0.3);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            transition: color .25s, text-shadow .25s;
+        }
+
+        /* ── REST phase: swap red→blue for digits too ── */
+        body.state-rest .clock-digits {
+            color: #0a6fff;
+            text-shadow:
+                0 0 10px rgba(10, 111, 255, 1),
+                0 0 30px rgba(10, 111, 255, 0.7),
+                0 0 70px rgba(10, 111, 255, 0.3);
+        }
+
+        body.state-rest .clock-digits-wrapper::before {
+            color: rgba(10, 111, 255, 0.12);
+        }
+
+        /* Ghost-digit data attr on wrappers is updated by JS */
+        .clock-progress-fill {
+            display: none;
+        }
+
+        /* kept for JS compat */
+    </style>
+
     <!-- Ambient decorations -->
     <div class="ambient-rings" id="ambient-rings">
         <div class="ring"></div>
@@ -342,6 +518,36 @@ if (!$sala) {
 
     <!-- Flash transition effect -->
     <div class="block-transition-flash" id="transition-flash" style="display:none"></div>
+
+    <!-- CLOCK MODE PANEL — CrossFit Box Hardware Timer ──────────────────────
+         Layout mirrors real hardware:  [INFO]  [PHASE]  [TIME]
+         Phase label = LED blue   |   Time digits = LED red
+    ──────────────────────────────────────────────────────────────────────── -->
+    <div class="clock-panel" id="clock-panel">
+        <div class="clock-hw-row">
+
+            <!-- Left: round counter + block name (small, dim) -->
+            <div class="clock-hw-info">
+                <div class="clock-sub" id="clock-sub"></div>
+                <div class="clock-progress-label" id="clock-progress-label"></div>
+            </div>
+
+            <!-- Center-left: phase label (WORK / REST / AMRAP…) in LED blue -->
+            <div class="clock-phase-wrapper" id="clock-phase-wrapper" data-ghost="88">
+                <div class="clock-phase-label" id="clock-phase-label">--</div>
+            </div>
+
+            <!-- Center-right: time countdown in LED red -->
+            <div class="clock-digits-wrapper" id="clock-digits-wrapper" data-ghost="88:88">
+                <div class="clock-digits" id="clock-digits">00:00</div>
+            </div>
+
+        </div>
+        <!-- Hidden fill: kept for JS compatibility in display-sync.js -->
+        <div style="display:none">
+            <div id="clock-progress-fill"></div>
+        </div>
+    </div>
 
     <script>
         const SALA_ID = <?php echo (int) $sala['id'] ?>;

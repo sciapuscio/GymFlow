@@ -5,6 +5,18 @@
     let stickWidget = null;  // StickmanWidget instance
     let _previewBlock = null; // set by session:block_change while paused
 
+    // Sub-second interpolation for the clock panel only.
+    // The server sends ticks at ~1Hz. We animate the clock at 60fps by
+    // tracking how many ms have passed since the last tick arrived.
+    let _lastTickAt = 0;      // performance.now() when last tick arrived
+    let _rafId = null;        // requestAnimationFrame handle
+    let _clockActive = false; // mirrors clock_mode.active for rAF guard
+
+    // Beep state tracking
+    let _lastClockSec = -1;   // last integer second shown on clock (for 3-2-1 pips)
+    let _lastClockPhase = ''; // last phase label — detects work↔rest transitions
+    let _audioCtx = null;     // Web Audio context (created on first use)
+
     function init() {
         connectSocket();
         // Init stickman widget (deferred so scripts load first)
@@ -14,6 +26,15 @@
                 stickWidget = new StickmanWidget(el, { size: 'normal' });
             }
         }, 200);
+
+        // Unlock Web Audio on first gesture (browser autoplay policy)
+        const _unlockAudio = () => {
+            _getAudioCtx();
+            document.removeEventListener('click', _unlockAudio);
+            document.removeEventListener('touchstart', _unlockAudio);
+        };
+        document.addEventListener('click', _unlockAudio, { once: true });
+        document.addEventListener('touchstart', _unlockAudio, { once: true });
     }
 
     // ── Socket.IO Connection ─────────────────────────────────────────────────
@@ -161,8 +182,10 @@
         const blockChanged = !prev || prev.current_block_index !== blockIdx;
         if (blockChanged && prev) flashTransition();
 
-        // Update body class
-        document.body.className = `state-${status}`;
+        // Update body class — preserve clock-active and other non-state classes
+        // (using full className replacement would nuke 'clock-active' on every tick)
+        document.body.classList.remove('state-idle', 'state-playing', 'state-paused', 'state-finished', 'state-rest');
+        document.body.classList.add(`state-${status}`);
 
         const idleScreen = document.getElementById('idle-screen');
         const liveScreen = document.getElementById('live-screen');
@@ -267,8 +290,271 @@
 
         // Block dots
         updateBlockDots(blockIdx, totalBlocks);
+
+        // Clock Mode — toggle panel + WOD area resize
+        _applyClockMode(state);
     }
 
+    // ── Clock Mode ─────────────────────────────────────────────────────────
+    function _applyClockMode(state) {
+        const cm = state.clock_mode;
+        const active = !!(cm && cm.active);
+        const wasActive = _clockActive;
+        _clockActive = active;
+
+        // Toggle body class (drives CSS: WOD shrinks to 75%, panel appears)
+        document.body.classList.toggle('clock-active', active);
+
+        if (!active) {
+            // Stop interpolation rAF and clear panel
+            if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+            return;
+        }
+
+        // Record tick arrival for sub-second interpolation
+        _lastTickAt = performance.now();
+
+        // Render immediately with server elapsed
+        renderClockPanel(state, localElapsed);
+
+        // Start/continue smooth rAF loop only if just became active
+        if (!wasActive) _startClockRaf(state);
+    }
+
+    function _startClockRaf(state) {
+        if (_rafId) cancelAnimationFrame(_rafId);
+
+        function tick() {
+            if (!_clockActive) { _rafId = null; return; }
+            // ms elapsed since last server tick (capped at 1200ms to avoid drift)
+            const msSinceTick = Math.min(performance.now() - _lastTickAt, 1200);
+            const interpolated = localElapsed + msSinceTick / 1000;
+            renderClockPanel(currentState, interpolated);
+            _rafId = requestAnimationFrame(tick);
+        }
+
+        _rafId = requestAnimationFrame(tick);
+    }
+
+    // Renders the clock panel from session tick data.
+    // elapsed may be fractional (from sub-second rAF interpolation).
+    function renderClockPanel(state, elapsed) {
+        if (!state) return;
+        const block = state.current_block;
+        const status = state.status || 'idle';
+
+        const digitsEl = document.getElementById('clock-digits');
+        const phaseEl = document.getElementById('clock-phase-label');
+        const subEl = document.getElementById('clock-sub');
+        const fillEl = document.getElementById('clock-progress-fill');
+        const lblEl = document.getElementById('clock-progress-label');
+        if (!digitsEl) return;
+
+        // If session is paused, show frozen time with PAUSA label
+        if (status === 'paused') {
+            if (phaseEl) phaseEl.textContent = 'PAUSA';
+            return; // keep digits frozen at last known value
+        }
+
+        if (!block) return;
+        const cfg = block.config || {};
+        const dur = computeBlockDuration(block);
+        const blockType = block.type || '';
+
+        let displaySec, phaseLabel, subText, pct;
+
+        if (blockType === 'tabata' || blockType === 'interval') {
+            // Timed intervals: show phase clock (work/rest countdown)
+            const workSecs = cfg.work || (blockType === 'tabata' ? 20 : 40);
+            const restSecs = cfg.rest || (blockType === 'tabata' ? 10 : 20);
+            const totalRounds = cfg.rounds || (blockType === 'tabata' ? 8 : 1);
+            const cycleSec = workSecs + restSecs;
+            const phaseElapsed = elapsed % cycleSec;
+            const inWork = phaseElapsed < workSecs;
+            const currentRound = Math.floor(elapsed / cycleSec); // 0-based
+            const isLastRound = currentRound >= totalRounds - 1;
+
+            if (inWork) {
+                displaySec = workSecs - phaseElapsed;  // countdown within work
+                phaseLabel = 'WORK';
+            } else {
+                const restElapsed = phaseElapsed - workSecs;
+                displaySec = restSecs - restElapsed;   // countdown within rest
+                phaseLabel = 'DESCANSO';
+            }
+
+            const shownRound = Math.min(currentRound + 1, totalRounds);
+            subText = `Ronda ${shownRound} / ${totalRounds}`;
+            pct = Math.min(100, (elapsed / dur) * 100);
+            if (lblEl) lblEl.textContent = block.name || blockType.toUpperCase();
+
+        } else if (blockType === 'amrap' || blockType === 'emom' || blockType === 'fortime') {
+            // Countdown from total duration
+            displaySec = Math.max(0, dur - elapsed);
+            phaseLabel = { amrap: 'AMRAP', emom: 'EMOM', fortime: 'FOR TIME' }[blockType] || blockType.toUpperCase();
+            subText = block.name || '';
+            pct = Math.min(100, (elapsed / dur) * 100);
+            if (lblEl) lblEl.textContent = formatDuration(dur);
+
+        } else if (blockType === 'rest') {
+            displaySec = Math.max(0, dur - elapsed);
+            phaseLabel = 'DESCANSO';
+            subText = 'Recuperación';
+            pct = Math.min(100, (elapsed / dur) * 100);
+            if (lblEl) lblEl.textContent = formatDuration(dur);
+
+        } else {
+            // Series, circuit, briefing, default: simple countdown
+            displaySec = Math.max(0, dur - elapsed);
+            phaseLabel = blockType.toUpperCase() || 'TIEMPO';
+            subText = block.name || '';
+            pct = dur > 0 ? Math.min(100, (elapsed / dur) * 100) : 0;
+            if (lblEl) lblEl.textContent = formatDuration(dur);
+        }
+
+        // Update elements — hardware layout
+        const secFormatted = _formatClockMs(displaySec);
+        const intSec = Math.floor(displaySec);
+
+        // ── BEEP LOGIC ──────────────────────────────────────────────────────────
+        // Phase transition: detect WORK↔DESCANSO change
+        if (_lastClockPhase && _lastClockPhase !== phaseLabel) {
+            if (phaseLabel === 'DESCANSO') _beepToRest();
+            else _beepToWork();
+        }
+        _lastClockPhase = phaseLabel;
+
+        // 3-2-1 countdown pips (fires once per integer second change)
+        if (intSec !== _lastClockSec) {
+            if (intSec >= 1 && intSec <= 3) _beepCountdown();
+            if (intSec === 0 && _lastClockSec === 1) _beepEnd();
+            _lastClockSec = intSec;
+        }
+        // ── END BEEP LOGIC ──────────────────────────────────────────────────────────
+        // Short hardware-style phase abbreviations (like real CrossFit timers)
+        const HW_LABEL = {
+            'WORK': 'uP',   // "UP" in DSEG7 looks like hardware "up" counter
+            'DESCANSO': 'rE',   // "rE" = REST
+            'AMRAP': 'At',   // abbreviation
+            'EMOM': 'En',
+            'FOR TIME': 'Ft',
+            'PAUSA': 'PU',
+        };
+        const hwPhase = HW_LABEL[phaseLabel] || phaseLabel.slice(0, 2);
+
+        // Update digits
+        if (digitsEl && digitsEl.textContent !== secFormatted) digitsEl.textContent = secFormatted;
+
+        // Keep ghost data-attr length matching digit length for proper ghost alignment
+        const digitsWrapper = document.getElementById('clock-digits-wrapper');
+        if (digitsWrapper) digitsWrapper.dataset.ghost = '8'.repeat(secFormatted.replace(':', '').length)
+            .split('').join('').replace(/(.{1})(.{2})$/, '$1:$2'); // e.g. "8:88" or "88:88"
+
+        // Phase label  
+        if (phaseEl) phaseEl.textContent = hwPhase;
+        const phaseWrapper = document.getElementById('clock-phase-wrapper');
+        if (phaseWrapper) phaseWrapper.dataset.ghost = '8'.repeat(hwPhase.length);
+
+        // Left info: sub text (round counter, block name)
+        if (subEl) subEl.textContent = subText;
+        if (lblEl) lblEl.textContent = ''; // keep empty — used only for progress label
+
+        // Drive REST body class for clock color (blue vs red)
+        const isRestPhase = phaseLabel === 'DESCANSO' || blockType === 'rest';
+        document.body.classList.toggle('state-rest', isRestPhase);
+    }
+
+    // Format seconds to M:SS (integer version) or M:SS.t for sub-second
+    // The clock panel shows integer seconds (same as a real hardware timer).
+    function _formatClockMs(sec) {
+        sec = Math.max(0, sec);
+        const intSec = Math.floor(sec);
+        const m = Math.floor(intSec / 60);
+        const s = intSec % 60;
+        return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+
+    // ── Beep Engine (Web Audio API) ───────────────────────────────────────────────
+    // All sounds are synthesized — no audio files needed.
+    function _getAudioCtx() {
+        if (!_audioCtx) {
+            _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (_audioCtx.state === 'suspended') _audioCtx.resume();
+        return _audioCtx;
+    }
+
+    // Core beep primitive: freq (Hz), dur (s), wave type, volume, start delay (s)
+    function _beep(freq, dur, type = 'square', vol = 0.4, delay = 0) {
+        try {
+            const ctx = _getAudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+            gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+            gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + 0.005);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+            osc.start(ctx.currentTime + delay);
+            osc.stop(ctx.currentTime + delay + dur + 0.05);
+        } catch (e) { /* silently ignore if audio unavailable */ }
+    }
+
+    // ── Named sound events ──────────────────────────────────────────────────────
+
+    // 3-2-1 countdown pip: 2.5 kHz, corto y seco
+    function _beepCountdown() {
+        _beep(2500, 0.07, 'sine', 0.5);
+    }
+
+    // Work → REST: two descending notes ("it’s over, cool down")
+    function _beepToRest() {
+        _beep(2200, 0.12, 'sine', 0.45);
+    }
+
+    // REST → WORK: doble beep rapido 2.2 kHz GO!
+    function _beepToWork() {
+        _beep(2200, 0.08, 'sine', 0.45, 0.00);
+        _beep(2200, 0.08, 'sine', 0.50, 0.13);
+    }
+
+    // Round / bloque terminado: 1.4 kHz, más grave
+    function _beepEnd() {
+        _beep(1400, 0.35, 'sine', 0.50, 0.00);
+        _beep(1400, 0.35, 'sine', 0.45, 0.45);
+    }
+
+    // ── Self-contained block duration calculator (mirrors server logic)
+    function computeBlockDuration(block) {
+        if (!block) return 300;
+        const c = block.config || {};
+        switch (block.type) {
+            case 'interval': {
+                const r = c.rounds || 1, w = c.work || 40, re = c.rest || 20;
+                return r * w + (r - 1) * re;
+            }
+            case 'tabata': {
+                const r = c.rounds || 8, w = c.work || 20, re = c.rest || 10;
+                return r * w + (r - 1) * re;
+            }
+            case 'amrap': case 'emom': case 'fortime': return c.duration || 600;
+            case 'rest': case 'briefing': return c.duration || 60;
+            case 'series': return (c.sets || 3) * ((c.rest || 60) + 30);
+            case 'circuit': return (block.exercises?.length || 0) * (c.station_time || 40) * (c.rounds || 1);
+            default: return 300;
+        }
+    }
+
+    // Format seconds as M:SS
+    function formatDuration(sec) {
+        sec = Math.max(0, Math.floor(sec));
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}:${String(s).padStart(2, '0')}`;
+    }
 
     function updateBlockDisplay(block, nextBlock, blockIdx, totalBlocks) {
         if (!block) return;
@@ -303,8 +589,17 @@
                 } else if (['amrap', 'emom', 'fortime', 'series'].includes(block.type)) {
                     // All exercises are done together — show block name, not one exercise
                     exEl.textContent = block.name || block.type.toUpperCase();
+                } else if (block.type === 'circuit' && exs.length > 0) {
+                    // Circuit: rotate station based on elapsed / station_time
+                    const stationSec = block.config?.station_time || 40;
+                    exIdx = Math.floor(localElapsed / stationSec) % exs.length;
+                    exEl.dataset.roundIdx = exIdx;
+                    const ex = exs[exIdx];
+                    exEl.textContent = ex?.name || (typeof ex === 'string' ? ex : null) || block.name;
+                    exEl.style.animation = 'none';
+                    requestAnimationFrame(() => exEl.style.animation = '');
                 } else {
-                    // Single exercise or circuit station
+                    // Single exercise
                     exEl.dataset.roundIdx = 0;
                     const ex = exs[0];
                     exEl.textContent = ex?.name || (typeof ex === 'string' ? ex : null) || block.name;
@@ -338,6 +633,10 @@
                     const cfg = block.config || {};
                     const roundDur = (cfg.work || 20) + (cfg.rest || 10);
                     return Math.floor(localElapsed / roundDur) % exs.length;
+                }
+                if (block.type === 'circuit' && exs.length > 1) {
+                    const stationSec = block.config?.station_time || 40;
+                    return Math.floor(localElapsed / stationSec) % exs.length;
                 }
                 if (['amrap', 'emom', 'fortime', 'series'].includes(block.type) && exs.length > 1) {
                     return Math.floor(localElapsed / 20) % exs.length;
@@ -431,6 +730,17 @@
         // amrap / fortime / series / emom: activeIdx stays -1 (all equal)
 
         container.style.display = 'flex';
+
+        // Responsive scaling: divide ~75vh by number of exercises to fit all on screen.
+        // font-size ≈ 50% of per-chip budget, clamped to a readable range.
+        const count = exs.length;
+        const budgetVh = 75 / count;               // vh available per chip
+        const fontVh = Math.min(4.5, Math.max(1.0, budgetVh * 0.5));
+        const padV = Math.min(10, Math.max(2, budgetVh * 0.12));
+        const padH = Math.min(32, Math.max(8, fontVh * 5));
+        const fontSize = `${fontVh}vh`;
+        const padding = `${padV}px ${padH}px`;
+
         container.innerHTML = exs.map((ex, i) => {
             const exName = ex?.name || (typeof ex === 'string' ? ex : '?');
             // Show reps prefix for list-based blocks (amrap/fortime/series/emom)
@@ -440,9 +750,9 @@
             const isActive = i === activeIdx;
             return `<span style="
             display:inline-flex;align-items:center;
-            padding:10px 32px;
+            padding:${padding};
             border-radius:999px;
-            font-size:clamp(20px,2.8vw,38px);
+            font-size:${fontSize};
             font-weight:${isActive ? '800' : '500'};
             letter-spacing:.08em;
             text-transform:uppercase;

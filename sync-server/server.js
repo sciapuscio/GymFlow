@@ -64,6 +64,7 @@ function buildTick(st) {
         total_duration: st.totalDuration,
         auto_play: st.autoPlay !== false,
         wod_overlay: st.wodOverlay || { active: false, blocks: [] },
+        clock_mode: st.clockMode || { active: false, mode: 'session', config: {} },
         server_ts: Date.now(),
     };
 }
@@ -138,6 +139,7 @@ async function loadSession(sessionId) {
         prepRemaining: 0,
         totalDuration: parseInt(row.total_duration) || 0,
         autoPlay: true,  // true = auto-advance blocks; false = pause at end of each block
+        clockMode: { active: false, mode: 'session', config: {} },
     };
 }
 
@@ -403,6 +405,24 @@ io.on('connection', (socket) => {
         if (st) st.wodOverlay = { active: !!active, blocks: active ? (blocks || []) : [] };
         io.to(`sala:${sala_id}`).emit('display:wod_overlay', { active: !!active, blocks: blocks || [] });
         console.log(`[Socket] Sala ${sala_id} WOD overlay → ${active}`);
+    });
+
+    // ── Control: CLOCK MODE ───────────────────────────────────────────────────
+    // Instructor sends { active, mode, config } to toggle/configure the display clock.
+    // mode: 'session' | 'countdown' | 'countup'
+    // config: { work, rest, rounds, duration, ... } (same schema as block config)
+    socket.on('control:clock_mode', ({ active, mode, config } = {}) => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        const st = sessionStates.get(sala_id);
+        if (!st) return;
+        st.clockMode = {
+            active: !!active,
+            mode: mode || 'session',
+            config: config || {},
+        };
+        broadcast(sala_id);  // full tick so display gets clock_mode in the proper payload
+        console.log(`[Socket] Sala ${sala_id} clock_mode → active=${active} mode=${mode}`);
     });
 
     // ── Disconnect ──────────────────────────────────────────────────────────

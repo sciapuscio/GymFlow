@@ -130,6 +130,15 @@ const GFLive = (() => {
             }
         }
 
+        // Sync Clock Mode button with server state
+        if (tick.clock_mode !== undefined) {
+            const serverClock = !!tick.clock_mode.active;
+            if (typeof window._clockModeActive !== 'undefined' && window._clockModeActive !== serverClock) {
+                window._clockModeActive = serverClock;
+                _syncClockBtn(serverClock);
+            }
+        }
+
         if (tick.status === 'finished') {
             // Stop music when session ends — must happen before isPlaying turns false,
             // otherwise the if(isPlaying) guard below would skip it.
@@ -502,7 +511,27 @@ const GFLive = (() => {
         }
     }
 
-    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket, emitWodOverlay };
+    /** Toggle or configure the display clock panel.
+     *  @param {boolean} active  - whether to show the clock
+     *  @param {string}  mode    - 'session' (default) | 'countdown' | 'countup'
+     *  @param {object}  config  - optional {work, rest, rounds, duration, ...}
+     */
+    function emitClockMode(active, mode = 'session', config = {}) {
+        if (socket?.connected) {
+            socket.emit('control:clock_mode', { active, mode, config });
+        }
+    }
+
+    function _syncClockBtn(active) {
+        const btn = document.getElementById('btn-clock-mode');
+        if (!btn) return;
+        btn.style.background = active ? 'var(--gf-accent)' : '';
+        btn.style.color = active ? '#000' : '';
+        btn.style.borderColor = active ? 'var(--gf-accent)' : '';
+        btn.title = active ? 'Ocultar reloj en pantalla' : 'Mostrar reloj en pantalla';
+    }
+
+    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket, emitWodOverlay, emitClockMode };
 })();
 
 // Expose globals used inline by live.php buttons

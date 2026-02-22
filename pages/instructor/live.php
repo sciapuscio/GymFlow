@@ -81,6 +81,10 @@ layout_footer($user);
                 title="Mostrar/ocultar resumen WOD en sala">
                 📋 WOD
             </button>
+            <button id="btn-clock-mode" class="btn btn-secondary btn-sm" onclick="toggleClockMode()"
+                title="Mostrar/ocultar reloj en pantalla">
+                🕐 Reloj
+            </button>
         <?php endif; ?>
         <a href="<?php echo BASE_URL ?>/pages/instructor/builder.php?id=<?php echo $id ?>"
             class="btn btn-secondary btn-sm">
@@ -184,6 +188,78 @@ layout_footer($user);
                     <div id="live-total-progress"
                         style="height:100%;background:linear-gradient(90deg,var(--gf-accent),var(--gf-accent-2));transition:width .5s;width:0%">
                     </div>
+                </div>
+            </div>
+
+            <!-- Clock Mode Config Panel -->
+            <div id="clock-config-panel"
+                style="border-top:1px solid var(--gf-border);padding-top:16px;display:none;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span
+                        style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gf-text-muted)">🕐
+                        Reloj en Pantalla</span>
+                    <span id="clock-status-badge"
+                        style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;letter-spacing:.06em;background:var(--gf-surface-2);color:var(--gf-text-muted)">INACTIVO</span>
+                </div>
+
+                <!-- Mode selector -->
+                <div>
+                    <label
+                        style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gf-text-muted);display:block;margin-bottom:6px">Modo</label>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                        <button class="clock-mode-btn active" data-mode="session"
+                            onclick="setClockDisplayMode('session')">Sesión</button>
+                        <button class="clock-mode-btn" data-mode="countdown"
+                            onclick="setClockDisplayMode('countdown')">Cuenta Regresiva</button>
+                        <button class="clock-mode-btn" data-mode="countup"
+                            onclick="setClockDisplayMode('countup')">Conteo Arriba</button>
+                    </div>
+                </div>
+
+                <!-- Custom params (hidden for 'session' mode) -->
+                <div id="clock-custom-params" style="display:none;flex-direction:column;gap:8px">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                        <div>
+                            <label
+                                style="font-size:10px;font-weight:700;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Duración
+                                (seg)</label>
+                            <input type="number" id="clock-cfg-duration" class="form-control"
+                                style="font-size:12px;padding:5px 8px" min="10" max="7200" value="600">
+                        </div>
+                        <div>
+                            <label
+                                style="font-size:10px;font-weight:700;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Rondas</label>
+                            <input type="number" id="clock-cfg-rounds" class="form-control"
+                                style="font-size:12px;padding:5px 8px" min="1" max="99" value="1">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                        <div>
+                            <label
+                                style="font-size:10px;font-weight:700;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Trabajo
+                                (seg)</label>
+                            <input type="number" id="clock-cfg-work" class="form-control"
+                                style="font-size:12px;padding:5px 8px" min="1" max="600" value="20">
+                        </div>
+                        <div>
+                            <label
+                                style="font-size:10px;font-weight:700;color:var(--gf-text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Descanso
+                                (seg)</label>
+                            <input type="number" id="clock-cfg-rest" class="form-control"
+                                style="font-size:12px;padding:5px 8px" min="0" max="600" value="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span
+                            style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gf-text-muted)">Presets</span>
+                        <button class="btn btn-ghost btn-sm" onclick="saveClockPreset()"
+                            style="font-size:10px;padding:2px 8px">+ Guardar</button>
+                    </div>
+                    <div id="clock-presets" style="display:flex;flex-wrap:wrap;gap:4px"></div>
                 </div>
             </div>
         </div>
@@ -371,6 +447,64 @@ layout_footer($user);
         background: var(--gf-accent);
         border-color: var(--gf-accent);
         color: #000;
+    }
+
+    /* ── Clock Mode Buttons ──────────────────────────────────────── */
+    .clock-mode-btn {
+        background: var(--gf-surface-2);
+        border: 1px solid var(--gf-border);
+        color: var(--gf-text-muted);
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        padding: 4px 9px;
+        cursor: pointer;
+        transition: all .15s;
+        line-height: 1;
+    }
+
+    .clock-mode-btn:hover {
+        border-color: var(--gf-accent);
+        color: var(--gf-accent);
+    }
+
+    .clock-mode-btn.active {
+        background: var(--gf-accent);
+        border-color: var(--gf-accent);
+        color: #000;
+    }
+
+    .clock-preset-btn {
+        background: var(--gf-surface-2);
+        border: 1px solid var(--gf-border);
+        color: var(--gf-text-muted);
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 9px;
+        cursor: pointer;
+        transition: all .15s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .clock-preset-btn:hover {
+        border-color: var(--gf-accent);
+        color: var(--gf-accent);
+    }
+
+    .clock-preset-delete {
+        opacity: 0.5;
+        font-size: 9px;
+        cursor: pointer;
+    }
+
+    .clock-preset-delete:hover {
+        opacity: 1;
+        color: #ef4444;
     }
 
     .sp-result-item {
@@ -737,5 +871,128 @@ layout_footer($user);
             btn.style.borderColor = _wodOverlayActive ? 'var(--gf-accent)' : '';
         }
     }
+
+    // ── Clock Mode ──────────────────────────────────────────────────────────
+    window._clockModeActive = false;
+    let _clockDisplayMode = 'session';
+
+    const _DEFAULT_PRESETS = [
+        { name: 'Tabata 20/10×8', mode: 'session', config: { work: 20, rest: 10, rounds: 8 } },
+        { name: 'EMOM 10′', mode: 'session', config: { duration: 600 } },
+        { name: 'AMRAP 12′', mode: 'session', config: { duration: 720 } },
+        { name: 'Countdown 5′', mode: 'countdown', config: { duration: 300 } },
+        { name: 'Count-Up', mode: 'countup', config: { duration: 600 } },
+    ];
+
+    function toggleClockMode() {
+        window._clockModeActive = !window._clockModeActive;
+        _syncClockBtnLocal(window._clockModeActive);
+
+        const panel = document.getElementById('clock-config-panel');
+        if (panel) panel.style.display = window._clockModeActive ? 'flex' : 'none';
+
+        // Emit to server regardless of panel visibility
+        _emitCurrentClockMode();
+    }
+
+    function _syncClockBtnLocal(active) {
+        const btn = document.getElementById('btn-clock-mode');
+        if (!btn) return;
+        btn.style.background = active ? 'var(--gf-accent)' : '';
+        btn.style.color = active ? '#000' : '';
+        btn.style.borderColor = active ? 'var(--gf-accent)' : '';
+        const badge = document.getElementById('clock-status-badge');
+        if (badge) {
+            badge.textContent = active ? 'ACTIVO' : 'INACTIVO';
+            badge.style.background = active ? 'var(--gf-accent)' : 'var(--gf-surface-2)';
+            badge.style.color = active ? '#000' : 'var(--gf-text-muted)';
+        }
+    }
+
+    function setClockDisplayMode(mode) {
+        _clockDisplayMode = mode;
+        // Toggle active class on mode buttons
+        document.querySelectorAll('.clock-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+        // Show/hide custom params section
+        const params = document.getElementById('clock-custom-params');
+        if (params) params.style.display = (mode === 'session') ? 'none' : 'flex';
+        // If clock is active, update immediately
+        if (window._clockModeActive) _emitCurrentClockMode();
+    }
+
+    function _getClockConfig() {
+        return {
+            duration: parseInt(document.getElementById('clock-cfg-duration')?.value || '600', 10),
+            rounds: parseInt(document.getElementById('clock-cfg-rounds')?.value || '1', 10),
+            work: parseInt(document.getElementById('clock-cfg-work')?.value || '20', 10),
+            rest: parseInt(document.getElementById('clock-cfg-rest')?.value || '10', 10),
+        };
+    }
+
+    function _emitCurrentClockMode() {
+        GFLive.emitClockMode(
+            window._clockModeActive,
+            _clockDisplayMode,
+            _clockDisplayMode === 'session' ? {} : _getClockConfig()
+        );
+    }
+
+    // ── Preset management ─────────────────────────────────────────────────────
+    function _loadClockPresets() {
+        try { return JSON.parse(localStorage.getItem('gf_clock_presets') || 'null') || _DEFAULT_PRESETS; }
+        catch { return _DEFAULT_PRESETS.slice(); }
+    }
+
+    function _saveClockPresets(presets) {
+        localStorage.setItem('gf_clock_presets', JSON.stringify(presets));
+    }
+
+    function saveClockPreset() {
+        const name = prompt('Nombre del preset:');
+        if (!name) return;
+        const presets = _loadClockPresets();
+        presets.push({ name: name.trim(), mode: _clockDisplayMode, config: _getClockConfig() });
+        _saveClockPresets(presets);
+        renderClockPresets();
+    }
+
+    function applyClockPreset(idx) {
+        const presets = _loadClockPresets();
+        const p = presets[idx];
+        if (!p) return;
+        setClockDisplayMode(p.mode);
+        if (p.config) {
+            const d = document.getElementById('clock-cfg-duration'); if (d && p.config.duration) d.value = p.config.duration;
+            const r = document.getElementById('clock-cfg-rounds'); if (r && p.config.rounds) r.value = p.config.rounds;
+            const w = document.getElementById('clock-cfg-work'); if (w && p.config.work) w.value = p.config.work;
+            const rs = document.getElementById('clock-cfg-rest'); if (rs && p.config.rest) rs.value = p.config.rest;
+        }
+        if (window._clockModeActive) _emitCurrentClockMode();
+    }
+
+    function deleteClockPreset(idx) {
+        const presets = _loadClockPresets();
+        presets.splice(idx, 1);
+        _saveClockPresets(presets);
+        renderClockPresets();
+    }
+
+    function renderClockPresets() {
+        const container = document.getElementById('clock-presets');
+        if (!container) return;
+        const presets = _loadClockPresets();
+        container.innerHTML = presets.map((p, i) => `
+            <button class="clock-preset-btn" onclick="applyClockPreset(${i})" title="${p.mode}">
+                ${p.name}
+                <span class="clock-preset-delete" onclick="event.stopPropagation();deleteClockPreset(${i})" title="Eliminar">✕</span>
+            </button>
+        `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderClockPresets();
+    });
 </script>
 <?php layout_end(); ?>
