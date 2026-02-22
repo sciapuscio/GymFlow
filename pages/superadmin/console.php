@@ -126,6 +126,14 @@ layout_footer($user);
         color: #67e8f9;
     }
 
+    .lt-autoplay {
+        color: #34d399;
+    }
+
+    .lt-phase {
+        color: #facc15;
+    }
+
     .lt-extend {
         color: #fb923c;
     }
@@ -240,6 +248,8 @@ layout_footer($user);
             'stop' => '⏹ Stop',
             'skip' => '⏭ Skip',
             'nav' => '⇄ Nav',
+            'autoplay' => '⏩ Auto',
+            'phase' => '💪 Fase',
             'extend' => '⏰ Extender',
             'config' => '🗻 AutoPlay',
             'wod' => '📊 WOD',
@@ -300,6 +310,7 @@ layout_footer($user);
             connect: 'CON', disconnect: 'DIS', instructor: 'INS', display: 'DSP',
             system: 'SYS', play: 'PLY', pause: 'PSE', stop: 'STO', skip: 'SKP',
             nav: 'NAV', extend: 'EXT', config: 'CFG', wod: 'WOD', clock: 'CLK',
+            autoplay: 'AUT', phase: 'PHS',
             broadcast: 'BRD', error: 'ERR',
         };
 

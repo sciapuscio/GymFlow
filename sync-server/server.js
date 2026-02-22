@@ -56,6 +56,7 @@ function _startClockTimer(salaId) {
             const rest = ct.rest || 10;
             const total = ct.rounds || 8;
             ct.phaseElapsed = (ct.phaseElapsed || 0) + 1;
+            const prevPhase = ct.phase;
 
             if (ct.phase === 'work') {
                 if (ct.phaseElapsed >= work) {
@@ -65,6 +66,7 @@ function _startClockTimer(salaId) {
                         ct.running = false;
                         ct.phase = 'done';
                         _stopClockTimer(salaId);
+                        mon('phase', `✅ Tabata sala ${salaId} TERMINADO (${total} rondas)`, { sala_id: salaId, rounds: total });
                     } else {
                         ct.currentRound = doneRound;
                         ct.phase = 'rest';
@@ -77,6 +79,16 @@ function _startClockTimer(salaId) {
                     ct.phaseElapsed = 0;
                 }
             }
+
+            // Emit phase-change log only on transitions (not every tick)
+            if (ct.phase !== prevPhase && ct.phase !== 'done') {
+                if (ct.phase === 'work') {
+                    mon('phase', `💪 WORK  sala ${salaId} · ronda ${(ct.currentRound || 0) + 1}/${total} (${work}s)`, { sala_id: salaId, round: ct.currentRound, work });
+                } else if (ct.phase === 'rest') {
+                    mon('phase', `😴 REST  sala ${salaId} · ronda ${ct.currentRound}/${total} (${rest}s)`, { sala_id: salaId, round: ct.currentRound, rest });
+                }
+            }
+
             ct.elapsed++;
             broadcast(salaId);
             return;
@@ -254,6 +266,7 @@ function startTimer(salaId) {
                 if (st.autoPlay !== false) {
                     // ── AUTO-PLAY MODE: advance immediately and keep going ─────
                     if (st.currentBlockIndex < st.blocks.length - 1) {
+                        const prevBlock = st.blocks[st.currentBlockIndex];
                         st.currentBlockIndex++;
                         st.elapsed = 0;
                         st.prepRemaining = 0;
@@ -263,15 +276,20 @@ function startTimer(salaId) {
                             block: st.blocks[st.currentBlockIndex],
                             next_block: st.blocks[st.currentBlockIndex + 1] || null,
                         });
+                        const nextBlk = st.blocks[st.currentBlockIndex];
+                        const nextLabel = nextBlk ? `"${nextBlk.name || nextBlk.type}" (${nextBlk.type})` : `bloque ${st.currentBlockIndex + 1}`;
+                        mon('autoplay', `⏩ AUTO sala ${salaId}: "${prevBlock?.name || prevBlock?.type}" finalizó → ${nextLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}]`, { sala_id: salaId, block: st.currentBlockIndex });
                     } else {
                         // Session finished
                         st.status = 'finished';
                         stopTimer(salaId);
                         persistState(st, 'stop');
+                        mon('stop', `⏹ SESIÓN TERMINADA sala ${salaId} (auto)`, { sala_id: salaId });
                     }
                 } else {
-                    // ── MANUAL MODE: pause at end of block, wait for Play ─────
+                    // ── MANUAL MODE: pause at end of block, wait for Play ───
                     if (st.currentBlockIndex < st.blocks.length - 1) {
+                        const prevBlock = st.blocks[st.currentBlockIndex];
                         st.currentBlockIndex++;
                         st.elapsed = 0;
                         st.prepRemaining = 0;
@@ -279,24 +297,25 @@ function startTimer(salaId) {
                         stopTimer(salaId);
                         persistState(st, 'block');
                         persistState(st, 'pause');
-                        // Broadcast paused state FIRST so clients update isPlaying
-                        // before processing block_change (avoids spurious Spotify auto-play)
                         broadcast(salaId);
                         io.to(`sala:${salaId}`).emit('session:block_change', {
                             index: st.currentBlockIndex,
                             block: st.blocks[st.currentBlockIndex],
                             next_block: st.blocks[st.currentBlockIndex + 1] || null,
                         });
-                        // Notify instructor that a block ended waiting for play
                         io.to(`sala:${salaId}`).emit('session:block_held', {
                             index: st.currentBlockIndex,
                             block: st.blocks[st.currentBlockIndex],
                         });
+                        const nextBlk = st.blocks[st.currentBlockIndex];
+                        const nextLabel = nextBlk ? `"${nextBlk.name || nextBlk.type}" (${nextBlk.type})` : `bloque ${st.currentBlockIndex + 1}`;
+                        mon('autoplay', `⏸ MANUAL sala ${salaId}: "${prevBlock?.name || prevBlock?.type}" finalizó → ${nextLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}] — esperando PLAY`, { sala_id: salaId, block: st.currentBlockIndex });
                     } else {
                         // Session finished
                         st.status = 'finished';
                         stopTimer(salaId);
                         persistState(st, 'stop');
+                        mon('stop', `⏹ SESIÓN TERMINADA sala ${salaId} (manual)`, { sala_id: salaId });
                     }
                 }
             }
