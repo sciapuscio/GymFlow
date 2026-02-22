@@ -274,8 +274,8 @@ io.on('connection', (socket) => {
         st.currentBlockIndex = Math.min(st.currentBlockIndex + 1, st.blocks.length - 1);
         st.elapsed = 0;
         st.prepRemaining = 0;
-        // If finished + not playing, stay idle (not finished) so display shows preview
-        if (st.status === 'finished') st.status = 'idle';
+        // If finished + not playing, reset to paused so display shows preview
+        if (st.status === 'finished') st.status = 'paused';
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
@@ -296,8 +296,8 @@ io.on('connection', (socket) => {
         st.currentBlockIndex = Math.max(st.currentBlockIndex - 1, 0);
         st.elapsed = 0;
         st.prepRemaining = 0;
-        // If navigating back from finished, reset to idle so display shows preview
-        if (st.status === 'finished') st.status = 'idle';
+        // If navigating back from finished, reset to paused so display shows preview
+        if (st.status === 'finished') st.status = 'paused';
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
@@ -317,8 +317,8 @@ io.on('connection', (socket) => {
         st.currentBlockIndex = Math.max(0, Math.min(index, st.blocks.length - 1));
         st.elapsed = 0;
         st.prepRemaining = prep_remaining;
-        // If jumping from a finished session, reset to idle so display shows preview
-        if (st.status === 'finished') st.status = 'idle';
+        // If jumping from a finished session, reset to paused so display shows preview
+        if (st.status === 'finished') st.status = 'paused';
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
