@@ -66,12 +66,13 @@
             la: [.42, .94], ra: [.58, .94],
         },
         hinge_bottom: {
-            head: [.50, .16], neck: [.50, .23],
-            ls: [.32, .25], rs: [.68, .25],
-            le: [.30, .36], re: [.70, .36],
-            lw: [.30, .49], rw: [.70, .49],
-            lh: [.42, .56], rh: [.58, .56],
-            lk: [.42, .75], rk: [.58, .75],
+            // Torso ~45° forward, knees slightly bent, hands at shin level
+            head: [.45, .28], neck: [.46, .36],
+            ls: [.36, .40], rs: [.60, .38],
+            le: [.34, .52], re: [.62, .50],
+            lw: [.35, .68], rw: [.63, .67],
+            lh: [.44, .54], rh: [.58, .54],
+            lk: [.43, .73], rk: [.59, .73],
             la: [.42, .94], ra: [.58, .94],
         },
         // ── PUSH HORIZONTAL (push-up / bench) ──────────────────────────────
@@ -467,6 +468,40 @@
         'Lateral Raises': 'push_v', 'Elevaciones Laterales': 'push_v',
     };
 
+    // ── Equipment per exercise ─────────────────────────────────────────────────
+    // Maps specific exercise names to the prop that should be drawn alongside
+    // the stickman. Exercises not listed here render with no equipment.
+    const EXERCISE_EQUIPMENT = {
+        // Barbell on back (high-bar / low-bar)
+        'Back Squat': 'barbell_back', 'Sentadilla con Barra': 'barbell_back',
+        // Barbell in front rack / overhead rack
+        'Front Squat': 'barbell_front', 'Sentadilla Frontal': 'barbell_front',
+        'Thruster': 'barbell_front',
+        // Barbell at floor / hip hinge pulls
+        'Deadlift': 'barbell_floor', 'Peso Muerto': 'barbell_floor',
+        'Romanian Deadlift': 'barbell_floor', 'Peso Muerto Rumano': 'barbell_floor',
+        'Bent Over Row': 'barbell_floor', 'Remo Inclinado': 'barbell_floor',
+        // Olympic lifts — barbell travels from floor through pull to catch
+        'Power Clean': 'barbell_olympic', 'Cargada de Potencia': 'barbell_olympic',
+        'Clean & Jerk': 'barbell_olympic', 'Cargada y Envión': 'barbell_olympic',
+        'Snatch': 'barbell_olympic', 'Arranque': 'barbell_olympic',
+        // Barbell overhead press
+        'Strict Press': 'barbell_press', 'Press Militar Estricto': 'barbell_press',
+        'Push Press': 'barbell_press',
+        'Jerk': 'barbell_press', 'Split Jerk': 'barbell_press',
+        // Barbell bench press
+        'Bench Press': 'barbell_bench', 'Press de Banca': 'barbell_bench',
+        // Kettlebell
+        'Kettlebell Swing': 'kettlebell', 'Balanceo con Pesa Rusa': 'kettlebell',
+        // Machines / cardio equipment
+        'Assault Bike': 'assault_bike', 'Bicicleta Assault': 'assault_bike',
+        'Rowing': 'rowing_machine', 'Remo Ergómetro': 'rowing_machine',
+        // Other equipment
+        'Wall Ball': 'wall_ball', 'Lanzamiento a la Pared': 'wall_ball',
+        'Jump Rope': 'jump_rope', 'Soga': 'jump_rope',
+        'Double Unders': 'jump_rope', 'Doble Comba': 'jump_rope',
+    };
+
     // ── Archetype definitions ──────────────────────────────────────────────────
     const ARCHETYPES = {
         muscle_up: { frames: [P.pullv_hang, P.pullv_top, P.pressv_rack, P.pressv_top, P.pressv_rack, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 3200, restCycleDuration: 5000 },
@@ -491,8 +526,12 @@
     // ── Public API ─────────────────────────────────────────────────────────────
     global.ExercisePoses = {
         getArchetype(exerciseName) {
-            const key = EXERCISE_ARCHETYPE[exerciseName] || EXERCISE_ARCHETYPE[exerciseName?.trim()];
-            return key ? ARCHETYPES[key] : (ARCHETYPES['squat']); // default fallback
+            const name = exerciseName ? exerciseName.trim() : '';
+            const key = EXERCISE_ARCHETYPE[name];
+            const arch = key ? ARCHETYPES[key] : ARCHETYPES['squat']; // default fallback
+            // Merge the per-exercise equipment tag so the renderer knows what to draw
+            const equipment = EXERCISE_EQUIPMENT[name] || null;
+            return Object.assign({}, arch, { equipment: equipment });
         },
         getTips(exerciseName) {
             return TIPS[exerciseName] || TIPS[exerciseName?.trim()] || ['Mantén la postura', 'Core activo', 'Movimiento controlado'];

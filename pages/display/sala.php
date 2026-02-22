@@ -148,9 +148,14 @@ if (!$sala) {
             style="font-family:'Bebas Neue',sans-serif;font-size:clamp(120px,22vw,240px);line-height:1;color:#3d5afe;text-shadow:0 0 100px rgba(61,90,254,0.5);animation:restPulse 1s ease-in-out infinite">
             5
         </div>
-        <div id="rest-next-label"
-            style="font-size:clamp(14px,2vw,24px);font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:.08em;text-transform:uppercase">
-            Siguiente ronda →
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div
+                style="font-size:clamp(13px,1.6vw,20px);font-weight:700;color:rgba(255,255,255,0.35);letter-spacing:.12em;text-transform:uppercase">
+                Siguiente →
+            </div>
+            <div id="rest-next-exercise"
+                style="font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,4vw,58px);letter-spacing:.08em;color:rgba(255,255,255,0.75);text-transform:uppercase;text-align:center">
+            </div>
         </div>
         <style>
             @keyframes restPulse {

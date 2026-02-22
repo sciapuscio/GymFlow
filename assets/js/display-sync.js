@@ -409,6 +409,25 @@
                     const restRemaining = roundDur - phaseElapsed;
                     restOverlay.style.display = 'flex';
                     if (restCountdown) restCountdown.textContent = restRemaining;
+
+                    // Show next exercise name so participants can prepare
+                    const nextExEl = document.getElementById('rest-next-exercise');
+                    if (nextExEl) {
+                        const exs = block.exercises || [];
+                        if (exs.length > 1) {
+                            // Next exercise in the rotation
+                            const curRoundIdx = Math.floor(elapsed / roundDur);
+                            const nextExIdx = (curRoundIdx + 1) % exs.length;
+                            const nextEx = exs[nextExIdx];
+                            nextExEl.textContent = nextEx?.name || (typeof nextEx === 'string' ? nextEx : '');
+                        } else if (exs.length === 1) {
+                            // Single exercise: same exercise again
+                            const ex = exs[0];
+                            nextExEl.textContent = ex?.name || (typeof ex === 'string' ? ex : '');
+                        } else {
+                            nextExEl.textContent = block.name || '';
+                        }
+                    }
                 } else {
                     restOverlay.style.display = 'none';
                 }

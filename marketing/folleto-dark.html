@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymFlow – Folleto Dark</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        @page {
+            size: A5 portrait;
+            margin: 0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 148mm;
+            height: 210mm;
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            overflow: hidden;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* ─── Background texture ─── */
+        .bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(204, 255, 0, 0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0, 255, 120, 0.06) 0%, transparent 60%),
+                #060606;
+        }
+
+        .grid-lines {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(204, 255, 0, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(204, 255, 0, 0.04) 1px, transparent 1px);
+            background-size: 12mm 12mm;
+        }
+
+        /* ─── Layout ─── */
+        .page {
+            position: relative;
+            width: 148mm;
+            height: 210mm;
+            display: flex;
+            flex-direction: column;
+            padding: 8mm 9mm;
+            z-index: 1;
+        }
+
+        /* ─── Header ─── */
+        .header {
+            text-align: center;
+            padding-bottom: 5mm;
+            border-bottom: 0.4mm solid rgba(204, 255, 0, 0.25);
+            margin-bottom: 5mm;
+        }
+
+        .logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 22mm;
+            line-height: 1;
+            letter-spacing: -1px;
+            color: #ffffff;
+            position: relative;
+            display: inline-block;
+        }
+
+        .logo .accent {
+            color: #ccff00;
+        }
+
+        .logo-bolt {
+            display: inline-block;
+            width: 11mm;
+            height: 11mm;
+            background: #ccff00;
+            clip-path: polygon(60% 0%, 100% 0%, 40% 50%, 80% 50%, 0% 100%, 30% 50%, 0% 50%);
+            margin: 0 1mm;
+            vertical-align: middle;
+            position: relative;
+            top: -2mm;
+        }
+
+        .tagline {
+            font-size: 3.2mm;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.65);
+            letter-spacing: 0.5mm;
+            text-transform: uppercase;
+            margin-top: 2mm;
+        }
+
+        /* ─── Live screen mockup ─── */
+        .screen-wrap {
+            position: relative;
+            width: 100%;
+            margin-bottom: 5mm;
+        }
+
+        .screen {
+            background: linear-gradient(135deg, #111 60%, #1a1a0a);
+            border: 0.5mm solid rgba(204, 255, 0, 0.3);
+            border-radius: 2.5mm;
+            padding: 4mm 5mm;
+            display: flex;
+            align-items: center;
+            gap: 5mm;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 0.4mm;
+            background: linear-gradient(90deg, transparent, #ccff00, transparent);
+        }
+
+        .screen-label {
+            position: absolute;
+            top: 2mm;
+            right: 3mm;
+            font-size: 2mm;
+            font-weight: 700;
+            color: #ccff00;
+            letter-spacing: 0.8mm;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .screen-label::before {
+            content: '●';
+            color: #00ff88;
+            margin-right: 1mm;
+            animation: none;
+        }
+
+        .timer-block {
+            text-align: center;
+            min-width: 25mm;
+        }
+
+        .timer-type {
+            font-size: 2.5mm;
+            font-weight: 700;
+            color: #ccff00;
+            letter-spacing: 1mm;
+            text-transform: uppercase;
+            margin-bottom: 1mm;
+        }
+
+        .timer-digits {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 14mm;
+            line-height: 1;
+            color: #ffffff;
+        }
+
+        .timer-digits .colon {
+            color: #ccff00;
+        }
+
+        .divider-v {
+            width: 0.3mm;
+            height: 18mm;
+            background: rgba(204, 255, 0, 0.3);
+        }
+
+        .blocks-col {
+            flex: 1;
+        }
+
+        .blocks-title {
+            font-size: 2mm;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 2mm;
+            letter-spacing: 0.5mm;
+            text-transform: uppercase;
+        }
+
+        .blocks-grid {
+            display: flex;
+            gap: 1.5mm;
+            flex-wrap: wrap;
+        }
+
+        .blk {
+            height: 5mm;
+            border-radius: 1mm;
+            font-size: 1.8mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            letter-spacing: 0.3mm;
+            text-transform: uppercase;
+        }
+
+        .blk-tabata {
+            background: #ccff00;
+            color: #000;
+            width: 17mm;
+        }
+
+        .blk-rest {
+            background: #334;
+            color: #88aaff;
+            border: 0.2mm solid #88aaff;
+            width: 9mm;
+        }
+
+        .blk-hiit {
+            background: #ff4444;
+            color: #fff;
+            width: 14mm;
+        }
+
+        .blk-done {
+            background: #1a2a1a;
+            color: #00ff88;
+            border: 0.2mm solid #00ff88;
+            width: 11mm;
+        }
+
+        .spotify-row {
+            display: flex;
+            align-items: center;
+            gap: 2mm;
+            margin-top: 3mm;
+            background: rgba(30, 215, 96, 0.1);
+            border: 0.2mm solid rgba(30, 215, 96, 0.3);
+            border-radius: 1.5mm;
+            padding: 1.5mm 2.5mm;
+        }
+
+        .spotify-dot {
+            width: 3mm;
+            height: 3mm;
+            border-radius: 50%;
+            background: #1ed760;
+            flex-shrink: 0;
+        }
+
+        .spotify-text {
+            font-size: 1.9mm;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .spotify-text strong {
+            color: #fff;
+        }
+
+        /* ─── Feature grid ─── */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3mm;
+            margin-bottom: 5mm;
+        }
+
+        .feat {
+            background: rgba(255, 255, 255, 0.04);
+            border: 0.3mm solid rgba(204, 255, 0, 0.15);
+            border-radius: 2mm;
+            padding: 3mm;
+            text-align: center;
+        }
+
+        .feat-icon {
+            font-size: 5mm;
+            margin-bottom: 1.5mm;
+            display: block;
+        }
+
+        .feat-name {
+            font-size: 2.5mm;
+            font-weight: 700;
+            color: #ccff00;
+            margin-bottom: 1mm;
+            letter-spacing: 0.2mm;
+        }
+
+        .feat-desc {
+            font-size: 1.8mm;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 1.4;
+        }
+
+        /* ─── Footer ─── */
+        .footer {
+            margin-top: auto;
+            padding-top: 4mm;
+            border-top: 0.4mm solid rgba(204, 255, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .footer-left {}
+
+        .footer-url {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 7mm;
+            color: #ccff00;
+            letter-spacing: 0.5mm;
+        }
+
+        .footer-cta {
+            display: inline-block;
+            background: #ccff00;
+            color: #000;
+            font-size: 2.5mm;
+            font-weight: 800;
+            padding: 2mm 5mm;
+            border-radius: 1.5mm;
+            text-transform: uppercase;
+            letter-spacing: 0.5mm;
+            margin-top: 2mm;
+        }
+
+        .qr-box {
+            text-align: center;
+        }
+
+        .qr-placeholder {
+            width: 18mm;
+            height: 18mm;
+            background: #fff;
+            border-radius: 1.5mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1mm;
+        }
+
+        .qr-inner {
+            width: 15mm;
+            height: 15mm;
+            background:
+                repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 0 0 / 3mm 3mm;
+            border-radius: 0.5mm;
+        }
+
+        .qr-label {
+            font-size: 1.8mm;
+            color: rgba(255, 255, 255, 0.45);
+            letter-spacing: 0.3mm;
+            text-transform: uppercase;
+        }
+
+        @media print {
+            body {
+                width: 148mm;
+                height: 210mm;
+            }
+
+            .bg,
+            .grid-lines {
+                background-attachment: fixed;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg"></div>
+    <div class="grid-lines"></div>
+
+    <div class="page">
+
+        <!-- HEADER -->
+        <div class="header">
+            <div class="logo">
+                Gym<span class="accent">Fl</span><svg width="38" height="38" viewBox="0 0 38 38"
+                    style="vertical-align:middle;margin:0 1px;position:relative;top:-3px" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="24,2 36,2 14,19 26,19 2,36 18,36 18,22 14,36 2,36" fill="#ccff00" />
+                </svg><span class="accent">w</span>
+            </div>
+            <div class="tagline">El sistema de entrenamiento funcional que tus instructores necesitan</div>
+        </div>
+
+        <!-- LIVE SCREEN MOCKUP -->
+        <div class="screen-wrap">
+            <div class="screen">
+                <div class="screen-label">● EN VIVO</div>
+                <div class="timer-block">
+                    <div class="timer-type">TABATA</div>
+                    <div class="timer-digits">00<span class="colon">:</span>38</div>
+                </div>
+                <div class="divider-v"></div>
+                <div class="blocks-col">
+                    <div class="blocks-title">Bloques de la clase</div>
+                    <div class="blocks-grid">
+                        <div class="blk blk-done">Calent.</div>
+                        <div class="blk blk-tabata">TABATA</div>
+                        <div class="blk blk-rest">DESC</div>
+                        <div class="blk blk-hiit">HIIT</div>
+                        <div class="blk blk-rest">REST</div>
+                    </div>
+                    <div class="spotify-row">
+                        <div class="spotify-dot"></div>
+                        <div class="spotify-text"><strong>Eye of the Tiger</strong> · Survivor</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURES -->
+        <div class="features">
+            <div class="feat">
+                <span class="feat-icon">⚡</span>
+                <div class="feat-name">Control en Vivo</div>
+                <div class="feat-desc">Lanzá y controlá tu clase en tiempo real desde cualquier dispositivo</div>
+            </div>
+            <div class="feat">
+                <span class="feat-icon">🎵</span>
+                <div class="feat-name">Spotify Sync</div>
+                <div class="feat-desc">Música sincronizada automáticamente con el timer de cada bloque</div>
+            </div>
+            <div class="feat">
+                <span class="feat-icon">📺</span>
+                <div class="feat-name">Display</div>
+                <div class="feat-desc">Tus alumnos ven el timer y los ejercicios en pantalla grande</div>
+            </div>
+            <div class="feat">
+                <span class="feat-icon">🏗️</span>
+                <div class="feat-name">Builder</div>
+                <div class="feat-desc">Diseñá bloques Tabata, HIIT, AMRAP y circuitos en minutos</div>
+            </div>
+            <div class="feat">
+                <span class="feat-icon">🎨</span>
+                <div class="feat-name">Branding</div>
+                <div class="feat-desc">Logo, colores y nombre de tu gimnasio en todas las pantallas</div>
+            </div>
+            <div class="feat">
+                <span class="feat-icon">📅</span>
+                <div class="feat-name">Programación</div>
+                <div class="feat-desc">Organizá tus sesiones semanales y compartílas con tu equipo</div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <div class="footer-left">
+                <div class="footer-url">gymflow.com.ar</div>
+                <div class="footer-cta">Probalo gratis 30 días →</div>
+            </div>
+            <div class="qr-box">
+                <div class="qr-placeholder">
+                    <div class="qr-inner"></div>
+                </div>
+                <div class="qr-label">Escaneá el código</div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

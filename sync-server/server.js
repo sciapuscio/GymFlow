@@ -62,6 +62,7 @@ function buildTick(st) {
         elapsed: st.elapsed,
         prep_remaining: st.prepRemaining,
         total_duration: st.totalDuration,
+        auto_play: st.autoPlay !== false,  // include flag in every tick
         server_ts: Date.now(),
     };
 }
@@ -135,6 +136,7 @@ async function loadSession(sessionId) {
         elapsed,
         prepRemaining: 0,
         totalDuration: parseInt(row.total_duration) || 0,
+        autoPlay: true,  // true = auto-advance blocks; false = pause at end of each block
     };
 }
 
@@ -153,23 +155,53 @@ function startTimer(salaId) {
             const dur = computeBlockDuration(block);
 
             if (st.elapsed >= dur) {
-                // Auto-advance to next block
-                if (st.currentBlockIndex < st.blocks.length - 1) {
-                    st.currentBlockIndex++;
-                    st.elapsed = 0;
-                    st.prepRemaining = 0;
-                    persistState(st, 'block');
-                    // Notify instructor of block change for Spotify
-                    io.to(`sala:${salaId}`).emit('session:block_change', {
-                        index: st.currentBlockIndex,
-                        block: st.blocks[st.currentBlockIndex],
-                        next_block: st.blocks[st.currentBlockIndex + 1] || null,
-                    });
+                if (st.autoPlay !== false) {
+                    // ── AUTO-PLAY MODE: advance immediately and keep going ─────
+                    if (st.currentBlockIndex < st.blocks.length - 1) {
+                        st.currentBlockIndex++;
+                        st.elapsed = 0;
+                        st.prepRemaining = 0;
+                        persistState(st, 'block');
+                        io.to(`sala:${salaId}`).emit('session:block_change', {
+                            index: st.currentBlockIndex,
+                            block: st.blocks[st.currentBlockIndex],
+                            next_block: st.blocks[st.currentBlockIndex + 1] || null,
+                        });
+                    } else {
+                        // Session finished
+                        st.status = 'finished';
+                        stopTimer(salaId);
+                        persistState(st, 'stop');
+                    }
                 } else {
-                    // Session finished
-                    st.status = 'finished';
-                    stopTimer(salaId);
-                    persistState(st, 'stop');
+                    // ── MANUAL MODE: pause at end of block, wait for Play ─────
+                    if (st.currentBlockIndex < st.blocks.length - 1) {
+                        st.currentBlockIndex++;
+                        st.elapsed = 0;
+                        st.prepRemaining = 0;
+                        st.status = 'paused';
+                        stopTimer(salaId);
+                        persistState(st, 'block');
+                        persistState(st, 'pause');
+                        // Broadcast paused state FIRST so clients update isPlaying
+                        // before processing block_change (avoids spurious Spotify auto-play)
+                        broadcast(salaId);
+                        io.to(`sala:${salaId}`).emit('session:block_change', {
+                            index: st.currentBlockIndex,
+                            block: st.blocks[st.currentBlockIndex],
+                            next_block: st.blocks[st.currentBlockIndex + 1] || null,
+                        });
+                        // Notify instructor that a block ended waiting for play
+                        io.to(`sala:${salaId}`).emit('session:block_held', {
+                            index: st.currentBlockIndex,
+                            block: st.blocks[st.currentBlockIndex],
+                        });
+                    } else {
+                        // Session finished
+                        st.status = 'finished';
+                        stopTimer(salaId);
+                        persistState(st, 'stop');
+                    }
                 }
             }
         }
@@ -313,19 +345,30 @@ io.on('connection', (socket) => {
         const sala_id = socket.data.salaId;
         const st = sessionStates.get(sala_id);
         if (!st) return;
+        const wasPlaying = st.status === 'playing';
         stopTimer(sala_id);
         st.currentBlockIndex = Math.max(0, Math.min(index, st.blocks.length - 1));
         st.elapsed = 0;
         st.prepRemaining = prep_remaining;
-        // If jumping from a finished session, reset to paused so display shows preview
-        if (st.status === 'finished') st.status = 'paused';
+        // If jumping from a finished session, or in manual mode, go to paused.
+        if (st.status === 'finished' || st.autoPlay === false) st.status = 'paused';
         await persistState(st, 'block');
+        if (st.status === 'paused') await persistState(st, 'pause');
+        // If a block was already playing when the instructor jumped:
+        // - AUTO mode: restart immediately with prep countdown.
+        // - MANUAL mode: stays paused — instructor must press Play.
+        if (wasPlaying && st.autoPlay !== false) {
+            st.status = 'playing';
+            await persistState(st, 'play');
+            startTimer(sala_id);
+        }
+        // Broadcast AFTER timer starts so clients get status=playing from the first tick
+        broadcast(sala_id);
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
             block: st.blocks[st.currentBlockIndex],
             next_block: st.blocks[st.currentBlockIndex + 1] || null,
         });
-        broadcast(sala_id);
     });
 
     // ── Control: EXTEND ─────────────────────────────────────────────────────
@@ -338,6 +381,16 @@ io.on('connection', (socket) => {
             block.config.duration = (block.config.duration || computeBlockDuration(block)) + seconds;
         }
         broadcast(sala_id);
+    });
+
+    // ── Control: SET AUTOPLAY ─────────────────────────────────────────────────
+    socket.on('control:set_autoplay', ({ enabled }) => {
+        const sala_id = socket.data.salaId;
+        const st = sessionStates.get(sala_id);
+        if (!st) return;
+        st.autoPlay = !!enabled;
+        console.log(`[Socket] Sala ${sala_id} autoPlay → ${st.autoPlay}`);
+        broadcast(sala_id);  // let display know too
     });
 
     // ── Disconnect ──────────────────────────────────────────────────────────

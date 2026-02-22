@@ -202,6 +202,7 @@
         this.ctx = canvas.getContext('2d');
         this.color = opts.color || 'rgba(255,255,255,0.92)';
         this._archetype = null;
+        this._equipment = null;  // equipment type string, e.g. 'barbell_back'
         this._phase = 'idle';
         this._startTs = null;
         this._rafId = null;
@@ -217,6 +218,7 @@
         this._currentEx = name;
         this._archetype = (typeof ExercisePoses !== 'undefined')
             ? ExercisePoses.getArchetype(name) : null;
+        this._equipment = this._archetype ? (this._archetype.equipment || null) : null;
         this._startTs = null;
         if (!this._running) this._startLoop();
     };
@@ -282,7 +284,9 @@
                 var segDur = seq[s].ms;
                 if (t < cum + segDur) {
                     var p = (t - cum) / segDur;
-                    this._drawPose(lerpPose(seq[s].pose, seq[s + 1].pose, p), W, H);
+                    var idlePose = lerpPose(seq[s].pose, seq[s + 1].pose, p);
+                    this._drawPose(idlePose, W, H);
+                    if (this._equipment) this._drawEquipment(idlePose, W, H, elapsed);
                     drawn = true;
                     break;
                 }
@@ -294,6 +298,7 @@
                 var last = seq[seq.length - 1];
                 if (t < cum + last.ms) {
                     this._drawPose(last.pose, W, H);
+                    if (this._equipment) this._drawEquipment(last.pose, W, H, elapsed);
                 } else {
                     // Animation complete — back to normal idle
                     this._idleAnim = null;
@@ -317,7 +322,9 @@
         var from = Math.floor(segT) % n;
         var to = (from + 1) % n;
         var prog = segT - Math.floor(segT);
-        this._drawPose(lerpPose(frames[from], frames[to], prog), W, H);
+        var pose = lerpPose(frames[from], frames[to], prog);
+        this._drawPose(pose, W, H);
+        if (this._equipment) this._drawEquipment(pose, W, H, elapsed);
     };
 
     StickFigure.prototype._drawPose = function (pose, W, H) {
@@ -349,40 +356,391 @@
         ctx.stroke();
     };
 
+    // ── Equipment prop renderer ───────────────────────────────────────────────
+    StickFigure.prototype._drawEquipment = function (pose, W, H, elapsed) {
+        var ctx = this.ctx;
+        var eq = this._equipment;
+        var lw = Math.max(1.5, H * 0.017);
+        elapsed = elapsed || 0;
+
+        // Helper: convert normalised pose coords to canvas pixels
+        function px(k) {
+            var j = pose[k] || [0.5, 0.5];
+            return [j[0] * W, j[1] * H];
+        }
+        // Helper: draw a filled circle
+        function disc(x, y, r, fillColor) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+        }
+        // Helper: draw a barbell between two world points, extending outward by `ext` px
+        function barbell(x1, y1, x2, y2, ext, barbellColor, discColor, discR) {
+            // Determine the direction of the bar
+            var dx = x2 - x1;
+            var dy = y2 - y1;
+            var len = Math.sqrt(dx * dx + dy * dy) || 1;
+            var ux = dx / len;
+            var uy = dy / len;
+            // Extend bar beyond wrists
+            var ax = x1 - ux * ext;
+            var ay = y1 - uy * ext;
+            var bx = x2 + ux * ext;
+            var by = y2 + uy * ext;
+            // Bar shaft
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.strokeStyle = barbellColor;
+            ctx.lineWidth = lw * 0.85;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+            // Discs
+            disc(ax, ay, discR, discColor);
+            disc(bx, by, discR, discColor);
+            // Collar rings (thin white accent)
+            ctx.beginPath();
+            ctx.arc(ax, ay, discR, 0, Math.PI * 2);
+            ctx.arc(bx, by, discR, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = lw * 0.5;
+            ctx.stroke();
+        }
+
+        var barbColor = 'rgba(200,200,220,0.90)';
+        var discFill = 'rgba(60,60,80,0.92)';
+        var discR = Math.max(5, H * 0.058); // disc radius
+        var ext = Math.max(8, W * 0.12);  // bar extension beyond wrists
+
+        // ── BARBELL BACK (Back Squat) ─────────────────────────────────────────
+        if (eq === 'barbell_back') {
+            var ls = px('ls'); var rs = px('rs');
+            // Bar sits on the traps — slightly behind shoulders, between ls and rs
+            var barY = (ls[1] + rs[1]) / 2 + H * 0.02;
+            barbell(ls[0], barY, rs[0], barY, ext, barbColor, discFill, discR);
+            // Hands gripping the bar
+            var lw2 = px('lw'); var rw2 = px('rw');
+            disc(lw2[0], barY, lw * 1.2, 'rgba(255,255,255,0.55)');
+            disc(rw2[0], barY, lw * 1.2, 'rgba(255,255,255,0.55)');
+        }
+
+        // ── BARBELL FRONT (Front Squat / Thruster) ────────────────────────────
+        else if (eq === 'barbell_front') {
+            var lw3 = px('lw'); var rw3 = px('rw');
+            var ls2 = px('ls'); var rs2 = px('rs');
+            // Bar rests in the front rack — at shoulder height, wrists close
+            var barY2 = (ls2[1] + rs2[1]) / 2;
+            barbell(ls2[0], barY2, rs2[0], barY2, ext, barbColor, discFill, discR);
+            disc(lw3[0], barY2, lw * 1.2, 'rgba(255,255,255,0.55)');
+            disc(rw3[0], barY2, lw * 1.2, 'rgba(255,255,255,0.55)');
+        }
+
+        // ── BARBELL FLOOR (Deadlift / RDL / Row) ─────────────────────────────
+        else if (eq === 'barbell_floor') {
+            var lw4 = px('lw'); var rw4 = px('rw');
+            // Draw bar at each wrist's own X and Y — so it follows the hands
+            // naturally as they travel from hip height down to shin level.
+            barbell(lw4[0], lw4[1], rw4[0], rw4[1], ext, barbColor, discFill, discR);
+        }
+
+
+        // ── BARBELL OLYMPIC (Clean / Snatch — floor → rack → overhead) ───────
+        else if (eq === 'barbell_olympic') {
+            var lw5 = px('lw'); var rw5 = px('rw');
+            var midY2 = (lw5[1] + rw5[1]) / 2;
+            barbell(lw5[0], midY2, rw5[0], midY2, ext, barbColor, discFill, discR);
+        }
+
+        // ── BARBELL PRESS (Strict Press / Push Press / Jerk) ─────────────────
+        else if (eq === 'barbell_press') {
+            var lw6 = px('lw'); var rw6 = px('rw');
+            var midY3 = (lw6[1] + rw6[1]) / 2;
+            barbell(lw6[0], midY3, rw6[0], midY3, ext * 0.8, barbColor, discFill, discR);
+        }
+
+        // ── BARBELL BENCH (Bench Press — bar follows wrists) ─────────────────
+        else if (eq === 'barbell_bench') {
+            var lw7 = px('lw'); var rw7 = px('rw');
+            var midY4 = (lw7[1] + rw7[1]) / 2;
+            barbell(lw7[0], midY4, rw7[0], midY4, ext, barbColor, discFill, discR);
+        }
+
+        // ── KETTLEBELL ────────────────────────────────────────────────────────
+        else if (eq === 'kettlebell') {
+            var lw8 = px('lw'); var rw8 = px('rw');
+            var kx = (lw8[0] + rw8[0]) / 2;
+            var ky = (lw8[1] + rw8[1]) / 2 + H * 0.03;
+            var kbR = Math.max(6, H * 0.065);  // kettlebell body radius
+            var hW = kbR * 0.65;               // handle half-width
+            var hH = kbR * 0.5;                // handle height above body
+            // Body (filled sphere-like circle)
+            ctx.beginPath();
+            ctx.arc(kx, ky, kbR, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(40,40,55,0.92)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(180,180,200,0.80)';
+            ctx.lineWidth = lw * 0.9;
+            ctx.stroke();
+            // Handle (arc on top)
+            ctx.beginPath();
+            ctx.arc(kx, ky - kbR * 0.3, hW, Math.PI, 0, false);
+            ctx.strokeStyle = 'rgba(200,200,220,0.90)';
+            ctx.lineWidth = lw * 1.1;
+            ctx.stroke();
+            // Window accent line
+            ctx.beginPath();
+            ctx.arc(kx, ky + kbR * 0.1, kbR * 0.4, 0.3, Math.PI - 0.3);
+            ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+            ctx.lineWidth = lw * 0.6;
+            ctx.stroke();
+        }
+
+        // ── ASSAULT BIKE ──────────────────────────────────────────────────────
+        else if (eq === 'assault_bike') {
+            var lh2 = px('lh'); var rh2 = px('rh');
+            var la = px('la'); var ra = px('ra');
+            var lk = px('lk'); var rk = px('rk');
+            var lw9 = px('lw'); var rw9 = px('rw');
+            var bikeColor = 'rgba(160,180,210,0.70)';
+            ctx.strokeStyle = bikeColor;
+            ctx.lineWidth = lw * 0.9;
+            ctx.lineCap = 'round';
+            // Seat (horizontal line beneath hips)
+            var seatY = (lh2[1] + rh2[1]) / 2 + H * 0.04;
+            var seatX = (lh2[0] + rh2[0]) / 2;
+            ctx.beginPath();
+            ctx.moveTo(seatX - W * 0.07, seatY);
+            ctx.lineTo(seatX + W * 0.07, seatY);
+            ctx.stroke();
+            // Seat post going down to BB
+            var bbX = seatX;
+            var bbY = (la[1] + ra[1]) / 2 - H * 0.04;
+            ctx.beginPath();
+            ctx.moveTo(seatX, seatY);
+            ctx.lineTo(bbX, bbY);
+            ctx.stroke();
+            // Pedal cranks — small circles at ankles
+            var crankR = Math.max(4, H * 0.032);
+            ctx.beginPath();
+            ctx.arc(bbX, bbY, crankR, 0, Math.PI * 2);
+            ctx.stroke();
+            // Pedal arms to ankles
+            ctx.beginPath();
+            ctx.moveTo(bbX, bbY); ctx.lineTo(la[0], la[1]);
+            ctx.moveTo(bbX, bbY); ctx.lineTo(ra[0], ra[1]);
+            ctx.stroke();
+            // Fan wheel front (large circle in front)
+            var wheelX = bbX + W * 0.25;
+            var wheelY = bbY;
+            var wheelR = Math.max(12, H * 0.13);
+            ctx.beginPath();
+            ctx.arc(wheelX, wheelY, wheelR, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(140,160,190,0.50)';
+            ctx.stroke();
+            // Spokes
+            ctx.strokeStyle = 'rgba(140,160,190,0.35)';
+            ctx.lineWidth = lw * 0.5;
+            for (var spoke = 0; spoke < 8; spoke++) {
+                var ang = (spoke / 8) * Math.PI * 2 + elapsed * 0.004;
+                ctx.beginPath();
+                ctx.moveTo(wheelX, wheelY);
+                ctx.lineTo(wheelX + Math.cos(ang) * wheelR, wheelY + Math.sin(ang) * wheelR);
+                ctx.stroke();
+            }
+            // Handlebar — connects wrists area to bike frame
+            var hbY = (lw9[1] + rw9[1]) / 2;
+            var hbX = (lw9[0] + rw9[0]) / 2;
+            ctx.beginPath();
+            ctx.moveTo(hbX, hbY - H * 0.04);
+            ctx.lineTo(hbX, hbY + H * 0.04);
+            ctx.strokeStyle = bikeColor;
+            ctx.lineWidth = lw * 0.9;
+            ctx.stroke();
+        }
+
+        // ── ROWING MACHINE ────────────────────────────────────────────────────
+        else if (eq === 'rowing_machine') {
+            var la2 = px('la'); var ra2 = px('ra');
+            var lh3 = px('lh'); var rh3 = px('rh');
+            var lw10 = px('lw'); var rw10 = px('rw');
+            var rowColor = 'rgba(150,185,215,0.65)';
+            // Rail (monorail under athlete)
+            var railY = (la2[1] + ra2[1]) / 2 + H * 0.04;
+            var railX1 = W * 0.05;
+            var railX2 = W * 0.95;
+            ctx.beginPath();
+            ctx.moveTo(railX1, railY);
+            ctx.lineTo(railX2, railY);
+            ctx.strokeStyle = rowColor;
+            ctx.lineWidth = lw * 0.8;
+            ctx.stroke();
+            // Seat slider
+            var seatCx = (lh3[0] + rh3[0]) / 2;
+            ctx.beginPath();
+            ctx.rect(seatCx - W * 0.06, railY - H * 0.01, W * 0.12, H * 0.015);
+            ctx.fillStyle = 'rgba(120,150,180,0.55)';
+            ctx.fill();
+            // Flywheel at front right
+            var fwX = W * 0.88;
+            var fwY = railY - H * 0.12;
+            var fwR = Math.max(8, H * 0.08);
+            ctx.beginPath();
+            ctx.arc(fwX, fwY, fwR, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(140,165,195,0.55)';
+            ctx.lineWidth = lw;
+            ctx.stroke();
+            // Chain / cord from hands to flywheel
+            var handleX = (lw10[0] + rw10[0]) / 2;
+            var handleY = (lw10[1] + rw10[1]) / 2;
+            ctx.beginPath();
+            ctx.moveTo(handleX, handleY);
+            ctx.lineTo(fwX - fwR, fwY);
+            ctx.strokeStyle = 'rgba(200,220,240,0.45)';
+            ctx.lineWidth = lw * 0.6;
+            ctx.setLineDash([3, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Handle bar (horizontal across hands)
+            var hbHalf = W * 0.06;
+            ctx.beginPath();
+            ctx.moveTo(handleX - hbHalf, handleY);
+            ctx.lineTo(handleX + hbHalf, handleY);
+            ctx.strokeStyle = rowColor;
+            ctx.lineWidth = lw * 1.1;
+            ctx.stroke();
+            // Footrests
+            ctx.beginPath();
+            ctx.moveTo(la2[0] - W * 0.04, la2[1]);
+            ctx.lineTo(la2[0] + W * 0.04, la2[1]);
+            ctx.moveTo(ra2[0] - W * 0.04, ra2[1]);
+            ctx.lineTo(ra2[0] + W * 0.04, ra2[1]);
+            ctx.strokeStyle = rowColor;
+            ctx.lineWidth = lw * 0.8;
+            ctx.stroke();
+        }
+
+        // ── WALL BALL ─────────────────────────────────────────────────────────
+        else if (eq === 'wall_ball') {
+            var lw11 = px('lw'); var rw11 = px('rw');
+            var bx = (lw11[0] + rw11[0]) / 2;
+            var by = (lw11[1] + rw11[1]) / 2 - H * 0.02;
+            var br = Math.max(7, H * 0.075);
+            // Shadow
+            ctx.beginPath();
+            ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fill();
+            // Ball body
+            var grad = ctx.createRadialGradient(bx - br * 0.3, by - br * 0.3, br * 0.1, bx, by, br);
+            grad.addColorStop(0, 'rgba(100,130,100,0.90)');
+            grad.addColorStop(1, 'rgba(40,60,40,0.92)');
+            ctx.beginPath();
+            ctx.arc(bx, by, br, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(180,210,180,0.60)';
+            ctx.lineWidth = lw * 0.7;
+            ctx.stroke();
+            // Seam lines
+            ctx.beginPath();
+            ctx.arc(bx, by, br * 0.7, 0.2, Math.PI - 0.2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+            ctx.lineWidth = lw * 0.5;
+            ctx.stroke();
+        }
+
+        // ── JUMP ROPE ─────────────────────────────────────────────────────────
+        else if (eq === 'jump_rope') {
+            var lw12 = px('lw'); var rw12 = px('rw');
+            var la3 = px('la'); var ra3 = px('ra');
+            var ropeColor = 'rgba(220,180,100,0.80)';
+            // Handles (small rects at wrists)
+            var hLen = Math.max(4, H * 0.04);
+            ctx.fillStyle = ropeColor;
+            ctx.beginPath();
+            ctx.roundRect(lw12[0] - lw, lw12[1] - hLen / 2, lw * 2, hLen, 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.roundRect(rw12[0] - lw, rw12[1] - hLen / 2, lw * 2, hLen, 2);
+            ctx.fill();
+            // Rope curve beneath feet — sinusoidal arc
+            var footY = Math.max(la3[1], ra3[1]) + H * 0.02;
+            var footMidX = (la3[0] + ra3[0]) / 2;
+            var phase = (elapsed % 800) / 800;  // 0..1 oscillation
+            var ropeAmp = H * 0.06 * Math.abs(Math.sin(phase * Math.PI));
+            ctx.beginPath();
+            ctx.moveTo(lw12[0], lw12[1] + hLen / 2);
+            ctx.bezierCurveTo(
+                la3[0], footY + ropeAmp,
+                ra3[0], footY + ropeAmp,
+                rw12[0], rw12[1] + hLen / 2
+            );
+            ctx.strokeStyle = ropeColor;
+            ctx.lineWidth = lw * 0.7;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+    };
+
     // ── StickmanWidget ────────────────────────────────────────────────────────
     function StickmanWidget(containerEl, opts) {
         this.container = containerEl;
         this.opts = opts || {};
         this._figure = null;
         this._tId = 'sm-tips-' + (Math.random() * 1e8 | 0);
+        this._nId = 'sm-name-' + (Math.random() * 1e8 | 0);
         this._cId = 'sm-canvas-' + (Math.random() * 1e8 | 0);
         this._build();
     }
 
     StickmanWidget.prototype._build = function () {
         var size = this.opts.size || 'normal';
-        var cW = (size === 'mini') ? 70 : 110;
-        var cH = (size === 'mini') ? 120 : 185;
-        var pad = (size === 'mini') ? '8px 10px' : '12px 14px';
-        var html = '<div style="'
-            + 'display:flex;flex-direction:column;align-items:center;gap:10px;'
-            + 'padding:' + pad + ';'
-            + 'background:rgba(255,255,255,0.04);'
-            + 'border:1px solid rgba(255,255,255,0.09);'
-            + 'border-radius:14px;width:100%;box-sizing:border-box;">'
-            + '<canvas id="' + this._cId + '" width="' + cW + '" height="' + cH
-            + '" style="display:block;"></canvas>';
-        if (size !== 'mini') {
-            html += '<div id="' + this._tId
-                + '" style="display:flex;flex-direction:column;gap:4px;width:100%;"></div>';
+        var isMini = size === 'mini';
+        var cW = isMini ? 70 : 130;
+        var cH = isMini ? 120 : 210;
+        var html;
+
+        if (isMini) {
+            // ── Mini (instructor panel): compact column layout ──────────────
+            html = '<div style="'
+                + 'display:flex;flex-direction:column;align-items:center;gap:10px;'
+                + 'padding:8px 10px;'
+                + 'background:rgba(255,255,255,0.04);'
+                + 'border:1px solid rgba(255,255,255,0.09);'
+                + 'border-radius:14px;width:100%;box-sizing:border-box;">'
+                + '<canvas id="' + this._cId + '" width="' + cW + '" height="' + cH
+                + '" style="display:block;"></canvas>'
+                + '</div>';
+        } else {
+            // ── Normal (TV display): row — canvas left, name+tips right ───
+            // Readable from across the room.
+            html = '<div style="'
+                + 'display:flex;flex-direction:row;align-items:center;gap:18px;'
+                + 'padding:14px 16px;'
+                + 'background:rgba(255,255,255,0.04);'
+                + 'border:1px solid rgba(255,255,255,0.09);'
+                + 'border-radius:14px;width:100%;box-sizing:border-box;">'
+                + '<canvas id="' + this._cId + '" width="' + cW + '" height="' + cH
+                + '" style="display:block;flex-shrink:0;"></canvas>'
+                + '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;">'
+                + '<div id="' + this._nId + '" style="'
+                + 'font-family:&quot;Bebas Neue&quot;,sans-serif;'
+                + 'font-size:clamp(22px,2.8vw,40px);'
+                + 'letter-spacing:.05em;line-height:1.1;'
+                + 'color:rgba(255,255,255,0.95);text-transform:uppercase;"></div>'
+                + '<div id="' + this._tId
+                + '" style="display:flex;flex-direction:column;gap:8px;"></div>'
+                + '</div>'
+                + '</div>';
         }
-        html += '</div>';
         this.container.innerHTML = html;
         var canvas = this.container.querySelector('canvas');
         this._figure = new StickFigure(canvas, {
             color: this.opts.color || 'rgba(255,255,255,0.88)'
         });
     };
+
 
     StickmanWidget.prototype.update = function (exerciseName, phase) {
         if (!this._figure) return;
@@ -392,6 +750,14 @@
     };
 
     StickmanWidget.prototype._updateTips = function (exerciseName) {
+        var isMini = this.opts.size === 'mini';
+
+        // Update exercise name label (display screen only)
+        if (!isMini) {
+            var nameEl = document.getElementById(this._nId);
+            if (nameEl) nameEl.textContent = exerciseName || '';
+        }
+
         var tipsEl = document.getElementById(this._tId);
         if (!tipsEl) return;
         var tips = (typeof ExercisePoses !== 'undefined')
@@ -399,13 +765,23 @@
             : ['Mantén la postura', 'Core activo', 'Movimiento controlado'];
         var html = '';
         for (var i = 0; i < tips.length; i++) {
-            html += '<div style="font-size:clamp(9px,1.1vw,12px);color:rgba(255,255,255,0.55);'
-                + 'display:flex;align-items:flex-start;gap:5px;line-height:1.4;">'
-                + '<span style="color:#ff6b35;flex-shrink:0;">&#9658;</span>'
-                + tips[i] + '</div>';
+            if (isMini) {
+                html += '<div style="font-size:clamp(9px,1.1vw,12px);color:rgba(255,255,255,0.55);'
+                    + 'display:flex;align-items:flex-start;gap:5px;line-height:1.4;">'
+                    + '<span style="color:#ff6b35;flex-shrink:0;">&#9658;</span>'
+                    + tips[i] + '</div>';
+            } else {
+                // Large text for TV readability
+                html += '<div style="font-size:clamp(15px,1.9vw,24px);font-weight:600;'
+                    + 'color:rgba(255,255,255,0.75);'
+                    + 'display:flex;align-items:flex-start;gap:8px;line-height:1.4;">'
+                    + '<span style="color:#ff6b35;flex-shrink:0;margin-top:2px;">&#9658;</span>'
+                    + tips[i] + '</div>';
+            }
         }
         tipsEl.innerHTML = html;
     };
+
 
     StickmanWidget.prototype.stop = function () {
         if (this._figure) this._figure.stop();

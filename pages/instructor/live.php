@@ -149,6 +149,17 @@ layout_footer($user);
                         <button class="prep-btn" onclick="setPrepTime(30)" data-sec="30">30s</button>
                     </div>
                 </div>
+                <!-- Autoplay / Manual toggle -->
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span
+                        style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gf-text-muted)">Modo</span>
+                    <label class="gf-switch" title="Continuo: avanza solo. Manual: pausa entre bloques.">
+                        <input type="checkbox" id="autoplay-switch" checked onchange="setAutoPlay(this.checked)">
+                        <span class="gf-switch-track"></span>
+                    </label>
+                    <span id="autoplay-label"
+                        style="font-size:12px;font-weight:600;color:var(--gf-text-muted);min-width:48px">Continuo</span>
+                </div>
                 <div style="display:flex;gap:8px">
                     <button class="btn btn-secondary btn-sm" onclick="liveControl('extend',{seconds:30})">+30s</button>
                     <button class="btn btn-secondary btn-sm" onclick="liveControl('extend',{seconds:60})">+1min</button>
@@ -381,6 +392,53 @@ layout_footer($user);
         flex-shrink: 0;
     }
 
+    /* ── Autoplay Toggle Switch ───────────────────────────────────────────── */
+    .gf-switch {
+        position: relative;
+        display: inline-flex;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .gf-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        position: absolute;
+    }
+
+    .gf-switch-track {
+        width: 38px;
+        height: 22px;
+        background: var(--gf-surface-2);
+        border: 1px solid var(--gf-border);
+        border-radius: 11px;
+        transition: background .2s, border-color .2s;
+        position: relative;
+    }
+
+    .gf-switch-track::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--gf-text-muted);
+        transition: transform .2s, background .2s;
+    }
+
+    .gf-switch input:checked+.gf-switch-track {
+        background: var(--gf-accent);
+        border-color: var(--gf-accent);
+    }
+
+    .gf-switch input:checked+.gf-switch-track::after {
+        transform: translateX(16px);
+        background: #000;
+    }
+
     /* ── Toast Notifications ───────────────────────────────────────────────── */
     #gf-toast-container {
         position: fixed;
@@ -503,6 +561,16 @@ layout_footer($user);
         // Init prep time from localStorage
         const savedPrep = parseInt(localStorage.getItem('gf_prep_time') || '0', 10);
         setPrepTime(isNaN(savedPrep) ? 0 : savedPrep);
+        // Init autoplay mode from localStorage (default ON)
+        const savedAP = localStorage.getItem('gf_autoplay');
+        const initAP = savedAP === null ? true : savedAP === '1';
+        // Apply to switch UI immediately, then emit to server once socket connects
+        const apSwitch = document.getElementById('autoplay-switch');
+        if (apSwitch) apSwitch.checked = initAP;
+        const apLabel = document.getElementById('autoplay-label');
+        if (apLabel) apLabel.textContent = initAP ? 'Continuo' : 'Manual';
+        // Emit after a short delay to ensure socket is connected
+        setTimeout(() => setAutoPlay(initAP), 1200);
     });
 
     // ── Prep Time Selector ──────────────────────────────────────────────────

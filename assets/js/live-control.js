@@ -20,6 +20,9 @@ const GFLive = (() => {
     let _fadePauseTimeout = null; // setTimeout handle for the final pause call
     let _fadingOut = false;     // true while fade is in progress
 
+    // Autoplay (continuous block playback)
+    let _autoPlay = true;        // mirrors server-side autoPlay flag
+
     // Stickman (mini, instructor panel)
     let stickMini = null;
 
@@ -63,14 +66,25 @@ const GFLive = (() => {
         socket.on('session:state', (tick) => applyTick(tick));
         socket.on('session:tick', (tick) => applyTick(tick));
 
-        // Block changed (server auto-advance): handle Spotify
-        socket.on('session:block_change', ({ block }) => {
-            if (block?.spotify_uri) {
-                autoPlayBlockSpotify(block);
+        // Block held: server paused after finishing a block (manual-advance mode)
+        socket.on('session:block_held', ({ block }) => {
+            const name = block?.name || 'Bloque';
+            showToast(`▶ Listo para iniciar: ${name}`, 'info');
+            // Flash the play button so the instructor notices
+            const btn = document.getElementById('btn-play');
+            if (btn) {
+                btn.style.boxShadow = '0 0 0 0 rgba(0,245,212,0.7)';
+                btn.animate([
+                    { boxShadow: '0 0 0 0 rgba(0,245,212,0.8)' },
+                    { boxShadow: '0 0 0 18px rgba(0,245,212,0)' },
+                ], { duration: 600, iterations: 3 });
             }
-            // Note: stopping music when next block has no track is handled
-            // exclusively by applyTick to avoid double volume API calls.
         });
+
+        // Block changed: Spotify is handled exclusively by applyTick's blockChanged
+        // branch (which has all the right guards). This handler is a no-op for Spotify
+        // — it only exists so the server can emit other notifications (block_held).
+        socket.on('session:block_change', () => { /* Spotify handled in applyTick */ });
 
         socket.on('error', (msg) => {
             console.error('[GFLive] Socket error:', msg);
@@ -95,6 +109,12 @@ const GFLive = (() => {
         if (session) session.status = tick.status;
 
         const blockChanged = currentIdx !== prevIdx;
+
+        // Sync autoplay switch if server state differs
+        if (tick.auto_play !== undefined && tick.auto_play !== _autoPlay) {
+            _autoPlay = tick.auto_play;
+            _syncAutoPlaySwitch();
+        }
 
         if (tick.status === 'finished') {
             // Stop music when session ends — must happen before isPlaying turns false,
@@ -123,6 +143,9 @@ const GFLive = (() => {
                     _lastAutoPlayUri = null;
                     spotifyFadeAndPause(2);
                 }
+            } else {
+                // Session paused on block change (manual mode) — stop music immediately
+                if (_lastAutoPlayUri) spotifyFadeAndPause(2);
             }
         } else if (_lastAutoPlayUri && isPlaying && !_fadingOut) {
             // Block-end fade: use server ticks (≈1Hz) as the fade timer.
@@ -236,7 +259,9 @@ const GFLive = (() => {
         if (pt) pt.textContent = `${currentIdx + 1} / ${blocks.length} bloques`;
 
         renderClock();
-        autoPlayBlockSpotify(b);
+        // NOTE: Spotify auto-play is handled by applyTick's blockChanged branch.
+        // Do NOT call autoPlayBlockSpotify here — it fires on every tick and
+        // causes double-play when a block changes.
     }
 
     function renderBlockList() {
@@ -436,9 +461,25 @@ const GFLive = (() => {
         emit('control:prev');
     }
 
+    // ── Autoplay toggle ───────────────────────────────────────────────────────
+    function setAutoPlay(enabled) {
+        _autoPlay = !!enabled;
+        emit('control:set_autoplay', { enabled: _autoPlay });
+        // Persist preference across page reloads (per-browser)
+        localStorage.setItem('gf_autoplay', _autoPlay ? '1' : '0');
+        _syncAutoPlaySwitch();
+    }
+
+    function _syncAutoPlaySwitch() {
+        const sw = document.getElementById('autoplay-switch');
+        if (sw && sw.checked !== _autoPlay) sw.checked = _autoPlay;
+        const lbl = document.getElementById('autoplay-label');
+        if (lbl) lbl.textContent = _autoPlay ? 'Continuo' : 'Manual';
+    }
+
     function getSocket() { return socket; }
 
-    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, getSocket };
+    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket };
 })();
 
 // Expose globals used inline by live.php buttons
@@ -454,3 +495,4 @@ window.liveControl = (action, data) => {
 window.togglePlay = () => GFLive.togglePlay();
 window.jumpToBlock = idx => GFLive.jumpToBlock(idx);
 window.setSala = id => GFLive.setSala(id);
+window.setAutoPlay = enabled => GFLive.setAutoPlay(enabled);
