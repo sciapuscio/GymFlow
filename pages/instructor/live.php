@@ -85,6 +85,10 @@ layout_footer($user);
                 title="Mostrar/ocultar reloj en pantalla">
                 🕐 Reloj
             </button>
+            <button id="btn-clock-fs" class="btn btn-secondary btn-sm" onclick="emitClockFs()"
+                title="Reloj pantalla completa en display">
+                ⛶ Full
+            </button>
         <?php endif; ?>
         <a href="<?php echo BASE_URL ?>/pages/instructor/builder.php?id=<?php echo $id ?>"
             class="btn btn-secondary btn-sm">
@@ -679,10 +683,350 @@ layout_footer($user);
     }
 </style>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     CLOCK CONTROLLER — fullscreen overlay shown when clock-ctrl-mode is active
+     Works like a hardware CrossFit timer remote
+═══════════════════════════════════════════════════════════════ -->
+<style>
+    /* body class set by JS when fullscreen clock is toggled */
+    body.clock-ctrl-mode .page-body {
+        display: none !important;
+    }
+
+    body.clock-ctrl-mode .page-header {
+        display: none !important;
+    }
+
+    body.clock-ctrl-mode #clock-ctrl {
+        display: flex !important;
+    }
+
+    #clock-ctrl {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 400;
+        background: #0d0d0d;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 32px 28px;
+        gap: 18px;
+        overflow-y: auto;
+    }
+
+    /* ── Live time readout ── */
+    #clock-ctrl-display {
+        font-family: 'DSEG7 Classic', 'Bebas Neue', monospace;
+        font-size: clamp(64px, 14vw, 160px);
+        color: #ff2400;
+        text-shadow: 0 0 12px rgba(255, 36, 0, .9), 0 0 40px rgba(255, 36, 0, .4);
+        letter-spacing: .05em;
+        line-height: 1;
+        text-align: center;
+    }
+
+    #clock-ctrl-phase {
+        font-family: 'DSEG7 Classic', monospace;
+        font-size: clamp(22px, 4vw, 52px);
+        color: #0a6fff;
+        text-shadow: 0 0 10px rgba(10, 111, 255, .8);
+        letter-spacing: .1em;
+        text-align: center;
+        min-height: 1.2em;
+    }
+
+    #clock-ctrl-sub {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.3);
+        letter-spacing: .2em;
+        text-align: center;
+    }
+
+    /* ── Mode selector row ── */
+    .ctrl-mode-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .ctrl-mode-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1.5px solid rgba(255, 255, 255, 0.15);
+        border-radius: 10px;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: clamp(12px, 2vw, 18px);
+        font-weight: 700;
+        letter-spacing: .08em;
+        padding: 12px 28px;
+        cursor: pointer;
+        transition: all .2s;
+        text-transform: uppercase;
+    }
+
+    .ctrl-mode-btn.active,
+    .ctrl-mode-btn:hover {
+        background: rgba(10, 111, 255, 0.18);
+        border-color: #0a6fff;
+        color: #4da6ff;
+    }
+
+    /* ── Work / Rest adjusters ── */
+    .ctrl-params {
+        display: flex;
+        gap: 32px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .ctrl-param {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ctrl-param label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .15em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.35);
+    }
+
+    .ctrl-param-val {
+        font-size: clamp(28px, 5vw, 54px);
+        font-weight: 700;
+        color: #fff;
+        min-width: 2ch;
+        text-align: center;
+    }
+
+    .ctrl-param-btns {
+        display: flex;
+        gap: 6px;
+    }
+
+    .ctrl-param-btns button {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 18px;
+        width: 44px;
+        height: 44px;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .ctrl-param-btns button:hover {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* ── Main action buttons ── */
+    .ctrl-action-row {
+        display: flex;
+        gap: 18px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .ctrl-btn-start {
+        background: #00c950;
+        border: none;
+        border-radius: 16px;
+        color: #000;
+        font-size: clamp(18px, 3vw, 28px);
+        font-weight: 800;
+        letter-spacing: .1em;
+        padding: 18px 56px;
+        cursor: pointer;
+        box-shadow: 0 0 30px rgba(0, 201, 80, 0.4);
+        transition: transform .1s, box-shadow .15s;
+    }
+
+    .ctrl-btn-start:hover {
+        transform: scale(1.04);
+        box-shadow: 0 0 50px rgba(0, 201, 80, 0.6);
+    }
+
+    .ctrl-btn-stop {
+        background: #ff2400;
+        border: none;
+        border-radius: 16px;
+        color: #fff;
+        font-size: clamp(18px, 3vw, 28px);
+        font-weight: 800;
+        letter-spacing: .1em;
+        padding: 18px 56px;
+        cursor: pointer;
+        box-shadow: 0 0 30px rgba(255, 36, 0, 0.4);
+        transition: transform .1s, box-shadow .15s;
+    }
+
+    .ctrl-btn-stop:hover {
+        transform: scale(1.04);
+    }
+
+    .ctrl-btn-reset {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        color: rgba(255, 255, 255, 0.55);
+        font-size: clamp(14px, 2vw, 20px);
+        font-weight: 700;
+        padding: 18px 32px;
+        cursor: pointer;
+        letter-spacing: .1em;
+        transition: background .15s;
+    }
+
+    .ctrl-btn-reset:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+    }
+
+    /* ── Preset chips ── */
+    .ctrl-presets {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .ctrl-preset-chip {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+        padding: 6px 18px;
+        cursor: pointer;
+        transition: all .2s;
+        font-weight: 600;
+        letter-spacing: .06em;
+    }
+
+    .ctrl-preset-chip.active,
+    .ctrl-preset-chip:hover {
+        background: rgba(255, 107, 53, 0.15);
+        border-color: var(--gf-accent, #cbf73f);
+        color: var(--gf-accent, #cbf73f);
+    }
+
+    /* ── Exit button (top-right) ── */
+    #clock-ctrl-exit {
+        position: absolute;
+        top: 18px;
+        right: 24px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 14px;
+        padding: 6px 14px;
+        cursor: pointer;
+        letter-spacing: .1em;
+        transition: all .2s;
+    }
+
+    #clock-ctrl-exit:hover {
+        color: #fff;
+        border-color: #fff;
+    }
+</style>
+
+<div id="clock-ctrl">
+    <button id="clock-ctrl-exit" onclick="emitClockFs()">⛶ Salir</button>
+
+    <!-- Live display mirror -->
+    <div style="text-align:center">
+        <div id="clock-ctrl-phase">--</div>
+        <div id="clock-ctrl-display">0:00</div>
+        <div id="clock-ctrl-sub"></div>
+    </div>
+
+    <!-- Mode buttons -->
+    <div class="ctrl-mode-row">
+        <button class="ctrl-mode-btn active" data-mode="session" onclick="_syncCtrlModeBtns('session')">Sesión</button>
+        <button class="ctrl-mode-btn" data-mode="tabata" onclick="_syncCtrlModeBtns('tabata')">Tabata</button>
+        <button class="ctrl-mode-btn" data-mode="countdown" onclick="_syncCtrlModeBtns('countdown')">CD</button>
+        <button class="ctrl-mode-btn" data-mode="countup" onclick="_syncCtrlModeBtns('countup')">CU</button>
+    </div>
+
+    <!-- Dynamic params row — visibility driven by JS per mode -->
+    <div class="ctrl-params" id="ctrl-params-row" style="display:none">
+        <!-- Prep: shown for tabata, countdown, countup -->
+        <div class="ctrl-param" data-modes="tabata,countdown,countup">
+            <label>Prep (s)</label>
+            <div class="ctrl-param-val" id="ctrl-val-prep">10</div>
+            <div class="ctrl-param-btns">
+                <button onclick="_ctrlAdj('prep',-5)">−</button>
+                <button onclick="_ctrlAdj('prep',5)">+</button>
+            </div>
+        </div>
+        <!-- Trabajo: tabata only -->
+        <div class="ctrl-param" data-modes="tabata">
+            <label>Trabajo (s)</label>
+            <div class="ctrl-param-val" id="ctrl-val-work">20</div>
+            <div class="ctrl-param-btns">
+                <button onclick="_ctrlAdj('work',-5)">−</button>
+                <button onclick="_ctrlAdj('work',5)">+</button>
+            </div>
+        </div>
+        <!-- Descanso: tabata only -->
+        <div class="ctrl-param" data-modes="tabata">
+            <label>Descanso (s)</label>
+            <div class="ctrl-param-val" id="ctrl-val-rest">10</div>
+            <div class="ctrl-param-btns">
+                <button onclick="_ctrlAdj('rest',-5)">−</button>
+                <button onclick="_ctrlAdj('rest',5)">+</button>
+            </div>
+        </div>
+        <!-- Rondas: tabata only -->
+        <div class="ctrl-param" data-modes="tabata">
+            <label>Rondas</label>
+            <div class="ctrl-param-val" id="ctrl-val-rounds">8</div>
+            <div class="ctrl-param-btns">
+                <button onclick="_ctrlAdj('rounds',-1)">−</button>
+                <button onclick="_ctrlAdj('rounds',1)">+</button>
+            </div>
+        </div>
+        <!-- Duración: countdown, countup -->
+        <div class="ctrl-param" data-modes="countdown,countup">
+            <label>Duración</label>
+            <div class="ctrl-param-val" id="ctrl-val-dur">5:00</div>
+            <div class="ctrl-param-btns">
+                <button onclick="_ctrlAdj('duration',-30)">−</button>
+                <button onclick="_ctrlAdj('duration',30)">+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="ctrl-presets" id="ctrl-presets-row"></div>
+
+    <!-- Start / Stop / Reset -->
+    <div class="ctrl-action-row">
+        <button class="ctrl-btn-reset" onclick="GFLive.clockTimerReset()">↺ REINICIAR</button>
+        <button class="ctrl-btn-start" onclick="_ctrlStart()">▶ INICIAR</button>
+        <button class="ctrl-btn-stop" onclick="_ctrlStop()">■ DETENER</button>
+    </div>
+</div>
+
 <!-- Toast container -->
 <div id="gf-toast-container"></div>
 
-<script src="http://localhost:3001/socket.io/socket.io.js"></script>
+<script>
+    // Stub io() in case socket.io fails to load (server offline / first load)
+    window._gfSocketStub = () => ({
+        on: () => { }, emit: () => { }, connected: false,
+        off: () => { }, disconnect: () => { }
+    });
+</script>
+<script src="http://localhost:3001/socket.io/socket.io.js"
+    onerror="if(typeof io==='undefined') window.io = window._gfSocketStub"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/exercise-poses.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/stickman.js"></script>
@@ -894,6 +1238,159 @@ layout_footer($user);
         // Emit to server regardless of panel visibility
         _emitCurrentClockMode();
     }
+
+    let _clockFsActive = false;
+    function emitClockFs() {
+        _clockFsActive = !_clockFsActive;
+
+        // Toggle instructor controller overlay
+        document.body.classList.toggle('clock-ctrl-mode', _clockFsActive);
+
+        // Highlight ⛶ Full button
+        const btn = document.getElementById('btn-clock-fs');
+        if (btn) {
+            btn.style.background = _clockFsActive ? '#ff2400' : '';
+            btn.style.color = _clockFsActive ? '#fff' : '';
+            btn.style.borderColor = _clockFsActive ? '#ff2400' : '';
+        }
+
+        // Tell display to go fullscreen
+        GFLive.emitClockFs(_clockFsActive);
+
+        // On open: build presets + sync mode buttons
+        if (_clockFsActive) _ctrlBuildPresets();
+    }
+
+    // ── Controller helpers ──────────────────────────────────────────────────
+
+    // Build preset chips inside the controller
+    function _ctrlBuildPresets() {
+        const PRESETS = [
+            { name: 'Tabata 20/10×8', mode: 'tabata', config: { work: 20, rest: 10, rounds: 8, prep: 10 } },
+            { name: 'Tabata 40/20×5', mode: 'tabata', config: { work: 40, rest: 20, rounds: 5, prep: 10 } },
+            { name: 'AMRAP 12′', mode: 'countup', config: { duration: 720, prep: 10 } },
+            { name: 'CD 5′', mode: 'countdown', config: { duration: 300, prep: 10 } },
+            { name: 'CD 10′', mode: 'countdown', config: { duration: 600, prep: 10 } },
+            { name: 'CD 20′', mode: 'countdown', config: { duration: 1200, prep: 10 } },
+        ];
+        const container = document.getElementById('ctrl-presets-row');
+        if (!container) return;
+        container.innerHTML = PRESETS.map((p, i) => `
+            <button class="ctrl-preset-chip" onclick="_ctrlApplyPreset(${i})">${p.name}</button>
+        `).join('');
+        window._ctrlPresets = PRESETS;
+    }
+
+    window._ctrlApplyPreset = function (idx) {
+        const p = (window._ctrlPresets || [])[idx];
+        if (!p) return;
+        // Apply config values to _ctrlVals and update UI labels
+        const cfg = p.config || {};
+        if (cfg.work !== undefined) { _ctrlVals.work = cfg.work; const e = document.getElementById('ctrl-val-work'); if (e) e.textContent = cfg.work; }
+        if (cfg.rest !== undefined) { _ctrlVals.rest = cfg.rest; const e = document.getElementById('ctrl-val-rest'); if (e) e.textContent = cfg.rest; }
+        if (cfg.rounds !== undefined) { _ctrlVals.rounds = cfg.rounds; const e = document.getElementById('ctrl-val-rounds'); if (e) e.textContent = cfg.rounds; }
+        if (cfg.prep !== undefined) { _ctrlVals.prep = cfg.prep; const e = document.getElementById('ctrl-val-prep'); if (e) e.textContent = cfg.prep; }
+        if (cfg.duration !== undefined) {
+            _ctrlVals.duration = cfg.duration;
+            const m = Math.floor(cfg.duration / 60), s = cfg.duration % 60;
+            const e = document.getElementById('ctrl-val-dur');
+            if (e) e.textContent = `${m}:${String(s).padStart(2, '0')}`;
+        }
+        // Switch mode
+        _syncCtrlModeBtns(p.mode);
+        // Highlight chip
+        document.querySelectorAll('.ctrl-preset-chip').forEach((c, i) =>
+            c.classList.toggle('active', i === idx));
+    };
+
+    // Sync active class on mode buttons + configure clock timer mode
+    window._syncCtrlModeBtns = function (mode) {
+        document.querySelectorAll('.ctrl-mode-btn').forEach(b =>
+            b.classList.toggle('active', b.dataset.mode === mode));
+        // Show/hide params row and individual params by data-modes
+        const paramsRow = document.getElementById('ctrl-params-row');
+        if (paramsRow) {
+            paramsRow.style.display = (mode === 'session') ? 'none' : 'flex';
+            paramsRow.querySelectorAll('.ctrl-param[data-modes]').forEach(el => {
+                const modes = el.dataset.modes.split(',');
+                el.style.display = modes.includes(mode) ? 'flex' : 'none';
+            });
+        }
+        // Configure server: clock mode + full timer cfg
+        GFLive.emitClockMode(true, mode);
+        if (mode !== 'session') {
+            GFLive.clockTimerCfg(mode, _ctrlVals.duration, _ctrlVals.prep,
+                _ctrlVals.work, _ctrlVals.rest, _ctrlVals.rounds);
+        }
+    };
+
+    // Adjust numeric param (+/-) and immediately send to server
+    const _ctrlVals = { work: 20, rest: 10, rounds: 8, duration: 300, prep: 10 };
+    window._ctrlAdj = function (key, delta) {
+        const minVal = (key === 'prep' || key === 'rest') ? 0 : 5;
+        _ctrlVals[key] = Math.max(minVal, _ctrlVals[key] + delta);
+        const elId = {
+            work: 'ctrl-val-work', rest: 'ctrl-val-rest',
+            rounds: 'ctrl-val-rounds', duration: 'ctrl-val-dur', prep: 'ctrl-val-prep'
+        }[key];
+        const el = document.getElementById(elId);
+        if (!el) return;
+        if (key === 'duration') {
+            const m = Math.floor(_ctrlVals.duration / 60);
+            const s = _ctrlVals.duration % 60;
+            el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+        } else {
+            el.textContent = _ctrlVals[key];
+        }
+        // Send updated config to server (full params, no mode change = preserve)
+        GFLive.clockTimerCfg(null, _ctrlVals.duration, _ctrlVals.prep,
+            _ctrlVals.work, _ctrlVals.rest, _ctrlVals.rounds);
+    };
+
+    // START — play the independent clock timer
+    window._ctrlStart = function () {
+        if (!window._clockModeActive) toggleClockMode(); // ensure clock is visible
+        GFLive.clockTimerPlay();
+    };
+
+    // STOP — pause the independent clock timer
+    window._ctrlStop = function () {
+        GFLive.clockTimerStop();
+    };
+
+    // ── Mirror server clock_timer to the controller display ───────────────────
+    (function _installCtrlTickMirror() {
+        const _orig = window._onLiveTick;
+        window._onLiveTick = function (tick) {
+            if (_orig) _orig(tick);
+            if (!_clockFsActive) return;
+            const clockMode = (tick.clock_mode || {}).mode || 'session';
+            const ct = tick.clock_timer || {};
+            const ctElapsed = ct.elapsed || 0;
+            const ctDuration = ct.duration || 300;
+            const ctRunning = ct.running || false;
+
+            let sec;
+            if (clockMode === 'countdown') {
+                sec = Math.max(0, ctDuration - ctElapsed);
+            } else if (clockMode === 'countup') {
+                sec = ctElapsed;
+            } else {
+                // session mode: show WOD elapsed
+                sec = typeof tick.elapsed === 'number' ? tick.elapsed : 0;
+            }
+
+            const m = Math.floor(sec / 60), s = sec % 60;
+            const timeStr = `${m}:${String(s).padStart(2, '0')}`;
+            const dispEl = document.getElementById('clock-ctrl-display');
+            const phaseEl = document.getElementById('clock-ctrl-phase');
+            const subEl = document.getElementById('clock-ctrl-sub');
+            if (dispEl) dispEl.textContent = timeStr;
+            if (phaseEl) phaseEl.textContent = clockMode === 'countdown' ? 'CD' : clockMode === 'countup' ? 'CU' : 'SESIÓN';
+            if (subEl) subEl.textContent = ctRunning ? '▶' : (ctElapsed > 0 ? '⏸' : '—');
+        };
+    })();
+
 
     function _syncClockBtnLocal(active) {
         const btn = document.getElementById('btn-clock-mode');

@@ -74,7 +74,17 @@ if (!$sala) {
         }
     </style>
 
-    <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/dseg7-classic">
+    <style>
+        /* DSEG7 Classic — hosted locally (CDN was returning 500) */
+        @font-face {
+            font-family: 'DSEG7 Classic';
+            src: url('/assets/fonts/DSEG7Classic-Regular.woff2') format('woff2'),
+                url('/assets/fonts/DSEG7Classic-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
+        }
+    </style>
 
     <style>
         /* ── CLOCK MODE — CrossFit Box Hardware Style ───────────────────────── */
@@ -91,20 +101,30 @@ if (!$sala) {
             transition: height .3s cubic-bezier(.4, 0, .2, 1), max-height .3s cubic-bezier(.4, 0, .2, 1);
         }
 
-        /* ── Hardware panel shell ── */
+        /* ═══════════════════════════════════════════════════════════════
+           HARDWARE TIMER — physical box aesthetic
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ── Panel shell — looks like the back of a wall-mounted LED box ── */
         .clock-panel {
             display: none;
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 25vh;
-            min-height: 120px;
-            background: #000;
-            /* Subtle bezel: top highlight + inner shadow */
-            border-top: 3px solid #111;
-            box-shadow: inset 0 4px 24px rgba(0, 0, 0, .9),
-                inset 0 -2px 8px rgba(0, 0, 0, .6);
+            height: auto;
+            /* Dark brushed-metal finish */
+            background:
+                /* dot-matrix grid texture */
+                repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0, 0, 0, .18) 3px, rgba(0, 0, 0, .18) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0, 0, 0, .18) 3px, rgba(0, 0, 0, .18) 4px),
+                linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
+            /* Physical top-bevel + shadow depth */
+            border-top: 2px solid #383838;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, .06),
+                inset 0 -1px 0 rgba(0, 0, 0, .9),
+                0 -4px 20px rgba(0, 0, 0, .8);
             z-index: 120;
             overflow: hidden;
             align-items: center;
@@ -115,17 +135,17 @@ if (!$sala) {
             display: flex;
         }
 
-        /* Inner row: everything laid out horizontally */
+        /* Inner row */
         .clock-hw-row {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: clamp(8px, 3vw, 48px);
+            gap: clamp(8px, 2.4vw, 40px);
             width: 100%;
-            padding: 0 clamp(16px, 5vw, 80px);
+            padding: clamp(10px, 1.6vh, 18px) clamp(12px, 4vw, 60px);
         }
 
-        /* ── Round / sub-info column (left of phase) ── */
+        /* ── Left info column ── */
         .clock-hw-info {
             display: flex;
             flex-direction: column;
@@ -135,79 +155,104 @@ if (!$sala) {
         }
 
         .clock-sub {
-            font-family: 'DSEG7 Classic', 'Bebas Neue', monospace;
-            font-size: clamp(10px, 2.2vh, 24px);
-            color: rgba(255, 36, 0, 0.35);
-            /* ghost red */
-            letter-spacing: .04em;
+            font-family: 'Bebas Neue', 'Impact', sans-serif;
+            font-size: clamp(13px, 2.2vh, 26px);
+            color: rgba(255, 255, 255, 0.82);
+            letter-spacing: .08em;
             white-space: nowrap;
             line-height: 1;
         }
 
-        /* The actual (lit) sub-value */
-        .clock-sub [data-lit] {
-            color: #a0c4ff;
-            text-shadow: 0 0 8px rgba(0, 102, 255, 0.5);
-        }
-
         .clock-progress-label {
-            font-size: clamp(9px, 1.4vh, 14px);
-            color: rgba(255, 255, 255, 0.18);
+            font-size: clamp(8px, 1.2vh, 13px);
+            color: rgba(255, 255, 255, 0.15);
             font-weight: 700;
             letter-spacing: .1em;
             text-transform: uppercase;
             white-space: nowrap;
         }
 
-        /* ── Phase label (LED blue — mode name) ── */
+        .clock-progress-fill {
+            display: none;
+        }
+
+        /* kept for JS compat */
+
+        /* ── PHYSICAL DIGIT ENCLOSURE — the rectangular LED housing ── */
+        .clock-hw-digits-block {
+            display: flex;
+            align-items: center;
+            gap: clamp(4px, 1vw, 16px);
+        }
+
+        /* The phase label sits in its own rectangular cell */
         .clock-phase-wrapper {
             position: relative;
             line-height: 1;
+            /* Physical enclosure */
+            background: #080808;
+            border: 1.5px solid #2a2a2a;
+            border-radius: 3px;
+            padding: clamp(3px, .8vh, 8px) clamp(5px, 1vw, 12px);
+            box-shadow:
+                inset 0 0 12px rgba(0, 0, 0, .9),
+                inset 0 1px 0 rgba(0, 0, 0, .8);
         }
 
-        /* Ghost (unlit) segments — same text behind, very dim */
         .clock-phase-wrapper::before {
             content: attr(data-ghost);
             position: absolute;
             inset: 0;
+            padding: inherit;
             font-family: 'DSEG7 Classic', monospace;
             font-size: inherit;
-            color: rgba(0, 102, 255, 0.12);
+            /* Strong ghost — 20% makes segments clearly visible */
+            color: rgba(10, 111, 255, 0.20);
             white-space: nowrap;
             pointer-events: none;
             user-select: none;
         }
 
         .clock-phase-label {
-            font-family: 'DSEG7 Classic', monospace;
-            font-size: clamp(28px, 9vh, 100px);
+            font-family: 'Bebas Neue', 'Impact', sans-serif;
+            font-size: clamp(22px, 6vh, 72px);
             line-height: 1;
             color: #0a6fff;
             text-shadow:
-                0 0 12px rgba(10, 111, 255, 0.9),
-                0 0 30px rgba(10, 111, 255, 0.5),
-                0 0 60px rgba(10, 111, 255, 0.2);
+                0 0 6px rgba(10, 111, 255, 1),
+                0 0 18px rgba(10, 111, 255, 0.6),
+                0 0 40px rgba(10, 111, 255, 0.2);
             text-transform: uppercase;
             white-space: nowrap;
-            letter-spacing: .06em;
+            letter-spacing: .04em;
             font-variant-numeric: tabular-nums;
-            transition: color .25s, text-shadow .25s;
+            position: relative;
+            /* above ghost */
         }
 
-        /* ── Time digits (LED red) ── */
+        /* The time digits — main LED panel */
         .clock-digits-wrapper {
             position: relative;
             line-height: 1;
+            background: #060606;
+            border: 1.5px solid #2e2e2e;
+            border-radius: 3px;
+            padding: clamp(4px, 1vh, 10px) clamp(8px, 1.4vw, 18px);
+            box-shadow:
+                inset 0 0 20px rgba(0, 0, 0, .95),
+                inset 0 2px 4px rgba(0, 0, 0, .8),
+                0 0 0 1px #111;
         }
 
-        /* Ghost digits */
+        /* Ghost digits — clearly visible inactive segments */
         .clock-digits-wrapper::before {
             content: attr(data-ghost);
             position: absolute;
             inset: 0;
+            padding: inherit;
             font-family: 'DSEG7 Classic', monospace;
             font-size: inherit;
-            color: rgba(255, 36, 0, 0.12);
+            color: rgba(255, 36, 0, 0.18);
             white-space: nowrap;
             pointer-events: none;
             user-select: none;
@@ -219,35 +264,202 @@ if (!$sala) {
             font-size: clamp(54px, 17vh, 170px);
             line-height: 1;
             letter-spacing: .04em;
-            color: #ff2400;
+            color: #ff3300;
             text-shadow:
-                0 0 10px rgba(255, 36, 0, 1),
-                0 0 30px rgba(255, 36, 0, 0.7),
-                0 0 70px rgba(255, 36, 0, 0.3);
+                0 0 4px rgba(255, 51, 0, 1),
+                0 0 12px rgba(255, 51, 0, 0.8),
+                0 0 28px rgba(255, 51, 0, 0.35);
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+            position: relative;
+            /* above ghost */
             transition: color .25s, text-shadow .25s;
         }
 
-        /* ── REST phase: swap red→blue for digits too ── */
+        /* REST phase: blue */
         body.state-rest .clock-digits {
-            color: #0a6fff;
+            color: #1a7fff;
             text-shadow:
-                0 0 10px rgba(10, 111, 255, 1),
-                0 0 30px rgba(10, 111, 255, 0.7),
-                0 0 70px rgba(10, 111, 255, 0.3);
+                0 0 4px rgba(26, 127, 255, 1),
+                0 0 12px rgba(26, 127, 255, 0.8),
+                0 0 28px rgba(26, 127, 255, 0.35);
         }
 
         body.state-rest .clock-digits-wrapper::before {
-            color: rgba(10, 111, 255, 0.12);
+            color: rgba(26, 127, 255, 0.18);
         }
 
-        /* Ghost-digit data attr on wrappers is updated by JS */
-        .clock-progress-fill {
+        body.state-rest .clock-digits-wrapper {
+            border-color: #1a3a5e;
+            box-shadow: inset 0 0 20px rgba(0, 0, 6, .95), inset 0 2px 4px rgba(0, 0, 0, .8), 0 0 0 1px #0a1a30;
+        }
+
+        /* ── Expand button ── */
+        .clock-fs-btn {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 4px;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: clamp(14px, 2.2vh, 20px);
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: color .2s, border-color .2s;
+            flex-shrink: 0;
+        }
+
+        .clock-fs-btn:hover {
+            color: #ff3300;
+            border-color: #ff3300;
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           FULLSCREEN overlay — same hardware look, fully dark room
+           ═══════════════════════════════════════════════════════════ */
+        #clock-fullscreen {
             display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            /* Same dot-matrix background */
+            background:
+                repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(0, 0, 0, .08) 5px, rgba(0, 0, 0, .08) 6px),
+                repeating-linear-gradient(90deg, transparent, transparent 5px, rgba(0, 0, 0, .08) 5px, rgba(0, 0, 0, .08) 6px),
+                #070707;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5vh;
+            cursor: pointer;
         }
 
-        /* kept for JS compat */
+        body.clock-fs #clock-fullscreen {
+            display: flex;
+        }
+
+        body.clock-fs .live-screen {
+            display: none !important;
+        }
+
+        body.clock-fs .clock-panel {
+            display: none !important;
+        }
+
+        /* Phase label — fullscreen */
+        .clock-fs-phase-wrapper {
+            position: relative;
+            line-height: 1;
+            background: #080808;
+            border: 2px solid #272727;
+            border-radius: 4px;
+            padding: clamp(6px, 1.2vh, 14px) clamp(14px, 2vw, 30px);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, .95);
+        }
+
+        .clock-fs-phase-wrapper::before {
+            content: attr(data-ghost);
+            position: absolute;
+            inset: 0;
+            padding: inherit;
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: inherit;
+            color: rgba(10, 111, 255, 0.20);
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .clock-fs-phase {
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: clamp(50px, 10vw, 150px);
+            line-height: 1;
+            color: #0a6fff;
+            text-shadow:
+                0 0 6px rgba(10, 111, 255, 1),
+                0 0 20px rgba(10, 111, 255, 0.6),
+                0 0 50px rgba(10, 111, 255, 0.2);
+            letter-spacing: .06em;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        /* Fullscreen digits — big physical box */
+        .clock-fs-digits-wrapper {
+            position: relative;
+            line-height: 1;
+            background: #060606;
+            border: 2px solid #2e2e2e;
+            border-radius: 4px;
+            padding: clamp(10px, 2vh, 28px) clamp(20px, 3vw, 50px);
+            box-shadow:
+                inset 0 0 60px rgba(0, 0, 0, .98),
+                inset 0 3px 8px rgba(0, 0, 0, .9),
+                0 0 0 1px #111,
+                0 4px 40px rgba(0, 0, 0, .8);
+        }
+
+        .clock-fs-digits-wrapper::before {
+            content: attr(data-ghost);
+            position: absolute;
+            inset: 0;
+            padding: inherit;
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: inherit;
+            color: rgba(255, 51, 0, 0.18);
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            letter-spacing: inherit;
+        }
+
+        .clock-fs-digits {
+            font-family: 'DSEG7 Classic', monospace;
+            font-size: clamp(120px, 28vw, 420px);
+            line-height: 1;
+            letter-spacing: .04em;
+            color: #ff3300;
+            text-shadow:
+                0 0 6px rgba(255, 51, 0, 1),
+                0 0 20px rgba(255, 51, 0, 0.75),
+                0 0 55px rgba(255, 51, 0, 0.3);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            position: relative;
+            transition: color .25s, text-shadow .25s;
+        }
+
+        body.state-rest .clock-fs-digits {
+            color: #1a7fff;
+            text-shadow:
+                0 0 6px rgba(26, 127, 255, 1),
+                0 0 20px rgba(26, 127, 255, 0.75),
+                0 0 55px rgba(26, 127, 255, 0.3);
+        }
+
+        body.state-rest .clock-fs-digits-wrapper::before {
+            color: rgba(26, 127, 255, 0.18);
+        }
+
+        body.state-rest .clock-fs-digits-wrapper {
+            border-color: #1a3a5e;
+        }
+
+        /* Sub text */
+        .clock-fs-sub {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(18px, 2.6vw, 44px);
+            color: rgba(255, 255, 255, 0.22);
+            letter-spacing: .3em;
+            text-transform: uppercase;
+        }
+
+        .clock-fs-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 28px;
+            font-size: clamp(10px, 1.2vw, 14px);
+            color: rgba(255, 255, 255, 0.08);
+            letter-spacing: .15em;
+        }
     </style>
 
     <!-- Ambient decorations -->
@@ -532,21 +744,39 @@ if (!$sala) {
                 <div class="clock-progress-label" id="clock-progress-label"></div>
             </div>
 
-            <!-- Center-left: phase label (WORK / REST / AMRAP…) in LED blue -->
-            <div class="clock-phase-wrapper" id="clock-phase-wrapper" data-ghost="88">
-                <div class="clock-phase-label" id="clock-phase-label">--</div>
+            <!-- Physical LED housing: phase cell + time cell -->
+            <div class="clock-hw-digits-block">
+                <!-- Phase label (WORK / REST / CD / CU…) in LED blue -->
+                <div class="clock-phase-wrapper" id="clock-phase-wrapper" data-ghost="88">
+                    <div class="clock-phase-label" id="clock-phase-label">--</div>
+                </div>
+
+                <!-- Time countdown in LED red -->
+                <div class="clock-digits-wrapper" id="clock-digits-wrapper" data-ghost="88:88">
+                    <div class="clock-digits" id="clock-digits">00:00</div>
+                </div>
             </div>
 
-            <!-- Center-right: time countdown in LED red -->
-            <div class="clock-digits-wrapper" id="clock-digits-wrapper" data-ghost="88:88">
-                <div class="clock-digits" id="clock-digits">00:00</div>
-            </div>
+            <!-- Right: expand to fullscreen button -->
+            <button class="clock-fs-btn" onclick="window.toggleClockFs()" title="Pantalla completa">&#x26F6;</button>
 
         </div>
         <!-- Hidden fill: kept for JS compatibility in display-sync.js -->
         <div style="display:none">
             <div id="clock-progress-fill"></div>
         </div>
+    </div>
+
+    <!-- FULLSCREEN CLOCK OVERLAY — takes 100% screen, WOD hidden completely -->
+    <div id="clock-fullscreen" onclick="window.toggleClockFs()" title="Click para salir">
+        <div class="clock-fs-phase-wrapper" id="clock-fs-phase-wrapper" data-ghost="88">
+            <div class="clock-fs-phase" id="clock-fs-phase">--</div>
+        </div>
+        <div class="clock-fs-digits-wrapper" id="clock-fs-digits-wrapper" data-ghost="88:88">
+            <div class="clock-fs-digits" id="clock-fs-digits">00:00</div>
+        </div>
+        <div class="clock-fs-sub" id="clock-fs-sub"></div>
+        <div class="clock-fs-hint">&#x26F6; toca para salir</div>
     </div>
 
     <script>

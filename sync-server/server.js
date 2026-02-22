@@ -24,8 +24,100 @@ const pool = mysql.createPool({ ...DB, waitForConnections: true, connectionLimit
 // ─── In-Memory State ───────────────────────────────────────────────────────
 // sessionStates: Map<salaId, sessionState>
 const sessionStates = new Map();
-// timers: Map<salaId, intervalId>
+// timers: Map<salaId, intervalId>  (WOD ticker)
 const timers = new Map();
+// clockTimers: Map<salaId, intervalId>  (standalone clock ticker)
+const clockTimers = new Map();
+
+function _startClockTimer(salaId) {
+    _stopClockTimer(salaId);
+    const id = setInterval(() => {
+        const st = sessionStates.get(salaId);
+        if (!st || !st.clockTimer) { clearInterval(id); return; }
+        const ct = st.clockTimer;
+        if (!ct.running) return;
+
+        // ── PREP PHASE ─────────────────────────────────────────────────────
+        if (ct.prep > 0 && ct.prepElapsed < ct.prep) {
+            ct.prepElapsed++;
+            if (ct.prepElapsed >= ct.prep) {
+                ct.phase = ct.mode === 'tabata' ? 'work' : 'main';
+            } else {
+                ct.phase = 'prep';
+            }
+            broadcast(salaId);
+            return;
+        }
+        ct.phase = ct.phase || 'main';
+
+        // ── TABATA MODE ────────────────────────────────────────────────────
+        if (ct.mode === 'tabata') {
+            const work = ct.work || 20;
+            const rest = ct.rest || 10;
+            const total = ct.rounds || 8;
+            ct.phaseElapsed = (ct.phaseElapsed || 0) + 1;
+
+            if (ct.phase === 'work') {
+                if (ct.phaseElapsed >= work) {
+                    const doneRound = (ct.currentRound || 0) + 1;
+                    if (doneRound >= total) {
+                        // All rounds done
+                        ct.running = false;
+                        ct.phase = 'done';
+                        _stopClockTimer(salaId);
+                    } else {
+                        ct.currentRound = doneRound;
+                        ct.phase = 'rest';
+                        ct.phaseElapsed = 0;
+                    }
+                }
+            } else if (ct.phase === 'rest') {
+                if (ct.phaseElapsed >= rest) {
+                    ct.phase = 'work';
+                    ct.phaseElapsed = 0;
+                }
+            }
+            ct.elapsed++;
+            broadcast(salaId);
+            return;
+        }
+
+        // ── COUNTDOWN MODE ─────────────────────────────────────────────────
+        if (ct.mode === 'countdown') {
+            ct.elapsed = Math.min(ct.duration, ct.elapsed + 1);
+            if (ct.elapsed >= ct.duration) {
+                ct.running = false;
+                ct.phase = 'done';
+                _stopClockTimer(salaId);
+            }
+            broadcast(salaId);
+            return;
+        }
+
+        // ── COUNT-UP MODE (default) ────────────────────────────────────────
+        ct.elapsed++;
+        if (ct.duration > 0 && ct.elapsed >= ct.duration) {
+            ct.running = false;
+            ct.phase = 'done';
+            _stopClockTimer(salaId);
+        }
+        broadcast(salaId);
+    }, 1000);
+    clockTimers.set(salaId, id);
+}
+function _stopClockTimer(salaId) {
+    const id = clockTimers.get(salaId);
+    if (id) { clearInterval(id); clockTimers.delete(salaId); }
+}
+function _ensureClockTimer(st) {
+    if (!st.clockTimer) {
+        st.clockTimer = {
+            mode: 'countdown', duration: 300, elapsed: 0, running: false,
+            prep: 10, prepElapsed: 0, phase: 'idle',
+            work: 20, rest: 10, rounds: 8, currentRound: 0, phaseElapsed: 0,
+        };
+    }
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 function computeBlockDuration(block) {
@@ -65,6 +157,7 @@ function buildTick(st) {
         auto_play: st.autoPlay !== false,
         wod_overlay: st.wodOverlay || { active: false, blocks: [] },
         clock_mode: st.clockMode || { active: false, mode: 'session', config: {} },
+        clock_timer: st.clockTimer || { mode: 'countdown', duration: 300, elapsed: 0, running: false },
         server_ts: Date.now(),
     };
 }
@@ -423,6 +516,75 @@ io.on('connection', (socket) => {
         };
         broadcast(sala_id);  // full tick so display gets clock_mode in the proper payload
         console.log(`[Socket] Sala ${sala_id} clock_mode → active=${active} mode=${mode}`);
+    });
+
+    // ── Control: CLOCK FULLSCREEN ───────────────────────────────────────────────
+    // Instructor toggles the display clock into fullscreen mode.
+    // No state stored — just re-broadcast the command to display sockets.
+    socket.on('control:clock_fs', ({ active } = {}) => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        // Emit directly to all sockets in this sala's room
+        io.to(`sala:${sala_id}`).emit('clock:fs', { active: !!active });
+        console.log(`[Socket] Sala ${sala_id} clock_fs → active=${active}`);
+    });
+
+    // ── Control: STANDALONE CLOCK TIMER ─────────────────────────────────────
+    socket.on('control:clock_timer_play', () => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        const st = sessionStates.get(sala_id);
+        if (!st) return;
+        _ensureClockTimer(st);
+        st.clockTimer.running = !st.clockTimer.running;
+        if (st.clockTimer.running) _startClockTimer(sala_id);
+        else _stopClockTimer(sala_id);
+        broadcast(sala_id);
+        console.log(`[Socket] Sala ${sala_id} clock_timer → running=${st.clockTimer.running}`);
+    });
+
+    socket.on('control:clock_timer_stop', () => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        const st = sessionStates.get(sala_id);
+        if (!st) return;
+        _ensureClockTimer(st);
+        st.clockTimer.running = false;
+        _stopClockTimer(sala_id);
+        broadcast(sala_id);
+    });
+
+    socket.on('control:clock_timer_reset', () => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        const st = sessionStates.get(sala_id);
+        if (!st) return;
+        _ensureClockTimer(st);
+        st.clockTimer.elapsed = 0;
+        st.clockTimer.running = false;
+        _stopClockTimer(sala_id);
+        broadcast(sala_id);
+    });
+
+    socket.on('control:clock_timer_cfg', ({ mode, duration, prep, work, rest, rounds } = {}) => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        const st = sessionStates.get(sala_id);
+        if (!st) return;
+        _ensureClockTimer(st);
+        const ct = st.clockTimer;
+        if (mode !== undefined) ct.mode = mode;
+        if (duration !== undefined) ct.duration = Math.max(5, parseInt(duration) || 300);
+        if (prep !== undefined) ct.prep = Math.max(0, parseInt(prep) || 0);
+        if (work !== undefined) ct.work = Math.max(1, parseInt(work) || 20);
+        if (rest !== undefined) ct.rest = Math.max(0, parseInt(rest) || 10);
+        if (rounds !== undefined) ct.rounds = Math.max(1, parseInt(rounds) || 8);
+        // Full reset
+        ct.elapsed = 0; ct.prepElapsed = 0; ct.phase = 'idle';
+        ct.currentRound = 0; ct.phaseElapsed = 0; ct.running = false;
+        _stopClockTimer(sala_id);
+        broadcast(sala_id);
+        console.log(`[Socket] Sala ${sala_id} clock_timer_cfg → mode=${ct.mode} dur=${ct.duration} prep=${ct.prep}`);
     });
 
     // ── Disconnect ──────────────────────────────────────────────────────────

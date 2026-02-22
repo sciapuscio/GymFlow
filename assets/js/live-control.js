@@ -183,6 +183,8 @@ const GFLive = (() => {
                 spotifySetVolume(Math.max(0, vol));
             }
         }
+        // Hook for external consumers (e.g. clock controller overlay)
+        if (typeof window._onLiveTick === 'function') window._onLiveTick(tick);
     }
 
     function _updateStickman() {
@@ -522,6 +524,25 @@ const GFLive = (() => {
         }
     }
 
+    function emitClockFs(active) {
+        if (socket?.connected) {
+            socket.emit('control:clock_fs', { active: !!active });
+        }
+    }
+
+    function clockTimerPlay() {
+        if (socket?.connected) socket.emit('control:clock_timer_play');
+    }
+    function clockTimerStop() {
+        if (socket?.connected) socket.emit('control:clock_timer_stop');
+    }
+    function clockTimerReset() {
+        if (socket?.connected) socket.emit('control:clock_timer_reset');
+    }
+    function clockTimerCfg(mode, duration, prep, work, rest, rounds) {
+        if (socket?.connected) socket.emit('control:clock_timer_cfg', { mode, duration, prep, work, rest, rounds });
+    }
+
     function _syncClockBtn(active) {
         const btn = document.getElementById('btn-clock-mode');
         if (!btn) return;
@@ -531,7 +552,7 @@ const GFLive = (() => {
         btn.title = active ? 'Ocultar reloj en pantalla' : 'Mostrar reloj en pantalla';
     }
 
-    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket, emitWodOverlay, emitClockMode };
+    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket, emitWodOverlay, emitClockMode, emitClockFs, clockTimerPlay, clockTimerStop, clockTimerReset, clockTimerCfg };
 })();
 
 // Expose globals used inline by live.php buttons

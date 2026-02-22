@@ -1,0 +1,26 @@
+{
+  "name": "GymFlow",
+  "short_name": "GymFlow",
+  "description": "Plataforma profesional para entrenamiento funcional, HIIT y CrossFit",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b0f",
+  "theme_color": "#e5ff3d",
+  "icons": [
+    {
+      "src": "/web/favicon-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/web/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/web/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

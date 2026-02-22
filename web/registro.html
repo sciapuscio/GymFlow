@@ -1,17 +1,34 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Empezar gratis 30 días – GymFlow</title>
+    <title>Registrá tu Gimnasio Gratis – Probá GymFlow 30 días | Sin Tarjeta</title>
     <meta name="description"
-        content="Registrá tu gimnasio en GymFlow y empezá tu prueba gratuita de 30 días. Sin tarjeta de crédito." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500&display=swap"
-        rel="stylesheet" />
+        content="Creá tu cuenta en GymFlow gratis. Elegí tu plan (Instructor, Gimnasio o Centro) y empezá tu prueba de 30 días sin tarjeta de crédito." />
+    <!-- Conversion page — do not index directly; traffic comes from landing -->
+    <meta name="robots" content="noindex, follow" />
+    <link rel="canonical" href="https://www.gymflow.com.ar/web/registro.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Empezá gratis en GymFlow – 30 días sin tarjeta" />
+    <meta property="og:description"
+        content="Registrá tu gimnasio y elegí tu plan. Sin permanencia, sin tarjeta de crédito." />
+    <meta property="og:url" content="https://www.gymflow.com.ar/web/registro.html" />
+    <meta property="og:image" content="https://www.gymflow.com.ar/web/og-image.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_AR" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <link rel="manifest" href="site.webmanifest" />
+    <meta name="theme-color" content="#e5ff3d" />
+
     <style>
         /* ---- TOKENS ---- */
         :root {
@@ -416,6 +433,8 @@
             outline: none;
             transition: all var(--trans);
             -webkit-appearance: none;
+            appearance: none;
+
         }
 
         input::placeholder {
@@ -697,6 +716,138 @@
             text-decoration: underline;
         }
 
+        /* ---- PLAN SELECTOR CARDS ---- */
+        .plan-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .plan-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 18px 20px;
+            background: var(--surface);
+            border: 1.5px solid var(--border2);
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all var(--trans);
+            position: relative;
+        }
+
+        .plan-card:hover {
+            border-color: rgba(229, 255, 61, .4);
+            background: rgba(229, 255, 61, .03);
+        }
+
+        .plan-card.selected {
+            border-color: var(--primary);
+            background: rgba(229, 255, 61, .05);
+            box-shadow: 0 0 0 3px rgba(229, 255, 61, .12);
+        }
+
+        .plan-card-featured {
+            order: -1;
+        }
+
+        .plan-radio {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border2);
+            flex-shrink: 0;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--trans);
+        }
+
+        .plan-card.selected .plan-radio {
+            border-color: var(--primary);
+            background: var(--primary);
+        }
+
+        .plan-radio::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0a0b0f;
+            opacity: 0;
+            transition: opacity var(--trans);
+        }
+
+        .plan-card.selected .plan-radio::after {
+            opacity: 1;
+        }
+
+        .plan-card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .plan-card-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .plan-card-name {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .plan-card-badge {
+            font-family: var(--font-display);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: var(--primary);
+            color: #0a0b0f;
+            border-radius: 100px;
+            padding: 2px 10px;
+        }
+
+        .plan-card-price {
+            font-family: var(--font-display);
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .plan-card-price strong {
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .plan-card-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .plan-card-feature {
+            font-size: 0.75rem;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .plan-card-feature::before {
+            content: '✓';
+            color: var(--primary);
+            font-weight: 700;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 900px) {
             .page {
@@ -822,11 +973,14 @@
                     <div class="step-dot" id="dot2">2</div>
                     <div class="step-line" id="line2"></div>
                     <div class="step-dot" id="dot3">3</div>
+                    <div class="step-line" id="line3"></div>
+                    <div class="step-dot" id="dot4">4</div>
                 </div>
                 <div class="steps-labels">
                     <div class="step-label-item active" id="lbl1">Tu gimnasio</div>
-                    <div class="step-label-item" id="lbl2">Tu cuenta</div>
-                    <div class="step-label-item" id="lbl3">Confirmar</div>
+                    <div class="step-label-item" id="lbl2">Tu plan</div>
+                    <div class="step-label-item" id="lbl3">Tu cuenta</div>
+                    <div class="step-label-item" id="lbl4">Confirmar</div>
                 </div>
 
                 <!-- Global alert -->
@@ -892,18 +1046,6 @@
                             </div>
                         </div>
 
-                        <div class="field-group">
-                            <label for="instructors_count">¿Cuántos instructores tiene el gimnasio?</label>
-                            <div class="select-wrap">
-                                <select id="instructors_count" name="instructors_count">
-                                    <option value="1">Solo yo (1 instructor)</option>
-                                    <option value="2-3">2-3 instructores</option>
-                                    <option value="4-10">4-10 instructores</option>
-                                    <option value="10+">Más de 10 instructores</option>
-                                </select>
-                            </div>
-                        </div>
-
                         <div class="form-actions">
                             <button type="button" class="btn-primary" id="btnStep1">
                                 <span>Continuar</span>
@@ -917,8 +1059,90 @@
                         </div>
                     </div>
 
-                    <!-- STEP 2 — Admin account -->
+                    <!-- STEP 2 — Plan selection -->
                     <div class="form-step" id="step2">
+                        <input type="hidden" id="selected_plan" value="gimnasio" />
+
+                        <div class="field-group" style="margin-bottom:6px;">
+                            <label>Elegí tu plan <span class="req">*</span></label>
+                            <p style="font-size:.8rem;color:var(--dim);margin-bottom:16px;margin-top:-4px;">30 días
+                                gratis en cualquier plan · Sin tarjeta de crédito</p>
+                        </div>
+
+                        <div class="plan-cards">
+                            <!-- Gimnasio — pre-seleccionado -->
+                            <div class="plan-card plan-card-featured selected" data-plan="gimnasio">
+                                <div class="plan-radio"></div>
+                                <div class="plan-card-body">
+                                    <div class="plan-card-top">
+                                        <span class="plan-card-name">Gimnasio</span>
+                                        <span class="plan-card-badge">Más popular</span>
+                                    </div>
+                                    <div class="plan-card-price"><strong>$29.000</strong> ARS / mes</div>
+                                    <div class="plan-card-features">
+                                        <span class="plan-card-feature">Hasta 3 salas</span>
+                                        <span class="plan-card-feature">Instructores ilimitados</span>
+                                        <span class="plan-card-feature">Biblioteca compartida</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Instructor -->
+                            <div class="plan-card" data-plan="instructor">
+                                <div class="plan-radio"></div>
+                                <div class="plan-card-body">
+                                    <div class="plan-card-top">
+                                        <span class="plan-card-name">Instructor</span>
+                                    </div>
+                                    <div class="plan-card-price"><strong>$12.000</strong> ARS / mes</div>
+                                    <div class="plan-card-features">
+                                        <span class="plan-card-feature">1 sala</span>
+                                        <span class="plan-card-feature">1 instructor</span>
+                                        <span class="plan-card-feature">Todas las funcionalidades</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Centro -->
+                            <div class="plan-card" data-plan="centro">
+                                <div class="plan-radio"></div>
+                                <div class="plan-card-body">
+                                    <div class="plan-card-top">
+                                        <span class="plan-card-name">Centro</span>
+                                    </div>
+                                    <div class="plan-card-price"><strong>$55.000</strong> ARS / mes</div>
+                                    <div class="plan-card-features">
+                                        <span class="plan-card-feature">Hasta 8 salas</span>
+                                        <span class="plan-card-feature">Instructores ilimitados</span>
+                                        <span class="plan-card-feature">Soporte dedicado</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field-error" id="err_selected_plan"></div>
+
+                        <div class="form-actions" style="margin-top:24px;">
+                            <button type="button" class="btn-back" id="btnBack1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M19 12H5" />
+                                    <path d="m12 19-7-7 7-7" />
+                                </svg>
+                                Atrás
+                            </button>
+                            <button type="button" class="btn-primary" id="btnStep2">
+                                <span>Continuar</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M5 12h14" />
+                                    <path d="m12 5 7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3 — Admin account -->
+                    <div class="form-step" id="step3">
 
                         <div class="field-group">
                             <label for="admin_name">Tu nombre completo <span class="req">*</span></label>
@@ -953,7 +1177,7 @@
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" class="btn-back" id="btnBack1">
+                            <button type="button" class="btn-back" id="btnBack2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -962,7 +1186,7 @@
                                 </svg>
                                 Atrás
                             </button>
-                            <button type="button" class="btn-primary" id="btnStep2">
+                            <button type="button" class="btn-primary" id="btnStep3">
                                 <span>Continuar</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
@@ -974,8 +1198,8 @@
                         </div>
                     </div>
 
-                    <!-- STEP 3 — Confirm -->
-                    <div class="form-step" id="step3">
+                    <!-- STEP 4 — Confirm -->
+                    <div class="form-step" id="step4">
 
                         <!-- Summary card -->
                         <div
@@ -1009,9 +1233,13 @@
                                 <div style="height:1px;background:var(--border);"></div>
                                 <div style="display:flex;justify-content:space-between;align-items:center;">
                                     <span style="font-size:.85rem;color:var(--muted)">Plan</span>
-                                    <span
-                                        style="font-family:var(--font-display);font-weight:700;color:var(--primary);">Prueba
-                                        gratuita · 30 días</span>
+                                    <span style="font-family:var(--font-display);font-weight:700;color:var(--primary);"
+                                        id="sum_plan">Gimnasio · $29.000/mes</span>
+                                </div>
+                                <div style="height:1px;background:var(--border);"></div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Prueba gratuita</span>
+                                    <span style="font-size:.9rem;color:var(--success);">✓ 30 días · sin tarjeta</span>
                                 </div>
                             </div>
                         </div>
@@ -1024,7 +1252,7 @@
                         </p>
 
                         <div class="form-actions">
-                            <button type="button" class="btn-back" id="btnBack2">
+                            <button type="button" class="btn-back" id="btnBack3">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -1074,6 +1302,25 @@
                 '': 'No especificado'
             };
 
+            const planLabels = {
+                'instructor': 'Instructor · $12.000/mes',
+                'gimnasio': 'Gimnasio · $29.000/mes',
+                'centro': 'Centro · $55.000/mes'
+            };
+
+            // ── Plan card selection ───────────────────────────────────────────────────────
+
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    document.getElementById('selected_plan').value = card.dataset.plan;
+                    // Clear error if present
+                    const err = document.getElementById('err_selected_plan');
+                    if (err) { err.classList.remove('show'); err.textContent = ''; }
+                });
+            });
+
             // ── Step navigation ──────────────────────────────────────────────────────────
 
             function goToStep(n) {
@@ -1082,27 +1329,28 @@
                 document.getElementById('step' + currentStep).classList.add('active');
                 updateStepUI();
                 clearAlert();
-                // Scroll form top
                 document.querySelector('.panel-right').scrollTo({ top: 0, behavior: 'smooth' });
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
             function updateStepUI() {
-                for (let i = 1; i <= 3; i++) {
+                for (let i = 1; i <= 4; i++) {
                     const dot = document.getElementById('dot' + i);
                     const lbl = document.getElementById('lbl' + i);
+                    if (!dot) continue;
                     dot.classList.remove('active', 'done');
                     lbl.classList.remove('active', 'done');
                     if (i < currentStep) { dot.classList.add('done'); lbl.classList.add('done'); dot.innerHTML = '✓'; }
                     else if (i === currentStep) { dot.classList.add('active'); lbl.classList.add('active'); dot.textContent = i; }
                     else { dot.textContent = i; }
                 }
-                if (document.getElementById('line1')) {
-                    document.getElementById('line1').classList.toggle('active', currentStep > 1);
-                    document.getElementById('line2').classList.toggle('active', currentStep > 2);
+                // Connector lines
+                for (let l = 1; l <= 3; l++) {
+                    const line = document.getElementById('line' + l);
+                    if (line) line.classList.toggle('active', currentStep > l);
                 }
-                // Populate summary on step 3
-                if (currentStep === 3) populateSummary();
+                // Populate summary on step 4
+                if (currentStep === 4) populateSummary();
             }
 
             function populateSummary() {
@@ -1110,6 +1358,8 @@
                 document.getElementById('sum_type').textContent = gymTypeLabels[val('gym_type')] || 'No especificado';
                 document.getElementById('sum_name').textContent = val('admin_name') || '—';
                 document.getElementById('sum_email').textContent = val('admin_email') || '—';
+                const plan = document.getElementById('selected_plan').value || 'gimnasio';
+                document.getElementById('sum_plan').textContent = planLabels[plan] || plan;
             }
 
             // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1145,6 +1395,16 @@
             }
 
             function validateStep2() {
+                clearErrors();
+                const plan = document.getElementById('selected_plan').value;
+                if (!plan || !['instructor', 'gimnasio', 'centro'].includes(plan)) {
+                    setError('selected_plan', 'Seleccioná un plan para continuar.');
+                    return false;
+                }
+                return true;
+            }
+
+            function validateStep3() {
                 clearErrors();
                 let ok = true;
                 if (!val('admin_name')) { setError('admin_name', 'Tu nombre es requerido.'); ok = false; }
@@ -1188,13 +1448,19 @@
 
             document.getElementById('btnStep2').addEventListener('click', () => {
                 if (validateStep2()) goToStep(3);
+            });
+
+            document.getElementById('btnBack2').addEventListener('click', () => goToStep(2));
+
+            document.getElementById('btnStep3').addEventListener('click', () => {
+                if (validateStep3()) goToStep(4);
                 else {
-                    const firstErr = document.querySelector('#step2 input.error');
+                    const firstErr = document.querySelector('#step3 input.error');
                     if (firstErr) firstErr.focus();
                 }
             });
 
-            document.getElementById('btnBack2').addEventListener('click', () => goToStep(2));
+            document.getElementById('btnBack3').addEventListener('click', () => goToStep(3));
 
             // ── Form submit ───────────────────────────────────────────────────────────────
 
@@ -1217,7 +1483,7 @@
                     city: val('city'),
                     phone: val('phone'),
                     gym_type: val('gym_type'),
-                    instructors_count: val('instructors_count'),
+                    plan: document.getElementById('selected_plan').value || 'gimnasio',
                     admin_name: val('admin_name'),
                     admin_email: val('admin_email'),
                     admin_password: document.getElementById('admin_password').value,
@@ -1235,12 +1501,11 @@
                     const json = await res.json();
 
                     if (!res.ok) {
-                        // Show field errors if present
                         if (json.fields) {
                             Object.entries(json.fields).forEach(([field, msg]) => setError(field, msg));
-                            // Go back to relevant step
                             if (json.fields.gym_name) goToStep(1);
-                            else if (json.fields.admin_name || json.fields.admin_email || json.fields.admin_password || json.fields.admin_password2) goToStep(2);
+                            else if (json.fields.plan) goToStep(2);
+                            else if (json.fields.admin_name || json.fields.admin_email || json.fields.admin_password || json.fields.admin_password2) goToStep(3);
                         }
                         showAlert(json.error || 'Ocurrió un error. Intentá de nuevo.');
                         btn.disabled = false;
@@ -1251,7 +1516,6 @@
                     }
 
                     // ── SUCCESS ──
-                    // Hide form, show success screen
                     document.getElementById('registerForm').style.display = 'none';
                     document.querySelector('.steps-indicator').style.display = 'none';
                     document.querySelector('.steps-labels').style.display = 'none';
@@ -1264,10 +1528,8 @@
                             `"${json.gym_name}" fue creado exitosamente. Tu prueba gratuita de 30 días ha comenzado. Redirigiendo al panel...`;
                     }
 
-                    // Store token
                     if (json.token) localStorage.setItem('gf_token', json.token);
 
-                    // Animate redirect bar then redirect
                     setTimeout(() => {
                         document.getElementById('redirectBar').style.width = '100%';
                     }, 100);
@@ -1290,7 +1552,6 @@
                 const el = document.getElementById(id);
                 if (el) {
                     el.addEventListener('blur', () => {
-                        // Clear individual error on blur if now valid
                         if (el.value.trim()) {
                             el.classList.remove('error');
                             const err = document.getElementById('err_' + id);

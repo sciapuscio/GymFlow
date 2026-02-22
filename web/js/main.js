@@ -243,4 +243,33 @@
   `;
     document.head.appendChild(rippleStyle);
 
+    // ---- BILLING TOGGLE (mensual / anual) ----
+    const billingToggle = document.getElementById('billingToggle');
+    if (billingToggle) {
+        let isAnual = false;
+
+        const plans = [
+            { amount: document.querySelector('[data-mensual="12.000"]'), note: document.getElementById('noteInstructor'), anualLabel: '$10.000 / mes · pagás $120.000 / año' },
+            { amount: document.querySelector('[data-mensual="29.000"]'), note: document.getElementById('noteGimnasio'), anualLabel: '$24.200 / mes · pagás $290.400 / año' },
+            { amount: document.querySelector('[data-mensual="55.000"]'), note: document.getElementById('noteCentro'), anualLabel: '$45.800 / mes · pagás $549.600 / año' }
+        ];
+
+        billingToggle.addEventListener('click', () => {
+            isAnual = !isAnual;
+            billingToggle.setAttribute('aria-checked', String(isAnual));
+            billingToggle.classList.toggle('active', isAnual);
+
+            plans.forEach(p => {
+                if (!p.amount) return;
+                if (isAnual) {
+                    p.amount.textContent = p.amount.dataset.anual;
+                    if (p.note) { p.note.textContent = '2 meses gratis incluidos'; p.note.classList.add('has-note'); }
+                } else {
+                    p.amount.textContent = p.amount.dataset.mensual;
+                    if (p.note) { p.note.innerHTML = '&nbsp;'; p.note.classList.remove('has-note'); }
+                }
+            });
+        });
+    }
+
 })();

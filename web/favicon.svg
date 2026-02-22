@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0b0f"/>
+      <stop offset="100%" style="stop-color:#1a1d27"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e5ff3d"/>
+      <stop offset="100%" style="stop-color:#b8f200"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- G letter -->
+  <text x="78" y="358" font-family="Arial Black, Arial" font-weight="900" font-size="280" fill="url(#accent)">G</text>
+  <!-- F letter shifted -->
+  <text x="248" y="358" font-family="Arial Black, Arial" font-weight="900" font-size="280" fill="white" opacity="0.92">F</text>
+  <!-- Accent lightning bolt line under letters -->
+  <rect x="78" y="380" width="356" height="14" rx="7" fill="url(#accent)" opacity="0.7"/>
+</svg>

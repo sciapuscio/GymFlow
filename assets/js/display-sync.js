@@ -66,6 +66,11 @@
         socket.on('display:wod_overlay', ({ active, blocks }) => {
             _renderWodOverlay(active, blocks);
         });
+
+        // ── Fullscreen clock command from instructor ──────────────────────────
+        socket.on('clock:fs', ({ active }) => {
+            document.body.classList.toggle('clock-fs', !!active);
+        });
     }   // ← closes connectSocket()
 
     // Shared WOD overlay renderer (called from socket event & applyState reconnect)
@@ -201,6 +206,7 @@
             // Show current block name on idle screen if one is loaded
             const idleLabel = document.getElementById('idle-class-label');
             if (idleLabel && block) idleLabel.textContent = block.name || '';
+            _applyClockMode(false); // close clock when idle
             stopTicker();
             return;
         }
@@ -210,6 +216,7 @@
             if (liveScreen) liveScreen.style.display = 'none';
             if (finishedScreen) finishedScreen.style.display = 'flex';
             if (pausedOverlay) pausedOverlay.classList.remove('visible');
+            _applyClockMode(false); // close clock when session ends
             stopTicker();
             return;
         }
@@ -296,8 +303,14 @@
     }
 
     // ── Clock Mode ─────────────────────────────────────────────────────────
+    // Fullscreen toggle — called from HTML onclick
+    window.toggleClockFs = function () {
+        document.body.classList.toggle('clock-fs');
+    };
+
     function _applyClockMode(state) {
-        const cm = state.clock_mode;
+        // Accept either a full state object or a bare false/falsy to deactivate
+        const cm = (state && typeof state === 'object') ? state.clock_mode : null;
         const active = !!(cm && cm.active);
         const wasActive = _clockActive;
         _clockActive = active;
@@ -306,8 +319,9 @@
         document.body.classList.toggle('clock-active', active);
 
         if (!active) {
-            // Stop interpolation rAF and clear panel
+            // Stop interpolation rAF, exit fullscreen, clear panel
             if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+            document.body.classList.remove('clock-fs'); // exit fullscreen too
             return;
         }
 
@@ -342,6 +356,8 @@
         if (!state) return;
         const block = state.current_block;
         const status = state.status || 'idle';
+        const clockMode = state.clock_mode || {};
+        const ct = state.clock_timer || {};
 
         const digitsEl = document.getElementById('clock-digits');
         const phaseEl = document.getElementById('clock-phase-label');
@@ -349,6 +365,111 @@
         const fillEl = document.getElementById('clock-progress-fill');
         const lblEl = document.getElementById('clock-progress-label');
         if (!digitsEl) return;
+
+        // ── STANDALONE CLOCK MODE (not tied to the WOD session) ───────────────
+        // SMART FALLTHROUGH: if the standalone timer is idle (never started)
+        // but the WOD session has an active block → mirror the WOD timer instead.
+        const standaloneMode = clockMode.mode === 'countdown' || clockMode.mode === 'countup' || clockMode.mode === 'tabata';
+        const ct_running = (state.clock_timer || {}).running || false;
+        const ct_elapsed = (state.clock_timer || {}).elapsed || 0;
+
+        const useStandalone = standaloneMode && (ct_running || ct_elapsed > 0);
+
+        if (useStandalone) {
+            const ctElapsed = ct.elapsed || 0;
+            const ctDuration = ct.duration || 300;
+            const ctRunning = ct.running || false;
+            const ctPhase = ct.phase || 'idle';
+            const ctPrep = ct.prep || 0;
+            const ctPrepElapsed = ct.prepElapsed || 0;
+            const ctWork = ct.work || 20;
+            const ctRest = ct.rest || 10;
+            const ctRounds = ct.rounds || 8;
+            const ctRound = (ct.currentRound || 0) + 1;
+            const ctPhaseElap = ct.phaseElapsed || 0;
+
+            let displaySec, phaseLabel, subText;
+            const mode = clockMode.mode;
+
+            // ── PREP phase ────────────────────────────────────────────────
+            if (ctPhase === 'prep' || (ctPrep > 0 && ctPrepElapsed < ctPrep)) {
+                displaySec = Math.max(0, ctPrep - ctPrepElapsed);
+                phaseLabel = 'PREP';
+                subText = 'Preparate…';
+                document.body.classList.remove('state-rest');
+
+                // ── DONE ──────────────────────────────────────────────────────
+            } else if (ctPhase === 'done') {
+                displaySec = 0;
+                phaseLabel = mode === 'tabata' ? 'FIN' : 'FIN';
+                subText = '¡Tiempo!';
+                document.body.classList.remove('state-rest');
+
+                // ── TABATA: WORK phase ─────────────────────────────────────────
+            } else if (mode === 'tabata' && ctPhase === 'work') {
+                displaySec = Math.max(0, ctWork - ctPhaseElap);
+                phaseLabel = 'WORK';
+                subText = `Ronda ${ctRound} / ${ctRounds}`;
+                document.body.classList.remove('state-rest');
+
+                // ── TABATA: REST phase ─────────────────────────────────────────
+            } else if (mode === 'tabata' && ctPhase === 'rest') {
+                displaySec = Math.max(0, ctRest - ctPhaseElap);
+                phaseLabel = 'DESCANSO';
+                subText = `Ronda ${ctRound} / ${ctRounds}`;
+                document.body.classList.add('state-rest');
+
+                // ── COUNTDOWN ─────────────────────────────────────────────────
+            } else if (mode === 'countdown') {
+                displaySec = Math.max(0, ctDuration - ctElapsed);
+                phaseLabel = 'CD';
+                subText = ctRunning ? 'EN MARCHA' : (ctElapsed > 0 ? 'PAUSADO' : 'LISTO');
+                document.body.classList.remove('state-rest');
+
+                // ── COUNT-UP ──────────────────────────────────────────────────
+            } else {
+                displaySec = ctElapsed;
+                phaseLabel = 'CU';
+                subText = ctRunning ? 'EN MARCHA' : (ctElapsed > 0 ? 'PAUSADO' : 'LISTO');
+                document.body.classList.remove('state-rest');
+            }
+
+            const secFormatted = _formatClockMs(displaySec);
+            const intSec = Math.floor(displaySec);
+
+            // Beeps
+            if (intSec !== _lastClockSec) {
+                if (intSec >= 1 && intSec <= 3) _beepCountdown();
+                if (intSec === 0 && _lastClockSec === 1) _beepEnd();
+                if (_lastClockPhase !== phaseLabel && phaseLabel === 'WORK') _beepToWork?.();
+                if (_lastClockPhase !== phaseLabel && phaseLabel === 'DESCANSO') _beepToRest?.();
+                _lastClockSec = intSec;
+            }
+            _lastClockPhase = phaseLabel;
+
+            if (digitsEl && digitsEl.textContent !== secFormatted) digitsEl.textContent = secFormatted;
+            if (phaseEl) phaseEl.textContent = phaseLabel;
+            if (subEl) subEl.textContent = subText;
+
+            const digitsWrapper = document.getElementById('clock-digits-wrapper');
+            if (digitsWrapper) digitsWrapper.dataset.ghost = '8'.repeat(secFormatted.replace(':', '').length).split('').join('').replace(/(.{1})(.{2})$/, '$1:$2');
+            const phaseWrapper = document.getElementById('clock-phase-wrapper');
+            if (phaseWrapper) phaseWrapper.dataset.ghost = '8888';
+
+            // Mirror to fullscreen
+            const fsDigitsEl = document.getElementById('clock-fs-digits');
+            const fsPhaseEl = document.getElementById('clock-fs-phase');
+            const fsSubEl = document.getElementById('clock-fs-sub');
+            const fsDW = document.getElementById('clock-fs-digits-wrapper');
+            const fsPW = document.getElementById('clock-fs-phase-wrapper');
+            if (fsDigitsEl && fsDigitsEl.textContent !== secFormatted) fsDigitsEl.textContent = secFormatted;
+            if (fsPhaseEl) fsPhaseEl.textContent = phaseLabel;
+            if (fsSubEl) fsSubEl.textContent = subText;
+            if (fsDW) fsDW.dataset.ghost = digitsWrapper ? digitsWrapper.dataset.ghost : '8:88';
+            if (fsPW) fsPW.dataset.ghost = '8888';
+            return; // ← skip session-based rendering below
+        }
+        // ── END STANDALONE MODE ───────────────────────────────────────────────
 
         // If session is paused, show frozen time with PAUSA label
         if (status === 'paused') {
@@ -431,16 +552,17 @@
             _lastClockSec = intSec;
         }
         // ── END BEEP LOGIC ──────────────────────────────────────────────────────────
-        // Short hardware-style phase abbreviations (like real CrossFit timers)
+        // Short hardware-style phase labels (DSEG7 renders uppercase well)
         const HW_LABEL = {
-            'WORK': 'uP',   // "UP" in DSEG7 looks like hardware "up" counter
-            'DESCANSO': 'rE',   // "rE" = REST
-            'AMRAP': 'At',   // abbreviation
-            'EMOM': 'En',
-            'FOR TIME': 'Ft',
-            'PAUSA': 'PU',
+            'WORK': 'WORK',
+            'DESCANSO': 'REST',
+            'AMRAP': 'AMRAP',
+            'EMOM': 'EMOM',
+            'FOR TIME': 'FT',
+            'PAUSA': 'STOP',
+            'PREP': 'PREP',
         };
-        const hwPhase = HW_LABEL[phaseLabel] || phaseLabel.slice(0, 2);
+        const hwPhase = HW_LABEL[phaseLabel] || phaseLabel.slice(0, 5);
 
         // Update digits
         if (digitsEl && digitsEl.textContent !== secFormatted) digitsEl.textContent = secFormatted;
@@ -462,6 +584,19 @@
         // Drive REST body class for clock color (blue vs red)
         const isRestPhase = phaseLabel === 'DESCANSO' || blockType === 'rest';
         document.body.classList.toggle('state-rest', isRestPhase);
+
+        // ── Mirror to fullscreen elements ────────────────────────────────────────
+        const fsDigitsEl = document.getElementById('clock-fs-digits');
+        const fsPhaseEl = document.getElementById('clock-fs-phase');
+        const fsSubEl = document.getElementById('clock-fs-sub');
+        const fsDW = document.getElementById('clock-fs-digits-wrapper');
+        const fsPW = document.getElementById('clock-fs-phase-wrapper');
+        if (fsDigitsEl && fsDigitsEl.textContent !== secFormatted) fsDigitsEl.textContent = secFormatted;
+        if (fsPhaseEl) fsPhaseEl.textContent = hwPhase;
+        if (fsSubEl) fsSubEl.textContent = subText;
+        if (fsDW) fsDW.dataset.ghost = digitsWrapper ? digitsWrapper.dataset.ghost : secFormatted.replace(/\d/g, '8');
+        if (fsPW) fsPW.dataset.ghost = phaseWrapper ? phaseWrapper.dataset.ghost : '88';
+        // ── End fullscreen mirror ────────────────────────────────────────────────
     }
 
     // Format seconds to M:SS (integer version) or M:SS.t for sub-second
@@ -476,10 +611,16 @@
 
 
     // ── Beep Engine (Web Audio API) ───────────────────────────────────────────────
-    // All sounds are synthesized — no audio files needed.
+    // Audio requires user gesture (browser policy). We unlock on first click/touch.
+    let _audioUnlocked = false;
+    document.addEventListener('click', () => { _audioUnlocked = true; _getAudioCtx(); }, { once: true });
+    document.addEventListener('touchstart', () => { _audioUnlocked = true; _getAudioCtx(); }, { once: true });
+
     function _getAudioCtx() {
+        if (!_audioUnlocked) return null;
         if (!_audioCtx) {
-            _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            catch (e) { return null; }
         }
         if (_audioCtx.state === 'suspended') _audioCtx.resume();
         return _audioCtx;
@@ -487,8 +628,9 @@
 
     // Core beep primitive: freq (Hz), dur (s), wave type, volume, start delay (s)
     function _beep(freq, dur, type = 'square', vol = 0.4, delay = 0) {
+        const ctx = _getAudioCtx();
+        if (!ctx) return; // not unlocked yet — silent
         try {
-            const ctx = _getAudioCtx();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
@@ -505,26 +647,29 @@
 
     // ── Named sound events ──────────────────────────────────────────────────────
 
-    // 3-2-1 countdown pip: 2.5 kHz, corto y seco
+    // 3-2-1 countdown: pip corto cuadrado
     function _beepCountdown() {
-        _beep(2500, 0.07, 'sine', 0.5);
+        _beep(880, 0.08, 'square', 0.45);
     }
 
     // Work → REST: two descending notes ("it’s over, cool down")
     function _beepToRest() {
-        _beep(2200, 0.12, 'sine', 0.45);
+        _beep(880, 0.10, 'square', 0.45, 0.00);
+        _beep(660, 0.20, 'square', 0.40, 0.13);
     }
 
     // REST → WORK: doble beep rapido 2.2 kHz GO!
     function _beepToWork() {
-        _beep(2200, 0.08, 'sine', 0.45, 0.00);
-        _beep(2200, 0.08, 'sine', 0.50, 0.13);
+        _beep(660, 0.07, 'square', 0.40, 0.00);
+        _beep(880, 0.07, 'square', 0.45, 0.09);
+        _beep(1100, 0.20, 'square', 0.55, 0.18);
     }
 
-    // Round / bloque terminado: 1.4 kHz, más grave
+    // Fin de bloque: tres notas descendentes
     function _beepEnd() {
-        _beep(1400, 0.35, 'sine', 0.50, 0.00);
-        _beep(1400, 0.35, 'sine', 0.45, 0.45);
+        _beep(880, 0.30, 'square', 0.50, 0.00);
+        _beep(660, 0.30, 'square', 0.50, 0.38);
+        _beep(440, 0.60, 'square', 0.50, 0.76);
     }
 
     // ── Self-contained block duration calculator (mirrors server logic)

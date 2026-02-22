@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Block admin and API routes
+Disallow: /api/
+Disallow: /config/
+Disallow: /includes/
+
+# Block registration (conversion page — low SEO value)
+Disallow: /web/registro.html
+
+Sitemap: https://www.gymflow.com.ar/web/sitemap.xml
