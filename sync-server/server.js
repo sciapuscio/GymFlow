@@ -262,6 +262,32 @@ function startTimer(salaId) {
             const block = st.blocks[st.currentBlockIndex];
             const dur = computeBlockDuration(block);
 
+            // ── Phase tracking for tabata/interval blocks ───────────────────
+            if (block && (block.type === 'tabata' || block.type === 'interval')) {
+                const c = block.config || {};
+                const work = c.work || (block.type === 'tabata' ? 20 : 40);
+                const rest = c.rest || (block.type === 'tabata' ? 10 : 20);
+                const cycle = work + rest;
+                const posInCycle = st.elapsed % cycle;
+                const currentPhase = posInCycle < work ? 'work' : 'rest';
+                const rounds = c.rounds || (block.type === 'tabata' ? 8 : 1);
+                const currentRound = Math.floor(st.elapsed / cycle) + 1;
+
+                if (currentPhase !== st._blockPhase) {
+                    st._blockPhase = currentPhase;
+                    const blkLabel = `"${block.name || block.type}"`;
+                    if (currentPhase === 'work') {
+                        mon('phase', `💪 WORK  sala ${salaId} · ${blkLabel} · ronda ${currentRound}/${rounds} (${work}s)`, { sala_id: salaId, round: currentRound, work });
+                    } else {
+                        mon('phase', `😴 REST  sala ${salaId} · ${blkLabel} · ronda ${currentRound - 1}/${rounds} (${rest}s)`, { sala_id: salaId, round: currentRound - 1, rest });
+                    }
+                }
+            } else {
+                // Reset phase state when on a non-tabata block
+                st._blockPhase = null;
+            }
+            // ───────────────────────────────────────────────────────────────
+
             if (st.elapsed >= dur) {
                 if (st.autoPlay !== false) {
                     // ── AUTO-PLAY MODE: advance immediately and keep going ─────
