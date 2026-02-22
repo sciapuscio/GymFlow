@@ -357,6 +357,13 @@ io.on('connection', (socket) => {
         console.log(`[Socket] Display joined sala ${sala_id}`);
     });
 
+    // ── Join as SYSTEM (admin/instructor dashboard pages) ───────────────────
+    // No sala room — used only to receive system:broadcast notifications.
+    socket.on('join:system', ({ role }) => {
+        socket.data.role = role || 'admin'; // admin | instructor | superadmin
+        console.log(`[Socket] System join: ${socket.id} as ${socket.data.role}`);
+    });
+
     // ── Control: PLAY ───────────────────────────────────────────────────────
     socket.on('control:play', async ({ prep_remaining = 0 } = {}) => {
         const sala_id = socket.data.salaId;
@@ -619,6 +626,25 @@ app.get('/internal/reload', async (req, res) => {
         console.error('[HTTP] reload error:', e.message);
         res.json({ ok: false, error: e.message });
     }
+});
+
+// ─── HTTP: Superadmin Broadcast ───────────────────────────────────────────
+// Called by PHP /api/broadcast.php after superadmin sends a system message.
+// Emits 'system:broadcast' to every connected socket EXCEPT display roles.
+app.post('/internal/broadcast', (req, res) => {
+    const message = (req.body.message || '').trim();
+    const type = ['info', 'warning', 'error'].includes(req.body.type) ? req.body.type : 'info';
+    if (!message) return res.json({ ok: false, error: 'Empty message' });
+
+    let count = 0;
+    for (const [, socket] of io.sockets.sockets) {
+        if (socket.data.role !== 'display') {
+            socket.emit('system:broadcast', { message, type, ts: Date.now() });
+            count++;
+        }
+    }
+    console.log(`[Broadcast] Sent to ${count} sockets: "${message.slice(0, 60)}"`);
+    res.json({ ok: true, recipients: count });
 });
 
 app.get('/health', (_, res) => res.json({ ok: true, sessions: sessionStates.size }));

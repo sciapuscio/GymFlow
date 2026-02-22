@@ -194,11 +194,139 @@ layout_footer($user);
     </div>
 </div>
 
+<!-- ═══ MENSAJERÍA DEL SISTEMA ════════════════════════════════════════════ -->
+<div class="page-body" style="margin-top:0">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+
+        <!-- ── Banner persistente ──────────────────────────────────────── -->
+        <div class="card">
+            <div class="flex items-center gap-2 mb-4">
+                <span style="font-size:20px">📌</span>
+                <h2 style="font-size:16px;font-weight:700;margin:0">Aviso Persistente</h2>
+                <span style="margin-left:auto;font-size:12px;color:var(--gf-text-muted)">Visible en todas las
+                    páginas</span>
+            </div>
+
+            <!-- Active notices list -->
+            <div id="notice-list" style="margin-bottom:16px"></div>
+
+            <!-- Create form -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <select id="notice-type"
+                    style="background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:8px 12px;font-size:13px">
+                    <option value="warning">⚠️ Advertencia</option>
+                    <option value="info">ℹ️ Información</option>
+                    <option value="error">🚨 Error / Urgente</option>
+                </select>
+                <textarea id="notice-msg" rows="3"
+                    placeholder="Ej: El sistema no estará disponible hoy entre las 20 y 21 hs."
+                    style="background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit"></textarea>
+                <button class="btn btn-primary" onclick="publishNotice()">📌 Publicar aviso</button>
+            </div>
+        </div>
+
+        <!-- ── Broadcast en tiempo real ────────────────────────────────── -->
+        <div class="card">
+            <div class="flex items-center gap-2 mb-4">
+                <span style="font-size:20px">📢</span>
+                <h2 style="font-size:16px;font-weight:700;margin:0">Mensaje Urgente</h2>
+                <span style="margin-left:auto;font-size:12px;color:var(--gf-text-muted)">Popup instantáneo en tiempo
+                    real</span>
+            </div>
+            <p style="font-size:13px;color:var(--gf-text-muted);margin-bottom:14px;line-height:1.5">
+                Se entrega como popup bloqueante a <strong>todos los admins e instructores</strong> actualmente
+                conectados.
+                Las pantallas de sala no lo reciben.
+            </p>
+
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <select id="bc-type"
+                    style="background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:8px 12px;font-size:13px">
+                    <option value="info">ℹ️ Información</option>
+                    <option value="warning">⚠️ Advertencia</option>
+                    <option value="error">🚨 Error / Urgente</option>
+                </select>
+                <textarea id="bc-msg" rows="3"
+                    placeholder="Ej: Vamos a reiniciar el servidor. Por favor volvé a establecer las salas."
+                    style="background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:10px 12px;font-size:13px;resize:vertical;font-family:inherit"></textarea>
+                <button class="btn btn-primary" id="bc-btn" onclick="sendBroadcast()"
+                    style="background:#ff6b35;border-color:#ff6b35">📢 Enviar a todos ahora</button>
+                <div id="bc-result" style="font-size:12px;color:var(--gf-text-muted);min-height:18px"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script>
     async function toggleGym(id, newActive) {
         await GF.put(`${window.GF_BASE}/api/gyms.php?id=${id}`, { active: newActive });
         location.reload();
     }
+
+    // ── System Notices ────────────────────────────────────────────────────
+    async function loadNotices() {
+        const list = document.getElementById('notice-list');
+        const d = await GF.get(`${window.GF_BASE}/api/system-notices.php`);
+        if (!d) {
+            list.innerHTML = '<div style="font-size:13px;color:var(--gf-text-muted)">Sin avisos activos.</div>';
+            return;
+        }
+        const typeLabel = { warning: '⚠️ Advertencia', info: 'ℹ️ Info', error: '🚨 Urgente' };
+        const typeBg = { warning: 'rgba(245,158,11,.08)', info: 'rgba(59,130,246,.08)', error: 'rgba(239,68,68,.08)' };
+        list.innerHTML = `
+            <div style="padding:12px 14px;border-radius:10px;background:${typeBg[d.type] || typeBg.info};display:flex;align-items:flex-start;gap:10px;font-size:13px">
+                <span style="flex-shrink:0">${typeLabel[d.type] || 'ℹ️'}</span>
+                <div style="flex:1;line-height:1.5">${d.message.replace(/</g, '&lt;')}</div>
+                <button onclick="deleteNotice(${d.id})" title="Eliminar"
+                    style="background:none;border:none;color:var(--gf-text-muted);cursor:pointer;font-size:16px;padding:0;flex-shrink:0">✕</button>
+            </div>`;
+    }
+
+    async function publishNotice() {
+        const message = document.getElementById('notice-msg').value.trim();
+        const type = document.getElementById('notice-type').value;
+        if (!message) return showToast('Escribí un mensaje primero', 'error');
+        await GF.post(`${window.GF_BASE}/api/system-notices.php`, { message, type });
+        document.getElementById('notice-msg').value = '';
+        showToast('Aviso publicado ✓', 'success');
+        loadNotices();
+    }
+
+    async function deleteNotice(id) {
+        await fetch(`${window.GF_BASE}/api/system-notices.php?id=${id}`, { method: 'DELETE', credentials: 'include' });
+        showToast('Aviso eliminado', 'info');
+        loadNotices();
+    }
+
+    // ── Broadcast ────────────────────────────────────────────────────────
+    async function sendBroadcast() {
+        const message = document.getElementById('bc-msg').value.trim();
+        const type = document.getElementById('bc-type').value;
+        const btn = document.getElementById('bc-btn');
+        const result = document.getElementById('bc-result');
+        if (!message) return showToast('Escribí un mensaje primero', 'error');
+
+        btn.disabled = true;
+        btn.textContent = 'Enviando…';
+        result.textContent = '';
+
+        const d = await GF.post(`${window.GF_BASE}/api/broadcast.php`, { message, type });
+        btn.disabled = false;
+        btn.textContent = '📢 Enviar a todos ahora';
+
+        if (d?.ok) {
+            const n = d.server?.recipients ?? '?';
+            result.textContent = `✓ Enviado a ${n} conexión${n !== 1 ? 'es' : ''} activa${n !== 1 ? 's' : ''}.`;
+            result.style.color = 'var(--gf-accent)';
+            document.getElementById('bc-msg').value = '';
+        } else {
+            result.textContent = d?.warning || 'Error al enviar.';
+            result.style.color = '#ff6b35';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadNotices);
 </script>
 <?php layout_end(); ?>

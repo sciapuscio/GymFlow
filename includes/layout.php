@@ -108,6 +108,30 @@ function layout_footer(array $user): void
 
                 <!-- Toast container -->
                 <div class="toast-container" id="toasts"></div>
+
+                <?php
+                // ── System Notice Banner ───────────────────────────────────
+                try {
+                    $notice = db()->query(
+                        "SELECT id, message, type FROM system_notices WHERE active = 1 ORDER BY id DESC LIMIT 1"
+                    )->fetch();
+                } catch (\Throwable $e) {
+                    $notice = null; // table may not exist yet
+                }
+                if ($notice):
+                    $noticeColors = [
+                        'warning' => ['bg' => 'rgba(245,158,11,0.08)', 'border' => 'rgba(245,158,11,0.25)', 'icon' => '⚠️'],
+                        'error' => ['bg' => 'rgba(239,68,68,0.08)', 'border' => 'rgba(239,68,68,0.25)', 'icon' => '🚨'],
+                        'info' => ['bg' => 'rgba(59,130,246,0.08)', 'border' => 'rgba(59,130,246,0.25)', 'icon' => 'ℹ️'],
+                    ];
+                    $nc = $noticeColors[$notice['type']] ?? $noticeColors['info'];
+                    ?>
+                    <div id="system-notice-banner"
+                        style="margin:0 0 18px 0;padding:14px 18px;border-radius:12px;background:<?php echo $nc['bg'] ?>;border:1px solid <?php echo $nc['border'] ?>;display:flex;align-items:center;gap:14px;font-size:14px;line-height:1.5">
+                        <span style="font-size:20px;flex-shrink:0"><?php echo $nc['icon'] ?></span>
+                        <div style="flex:1"><?php echo htmlspecialchars($notice['message']) ?></div>
+                    </div>
+                <?php endif; ?>
                 <script>
                     window.GF_USER = <?php echo json_encode(['id' => $user['id'], 'role' => $user['role'], 'gym_id' => $user['gym_id'] ?? null, 'name' => $user['name']]) ?>;
                     window.GF_BASE = '<?php echo defined('BASE_URL') ? BASE_URL : '' ?>';
@@ -149,8 +173,139 @@ function layout_footer(array $user): void
                         <?php
                     endif;
                 }
-    // ── end tour ───────────────────────────────────────────────────────
-}
+                // ── end tour ───────────────────────────────────────────────────────
+                ?>
+
+                <?php if (in_array($user['role'] ?? '', ['superadmin', 'admin', 'instructor'])): ?>
+                    <style>
+                        #gf-broadcast-overlay {
+                            display: none;
+                            position: fixed;
+                            inset: 0;
+                            z-index: 9999;
+                            background: rgba(8, 8, 16, 0.82);
+                            backdrop-filter: blur(6px);
+                            align-items: center;
+                            justify-content: center;
+                        }
+
+                        #gf-broadcast-overlay.active {
+                            display: flex;
+                        }
+
+                        #gf-broadcast-box {
+                            background: var(--gf-surface, #14141e);
+                            border: 1px solid rgba(255, 255, 255, 0.12);
+                            border-radius: 20px;
+                            padding: 36px 40px;
+                            max-width: 520px;
+                            width: 90%;
+                            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+                            text-align: center;
+                            animation: gfBroadcastIn .25s cubic-bezier(.34, 1.56, .64, 1);
+                        }
+
+                        @keyframes gfBroadcastIn {
+                            from {
+                                transform: scale(.88);
+                                opacity: 0;
+                            }
+
+                            to {
+                                transform: scale(1);
+                                opacity: 1;
+                            }
+                        }
+
+                        #gf-broadcast-icon {
+                            font-size: 40px;
+                            margin-bottom: 16px;
+                        }
+
+                        #gf-broadcast-title {
+                            font-size: 13px;
+                            font-weight: 700;
+                            letter-spacing: .12em;
+                            text-transform: uppercase;
+                            color: var(--gf-text-muted, #888);
+                            margin-bottom: 14px;
+                        }
+
+                        #gf-broadcast-msg {
+                            font-size: 17px;
+                            font-weight: 500;
+                            line-height: 1.5;
+                            color: var(--gf-text, #f0f0f0);
+                            margin-bottom: 28px;
+                        }
+
+                        #gf-broadcast-close {
+                            background: var(--gf-accent, #00f5d4);
+                            color: #080810;
+                            border: none;
+                            border-radius: 12px;
+                            font-size: 14px;
+                            font-weight: 700;
+                            letter-spacing: .08em;
+                            padding: 12px 32px;
+                            cursor: pointer;
+                            transition: transform .1s, box-shadow .15s;
+                        }
+
+                        #gf-broadcast-close:hover {
+                            transform: scale(1.04);
+                            box-shadow: 0 0 24px rgba(0, 245, 212, .4);
+                        }
+                    </style>
+                    <div id="gf-broadcast-overlay">
+                        <div id="gf-broadcast-box">
+                            <div id="gf-broadcast-icon">📢</div>
+                            <div id="gf-broadcast-title">Mensaje del Sistema</div>
+                            <div id="gf-broadcast-msg"></div>
+                            <button id="gf-broadcast-close"
+                                onclick="document.getElementById('gf-broadcast-overlay').classList.remove('active')">Entendido</button>
+                        </div>
+                    </div>
+                    <script>
+                        (function () {
+                            const ICONS = { info: 'ℹ️', warning: '⚠️', error: '🚨' };
+                            function showBroadcast(data) {
+                                document.getElementById('gf-broadcast-icon').textContent = ICONS[data.type] || '📢';
+                                document.getElementById('gf-broadcast-msg').textContent = data.message || '';
+                                document.getElementById('gf-broadcast-overlay').classList.add('active');
+                            }
+                            // Connect a dedicated system socket (no sala room)
+                            function connectBroadcastSocket() {
+                                if (typeof io === 'undefined') return;
+                                const sock = io(window.GF_SOCKET_URL || 'http://localhost:3001',
+                                    { transports: ['websocket', 'polling'] });
+                                sock.on('connect', () => {
+                                    sock.emit('join:system', { role: '<?php echo $broadcastRole ?>' });
+                                });
+                                sock.on('system:broadcast', showBroadcast);
+                            }
+                            // Wait for socket.io to be available (may be loaded late on non-live pages)
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', connectBroadcastSocket);
+                            } else {
+                                connectBroadcastSocket();
+                            }
+                            // If io not yet loaded when DOM fires, retry after 2s
+                            setTimeout(connectBroadcastSocket, 2000);
+                        })();
+                    </script>
+                    <!-- socket.io client for broadcast-only pages (no-op if already loaded) -->
+                    <script>
+                        if (typeof io === 'undefined') {
+                            var _s = document.createElement('script');
+                            _s.src = 'http://localhost:3001/socket.io/socket.io.js';
+                            _s.onerror = function () { };
+                            document.head.appendChild(_s);
+                        }
+                    </script>
+                <?php endif; ?>
+            <?php } // end layout_footer()
+
 
 function layout_end(): void
 {
