@@ -122,6 +122,26 @@ layout_footer($user);
         color: #38bdf8;
     }
 
+    .lt-nav {
+        color: #67e8f9;
+    }
+
+    .lt-extend {
+        color: #fb923c;
+    }
+
+    .lt-config {
+        color: #94a3b8;
+    }
+
+    .lt-wod {
+        color: #f472b6;
+    }
+
+    .lt-clock {
+        color: #c084fc;
+    }
+
     .lt-broadcast {
         color: #ff6b35;
     }
@@ -219,6 +239,11 @@ layout_footer($user);
             'pause' => '⏸ Pause',
             'stop' => '⏹ Stop',
             'skip' => '⏭ Skip',
+            'nav' => '⇄ Nav',
+            'extend' => '⏰ Extender',
+            'config' => '🗻 AutoPlay',
+            'wod' => '📊 WOD',
+            'clock' => '🕑 Reloj',
             'broadcast' => '📢 Broadcast',
             'error' => '🚨 Error',
         ];
@@ -274,6 +299,7 @@ layout_footer($user);
         const TYPE_LABELS = {
             connect: 'CON', disconnect: 'DIS', instructor: 'INS', display: 'DSP',
             system: 'SYS', play: 'PLY', pause: 'PSE', stop: 'STO', skip: 'SKP',
+            nav: 'NAV', extend: 'EXT', config: 'CFG', wod: 'WOD', clock: 'CLK',
             broadcast: 'BRD', error: 'ERR',
         };
 

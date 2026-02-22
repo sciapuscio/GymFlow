@@ -481,7 +481,6 @@ io.on('connection', (socket) => {
         st.currentBlockIndex = Math.max(st.currentBlockIndex - 1, 0);
         st.elapsed = 0;
         st.prepRemaining = 0;
-        // If navigating back from finished, reset to paused so display shows preview
         if (st.status === 'finished') st.status = 'paused';
         await persistState(st, 'block');
         io.to(`sala:${sala_id}`).emit('session:block_change', {
@@ -491,6 +490,8 @@ io.on('connection', (socket) => {
         });
         if (wasPlaying) startTimer(sala_id);
         broadcast(sala_id);
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('nav', `⏮ PREV  sala ${sala_id} → bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: GOTO ───────────────────────────────────────────────────────
@@ -503,25 +504,22 @@ io.on('connection', (socket) => {
         st.currentBlockIndex = Math.max(0, Math.min(index, st.blocks.length - 1));
         st.elapsed = 0;
         st.prepRemaining = prep_remaining;
-        // If jumping from a finished session, or in manual mode, go to paused.
         if (st.status === 'finished' || st.autoPlay === false) st.status = 'paused';
         await persistState(st, 'block');
         if (st.status === 'paused') await persistState(st, 'pause');
-        // If a block was already playing when the instructor jumped:
-        // - AUTO mode: restart immediately with prep countdown.
-        // - MANUAL mode: stays paused — instructor must press Play.
         if (wasPlaying && st.autoPlay !== false) {
             st.status = 'playing';
             await persistState(st, 'play');
             startTimer(sala_id);
         }
-        // Broadcast AFTER timer starts so clients get status=playing from the first tick
         broadcast(sala_id);
         io.to(`sala:${sala_id}`).emit('session:block_change', {
             index: st.currentBlockIndex,
             block: st.blocks[st.currentBlockIndex],
             next_block: st.blocks[st.currentBlockIndex + 1] || null,
         });
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('nav', `➡ GOTO  sala ${sala_id} → bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: EXTEND ─────────────────────────────────────────────────────
@@ -534,6 +532,8 @@ io.on('connection', (socket) => {
             block.config.duration = (block.config.duration || computeBlockDuration(block)) + seconds;
         }
         broadcast(sala_id);
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('extend', `⏰ +${seconds}s sala ${sala_id} · bloque ${st.currentBlockIndex + 1} · ${who}`, { sala_id, seconds, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: SET AUTOPLAY ─────────────────────────────────────────────────
@@ -543,7 +543,9 @@ io.on('connection', (socket) => {
         if (!st) return;
         st.autoPlay = !!enabled;
         console.log(`[Socket] Sala ${sala_id} autoPlay → ${st.autoPlay}`);
-        broadcast(sala_id);  // let display know too
+        broadcast(sala_id);
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('config', `⚙ AutoPlay sala ${sala_id} → ${enabled ? 'ON' : 'OFF'} · ${who}`, { sala_id, enabled, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: WOD OVERLAY ──────────────────────────────────────────────────
@@ -555,6 +557,8 @@ io.on('connection', (socket) => {
         if (st) st.wodOverlay = { active: !!active, blocks: active ? (blocks || []) : [] };
         io.to(`sala:${sala_id}`).emit('display:wod_overlay', { active: !!active, blocks: blocks || [] });
         console.log(`[Socket] Sala ${sala_id} WOD overlay → ${active}`);
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('wod', `📊 WOD sala ${sala_id} → ${active ? 'ABIERTO' : 'CERRADO'} · ${who}`, { sala_id, active, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: CLOCK MODE ───────────────────────────────────────────────────
@@ -571,8 +575,10 @@ io.on('connection', (socket) => {
             mode: mode || 'session',
             config: config || {},
         };
-        broadcast(sala_id);  // full tick so display gets clock_mode in the proper payload
+        broadcast(sala_id);
         console.log(`[Socket] Sala ${sala_id} clock_mode → active=${active} mode=${mode}`);
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('clock', `🕑 Reloj sala ${sala_id} → ${active ? `${mode || 'session'} ON` : 'OFF'} · ${who}`, { sala_id, active, mode, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: CLOCK FULLSCREEN ───────────────────────────────────────────────
@@ -584,6 +590,8 @@ io.on('connection', (socket) => {
         // Emit directly to all sockets in this sala's room
         io.to(`sala:${sala_id}`).emit('clock:fs', { active: !!active });
         console.log(`[Socket] Sala ${sala_id} clock_fs → active=${active}`);
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('clock', `🔲 FullScreen sala ${sala_id} → ${active ? 'ON' : 'OFF'} · ${who}`, { sala_id, active, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: STANDALONE CLOCK TIMER ─────────────────────────────────────
@@ -646,7 +654,12 @@ io.on('connection', (socket) => {
 
     // ── Disconnect ──────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
-        console.log(`[Socket] Disconnected: ${socket.id} (${socket.data.role || '?'})`);
+        const role = socket.data.role || '?';
+        const desc = socket.data.userName
+            ? `${socket.data.userName} [${socket.data.gymName}] (${role})`
+            : `${socket.id} (${role})`;
+        console.log(`[Socket] Disconnected: ${socket.id} (${role})`);
+        if (role !== 'monitor') mon('disconnect', `🔚 ${desc}`, { id: socket.id, role, user: socket.data.userName, gym: socket.data.gymName });
     });
 });
 
@@ -694,6 +707,7 @@ app.post('/internal/broadcast', (req, res) => {
         }
     }
     console.log(`[Broadcast] Sent to ${count} sockets: "${message.slice(0, 60)}"`);
+    mon('broadcast', `📢 BROADCAST [${type}]: "${message.slice(0, 80)}" → ${count} receptores`, { type, message, count });
     res.json({ ok: true, recipients: count });
 });
 
