@@ -355,12 +355,30 @@ io.on('connection', (socket) => {
             socket.data.salaId = sala_id;
             socket.data.role = 'instructor';
             socket.data.sessionId = session_id;
+
+            // Fetch instructor + gym name for monitor logs
+            try {
+                const [info] = await pool.execute(
+                    `SELECT u.name AS uname, g.name AS gname
+                     FROM gym_sessions gs
+                     JOIN salas sal ON sal.id = gs.sala_id
+                     JOIN gyms g ON g.id = sal.gym_id
+                     JOIN users u ON u.id = gs.instructor_id
+                     WHERE gs.id = ?`,
+                    [session_id]
+                );
+                if (info.length) {
+                    socket.data.userName = info[0].uname;
+                    socket.data.gymName = info[0].gname;
+                }
+            } catch (_) { /* non-critical */ }
+
             // Resume timer if was already playing on load
             if (st.status === 'playing' && !timers.has(sala_id)) {
                 startTimer(sala_id);
             }
             socket.emit('session:state', buildTick(st));
-            mon('instructor', `Instructor unido a sala ${sala_id}`, { sala_id, session_id, socketId: socket.id });
+            mon('instructor', `Instructor ${socket.data.userName || '?'} [${socket.data.gymName || '?'}] → sala ${sala_id}`, { sala_id, session_id, socketId: socket.id });
             console.log(`[Socket] Instructor joined sala ${sala_id}, session ${session_id}`);
         } catch (e) {
             mon('error', `Error join:session: ${e.message}`, { socketId: socket.id });
@@ -398,7 +416,8 @@ io.on('connection', (socket) => {
         startTimer(sala_id);
         await persistState(st, 'play');
         broadcast(sala_id);
-        mon('play', `▶ PLAY  sala ${sala_id} — bloque ${st.currentBlockIndex + 1}/${st.blocks.length}`, { sala_id, block: st.currentBlockIndex });
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('play', `▶ PLAY  sala ${sala_id} · bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: PAUSE ──────────────────────────────────────────────────────
@@ -411,7 +430,8 @@ io.on('connection', (socket) => {
         stopTimer(sala_id);
         await persistState(st, 'pause');
         broadcast(sala_id);
-        mon('pause', `⏸ PAUSE sala ${sala_id}`, { sala_id });
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('pause', `⏸ PAUSE sala ${sala_id} · ${who}`, { sala_id, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: STOP ───────────────────────────────────────────────────────
@@ -423,7 +443,8 @@ io.on('connection', (socket) => {
         stopTimer(sala_id);
         await persistState(st, 'stop');
         broadcast(sala_id);
-        mon('stop', `⏹ STOP  sala ${sala_id} — sesión finalizada`, { sala_id });
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('stop', `⏹ STOP  sala ${sala_id} · sesión finalizada · ${who}`, { sala_id, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: SKIP ───────────────────────────────────────────────────────
@@ -446,7 +467,8 @@ io.on('connection', (socket) => {
         });
         if (wasPlaying) startTimer(sala_id);
         broadcast(sala_id);
-        mon('skip', `⏭ SKIP  sala ${sala_id}`, { sala_id, block: st.currentBlockIndex });
+        const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
+        mon('skip', `⏭ SKIP  sala ${sala_id} → bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: PREV ───────────────────────────────────────────────────────
