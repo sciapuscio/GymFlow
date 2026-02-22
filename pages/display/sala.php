@@ -209,7 +209,7 @@ if (!$sala) {
 
                 <!-- Exercise list: all exercises in current block as chips -->
                 <div id="exercise-list"
-                    style="display:none;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;margin-bottom:4px">
+                    style="display:none;flex-direction:column;align-items:center;gap:12px;margin-top:16px;margin-bottom:8px">
                 </div>
 
                 <div class="display-block-info">
