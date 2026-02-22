@@ -304,13 +304,15 @@ function startTimer(salaId) {
                         });
                         const nextBlk = st.blocks[st.currentBlockIndex];
                         const nextLabel = nextBlk ? `"${nextBlk.name || nextBlk.type}" (${nextBlk.type})` : `bloque ${st.currentBlockIndex + 1}`;
-                        mon('autoplay', `⏩ AUTO sala ${salaId}: "${prevBlock?.name || prevBlock?.type}" finalizó → ${nextLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}]`, { sala_id: salaId, block: st.currentBlockIndex });
+                        const ctx = st.gymName ? ` · ${st.gymName} / ${st.salaName || 'sala ' + salaId}` : '';
+                        mon('autoplay', `⏩ AUTO sala ${salaId}: "${prevBlock?.name || prevBlock?.type}" finalizó → ${nextLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}]${ctx}`, { sala_id: salaId, block: st.currentBlockIndex });
                     } else {
                         // Session finished
                         st.status = 'finished';
                         stopTimer(salaId);
                         persistState(st, 'stop');
-                        mon('stop', `⏹ SESIÓN TERMINADA sala ${salaId} (auto)`, { sala_id: salaId });
+                        const ctxF = st.gymName ? ` · ${st.gymName} / ${st.salaName || 'sala ' + salaId}` : '';
+                        mon('stop', `⏹ SESIÓN TERMINADA sala ${salaId} (auto)${ctxF}`, { sala_id: salaId });
                     }
                 } else {
                     // ── MANUAL MODE: pause at end of block, wait for Play ───
@@ -333,15 +335,17 @@ function startTimer(salaId) {
                             index: st.currentBlockIndex,
                             block: st.blocks[st.currentBlockIndex],
                         });
-                        const nextBlk = st.blocks[st.currentBlockIndex];
-                        const nextLabel = nextBlk ? `"${nextBlk.name || nextBlk.type}" (${nextBlk.type})` : `bloque ${st.currentBlockIndex + 1}`;
-                        mon('autoplay', `⏸ MANUAL sala ${salaId}: "${prevBlock?.name || prevBlock?.type}" finalizó → ${nextLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}] — esperando PLAY`, { sala_id: salaId, block: st.currentBlockIndex });
+                        const nextBlkM = st.blocks[st.currentBlockIndex];
+                        const nextLabelM = nextBlkM ? `"${nextBlkM.name || nextBlkM.type}" (${nextBlkM.type})` : `bloque ${st.currentBlockIndex + 1}`;
+                        const ctxM = st.gymName ? ` · ${st.gymName} / ${st.salaName || 'sala ' + salaId}` : '';
+                        mon('autoplay', `⏸ MANUAL sala ${salaId}: "${prevBlock?.name || prevBlock?.type}" finalizó → ${nextLabelM} [${st.currentBlockIndex + 1}/${st.blocks.length}] — esperando PLAY${ctxM}`, { sala_id: salaId, block: st.currentBlockIndex });
                     } else {
                         // Session finished
                         st.status = 'finished';
                         stopTimer(salaId);
                         persistState(st, 'stop');
-                        mon('stop', `⏹ SESIÓN TERMINADA sala ${salaId} (manual)`, { sala_id: salaId });
+                        const ctxFM = st.gymName ? ` · ${st.gymName} / ${st.salaName || 'sala ' + salaId}` : '';
+                        mon('stop', `⏹ SESIÓN TERMINADA sala ${salaId} (manual)${ctxFM}`, { sala_id: salaId });
                     }
                 }
             }
@@ -401,10 +405,10 @@ io.on('connection', (socket) => {
             socket.data.role = 'instructor';
             socket.data.sessionId = session_id;
 
-            // Fetch instructor + gym name for monitor logs
+            // Fetch instructor + gym + sala name for monitor logs
             try {
                 const [info] = await pool.execute(
-                    `SELECT u.name AS uname, g.name AS gname
+                    `SELECT u.name AS uname, g.name AS gname, sal.name AS sname
                      FROM gym_sessions gs
                      JOIN salas sal ON sal.id = gs.sala_id
                      JOIN gyms g ON g.id = sal.gym_id
@@ -415,6 +419,10 @@ io.on('connection', (socket) => {
                 if (info.length) {
                     socket.data.userName = info[0].uname;
                     socket.data.gymName = info[0].gname;
+                    socket.data.salaName = info[0].sname;
+                    // Persist on st so timer-driven logs (auto-advance, stop) have context
+                    st.gymName = info[0].gname;
+                    st.salaName = info[0].sname;
                 }
             } catch (_) { /* non-critical */ }
 
