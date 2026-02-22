@@ -468,7 +468,9 @@ io.on('connection', (socket) => {
         if (wasPlaying) startTimer(sala_id);
         broadcast(sala_id);
         const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
-        mon('skip', `⏭ SKIP  sala ${sala_id} → bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
+        const blk = st.blocks[st.currentBlockIndex];
+        const blkLabel = blk ? `"${blk.name || blk.type}" (${blk.type})` : `bloque ${st.currentBlockIndex + 1}`;
+        mon('skip', `⏭ SKIP  sala ${sala_id} → ${blkLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}] · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: PREV ───────────────────────────────────────────────────────
@@ -491,7 +493,9 @@ io.on('connection', (socket) => {
         if (wasPlaying) startTimer(sala_id);
         broadcast(sala_id);
         const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
-        mon('nav', `⏮ PREV  sala ${sala_id} → bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
+        const blk = st.blocks[st.currentBlockIndex];
+        const blkLabel = blk ? `"${blk.name || blk.type}" (${blk.type})` : `bloque ${st.currentBlockIndex + 1}`;
+        mon('nav', `⏮ PREV  sala ${sala_id} → ${blkLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}] · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: GOTO ───────────────────────────────────────────────────────
@@ -519,7 +523,9 @@ io.on('connection', (socket) => {
             next_block: st.blocks[st.currentBlockIndex + 1] || null,
         });
         const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
-        mon('nav', `➡ GOTO  sala ${sala_id} → bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
+        const blk = st.blocks[st.currentBlockIndex];
+        const blkLabel = blk ? `"${blk.name || blk.type}" (${blk.type})` : `bloque ${st.currentBlockIndex + 1}`;
+        mon('nav', `➡ GOTO  sala ${sala_id} → ${blkLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}] · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: EXTEND ─────────────────────────────────────────────────────
@@ -533,7 +539,9 @@ io.on('connection', (socket) => {
         }
         broadcast(sala_id);
         const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
-        mon('extend', `⏰ +${seconds}s sala ${sala_id} · bloque ${st.currentBlockIndex + 1} · ${who}`, { sala_id, seconds, user: socket.data.userName, gym: socket.data.gymName });
+        const blk = st.blocks[st.currentBlockIndex];
+        const blkLabel = blk ? `"${blk.name || blk.type}"` : `bloque ${st.currentBlockIndex + 1}`;
+        mon('extend', `⏰ +${seconds}s sala ${sala_id} · ${blkLabel} [${st.currentBlockIndex + 1}] · ${who}`, { sala_id, seconds, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: SET AUTOPLAY ─────────────────────────────────────────────────
