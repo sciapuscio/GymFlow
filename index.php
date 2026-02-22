@@ -213,20 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: translateY(0);
         }
 
-        .login-hint {
-            text-align: center;
-            margin-top: 24px;
-            font-size: 12px;
-            color: #55558a;
-        }
-
-        .login-hint code {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #8888aa;
-        }
-
         /* Label */
         .form-label {
             color: #8888aa;
@@ -270,9 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="login-btn">INGRESAR</button>
         </form>
 
-        <div class="login-hint">
-            Demo: <code>superadmin@gymflow.app</code> / <code>Admin123!</code>
-        </div>
+
     </div>
 </body>
 
