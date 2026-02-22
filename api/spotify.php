@@ -328,6 +328,16 @@ if ($action === 'volume') {
     jsonResponse(['ok' => true]);
 }
 
+// ─── REPEAT ───────────────────────────────────────────────────────────────────
+// state: 'off' | 'track' | 'context'
+if ($action === 'repeat') {
+    $state = $_GET['state'] ?? 'off';
+    if (!in_array($state, ['off', 'track', 'context']))
+        $state = 'off';
+    spotifyCall($user['id'], 'PUT', '/me/player/repeat?state=' . $state);
+    jsonResponse(['ok' => true]);
+}
+
 // ─── DISCONNECT ───────────────────────────────────────────────────────────────
 if ($action === 'disconnect') {
     db()->prepare("UPDATE instructor_profiles SET spotify_access_token=NULL, spotify_refresh_token=NULL, spotify_expires_at=NULL WHERE user_id=?")

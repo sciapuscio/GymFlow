@@ -364,10 +364,15 @@ const GFLive = (() => {
     function spotifyAutoPause() {
         if (!_lastAutoPlayUri) return;
         _lastAutoPlayUri = null;
+        spotifyRepeat('off'); // clear repeat before stopping
         GF.post(window.GF_BASE + '/api/spotify.php?action=pause', {}).catch(() => { });
     }
     function spotifySetVolume(vol) {
         GF.post(window.GF_BASE + '/api/spotify.php?action=volume&vol=' + vol, {}).catch(() => { });
+    }
+    function spotifyRepeat(state) {
+        // state: 'off' | 'track' | 'context'
+        GF.post(window.GF_BASE + '/api/spotify.php?action=repeat&state=' + state, {}).catch(() => { });
     }
 
     // ── Volume Fade ──────────────────────────────────────────────────────────
@@ -382,6 +387,7 @@ const GFLive = (() => {
         _fadingOut = true;
 
         spotifySetVolume(0); // ← single volume API call
+        spotifyRepeat('off'); // clear repeat so next block starts fresh
 
         _fadePauseTimeout = setTimeout(() => {
             _fadePauseTimeout = null;
@@ -412,11 +418,11 @@ const GFLive = (() => {
             const isPlaylist = block.spotify_uri.startsWith('spotify:playlist:') || block.spotify_uri.startsWith('spotify:album:');
             const body = isPlaylist ? { context_uri: block.spotify_uri } : { uris: [block.spotify_uri] };
             const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
-            // Show toast if Spotify returned a non-success status (e.g. 429, 404…)
             if (typeof spCheckStatus === 'function') spCheckStatus(res, 'auto-play');
             if (typeof spRefreshNow === 'function') spRefreshNow();
-            // NOTE: the blind 2s retry was removed — it always fired even on successful plays,
-            // doubling play requests. The PHP backend already auto-picks the best device on 404.
+            // For single tracks: enable repeat=track so the song loops until the block ends.
+            // For playlists/albums: context_uri auto-advances naturally — no repeat needed.
+            if (!isPlaylist) spotifyRepeat('track');
         } catch (e) { /* Spotify not available */ }
     }
 
