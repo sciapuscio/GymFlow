@@ -156,6 +156,7 @@ const GFLive = (() => {
         // Spotify: on block change, play new track or stop if no track assigned
         if (blockChanged) {
             _cancelFade();
+            clearTimeout(GFLive._blockPauseTimer);  // cancel any deferred pause from prior tick
             if (isPlaying) {
                 const b = blocks[currentIdx];
                 if (b?.spotify_uri) {
@@ -167,8 +168,17 @@ const GFLive = (() => {
                     spotifyFadeAndPause(2);
                 }
             } else {
-                // Session paused on block change (manual mode) — stop music immediately
-                if (_lastAutoPlayUri) spotifyFadeAndPause(2);
+                // Session paused on block change (manual mode).
+                // ⚠️ Race guard: if the instructor hits Play immediately after selecting
+                // a block, the goto tick arrives with status=paused BEFORE the play tick.
+                // Pausing Spotify immediately would cause a brief cut-then-restart glitch.
+                // We defer 600 ms — if the session is still not playing by then, fade out.
+                if (_lastAutoPlayUri) {
+                    clearTimeout(GFLive._blockPauseTimer);
+                    GFLive._blockPauseTimer = setTimeout(() => {
+                        if (!isPlaying) spotifyFadeAndPause(2);
+                    }, 600);
+                }
             }
         } else if (_lastAutoPlayUri && isPlaying && !_fadingOut) {
             // Block-end fade: use server ticks (≈1Hz) as the fade timer.
