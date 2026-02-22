@@ -243,10 +243,10 @@ body.state-idle {
 /* Main content area */
 .display-main {
     display: grid;
-    grid-template-columns: 1fr clamp(340px, 28vw, 480px);
+    grid-template-columns: minmax(0, 42%) 1fr clamp(300px, 26vw, 440px);
     align-items: center;
     padding: 20px 40px;
-    gap: 40px;
+    gap: 30px;
     overflow: hidden;
 }
 
@@ -258,6 +258,15 @@ body.state-idle {
     height: 100%;
     justify-content: center;
     gap: 24px;
+}
+
+/* Center column: vertical exercise list */
+.display-center-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 /* Status label */

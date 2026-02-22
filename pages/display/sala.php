@@ -207,10 +207,6 @@ if (!$sala) {
 
                 <div class="display-exercise-name" id="display-exercise-name">—</div>
 
-                <!-- Exercise list: all exercises in current block as chips -->
-                <div id="exercise-list"
-                    style="display:none;flex-direction:column;align-items:center;gap:12px;margin-top:16px;margin-bottom:8px">
-                </div>
 
                 <div class="display-block-info">
                     <div class="display-block-meta" id="block-meta">—</div>
@@ -225,6 +221,12 @@ if (!$sala) {
                     <div class="block-progress-bar-wrap">
                         <div class="block-progress-fill" id="block-progress-fill" style="width:0%"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Center column: exercise list chips -->
+            <div class="display-center-panel">
+                <div id="exercise-list" style="display:none;flex-direction:column;align-items:center;gap:16px">
                 </div>
             </div>
 
