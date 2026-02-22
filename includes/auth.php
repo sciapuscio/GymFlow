@@ -8,7 +8,8 @@ function getCurrentUser(): ?array
         return null;
 
     $stmt = db()->prepare(
-        "SELECT u.*, g.name as gym_name, g.primary_color, g.secondary_color, g.slug as gym_slug 
+        "SELECT u.*, g.name as gym_name, g.primary_color, g.secondary_color, g.slug as gym_slug,
+                g.active as gym_active
          FROM sessions_auth sa 
          JOIN users u ON sa.user_id = u.id 
          LEFT JOIN gyms g ON u.gym_id = g.id
@@ -48,6 +49,18 @@ function requireAuth(string ...$roles): array
         }
         http_response_code(403);
         die(json_encode(['error' => 'Forbidden']));
+    }
+
+    // ── Gym active gate (skipped for superadmin) ─────────────────────────────
+    if ($user['role'] !== 'superadmin' && !empty($user['gym_id'])) {
+        if (isset($user['gym_active']) && !(int) $user['gym_active']) {
+            if ($isBrowser) {
+                header('Location: ' . BASE_URL . '/pages/expired.php?reason=gym_inactive');
+                exit;
+            }
+            http_response_code(403);
+            die(json_encode(['error' => 'Gym is inactive', 'code' => 'GYM_INACTIVE']));
+        }
     }
 
     // ── Subscription gate (skipped for superadmin) ───────────────────────────
@@ -90,6 +103,16 @@ function login(string $email, string $password): ?array
 
     if (!$user || !password_verify($password, $user['password_hash'])) {
         return null;
+    }
+
+    // Block login if the user's gym is inactive
+    if ($user['role'] !== 'superadmin' && !empty($user['gym_id'])) {
+        $gymRow = db()->prepare("SELECT active FROM gyms WHERE id = ?");
+        $gymRow->execute([$user['gym_id']]);
+        $gymActive = $gymRow->fetchColumn();
+        if ($gymActive === false || !(int) $gymActive) {
+            return null; // Reject login silently (same as wrong password UX)
+        }
     }
 
     // Generate token
