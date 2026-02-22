@@ -286,7 +286,7 @@
                     var p = (t - cum) / segDur;
                     var idlePose = lerpPose(seq[s].pose, seq[s + 1].pose, p);
                     this._drawPose(idlePose, W, H);
-                    if (this._equipment) this._drawEquipment(idlePose, W, H, elapsed);
+                    if (this._equipment && !isRest) this._drawEquipment(idlePose, W, H, elapsed);
                     drawn = true;
                     break;
                 }
@@ -298,7 +298,7 @@
                 var last = seq[seq.length - 1];
                 if (t < cum + last.ms) {
                     this._drawPose(last.pose, W, H);
-                    if (this._equipment) this._drawEquipment(last.pose, W, H, elapsed);
+                    if (this._equipment && !isRest) this._drawEquipment(last.pose, W, H, elapsed);
                 } else {
                     // Animation complete — back to normal idle
                     this._idleAnim = null;

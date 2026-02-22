@@ -116,6 +116,20 @@ const GFLive = (() => {
             _syncAutoPlaySwitch();
         }
 
+        // Sync WOD overlay button with server state (fixes reconnect desync)
+        if (tick.wod_overlay !== undefined) {
+            const serverWod = !!tick.wod_overlay.active;
+            if (typeof window._wodOverlayActive !== 'undefined' && window._wodOverlayActive !== serverWod) {
+                window._wodOverlayActive = serverWod;
+                const btn = document.getElementById('btn-wod-overlay');
+                if (btn) {
+                    btn.style.background = serverWod ? 'var(--gf-accent)' : '';
+                    btn.style.color = serverWod ? '#000' : '';
+                    btn.style.borderColor = serverWod ? 'var(--gf-accent)' : '';
+                }
+            }
+        }
+
         if (tick.status === 'finished') {
             // Stop music when session ends — must happen before isPlaying turns false,
             // otherwise the if(isPlaying) guard below would skip it.
@@ -482,7 +496,13 @@ const GFLive = (() => {
 
     function getSocket() { return socket; }
 
-    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket };
+    function emitWodOverlay(active, wodBlocks) {
+        if (socket?.connected) {
+            socket.emit('control:wod_overlay', { active, blocks: active ? (wodBlocks || blocks) : [] });
+        }
+    }
+
+    return { init, togglePlay, skipForward, skipBackward, stopSession, jumpToBlock, setSala, setAutoPlay, getSocket, emitWodOverlay };
 })();
 
 // Expose globals used inline by live.php buttons

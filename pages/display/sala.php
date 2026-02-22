@@ -306,7 +306,38 @@ if (!$sala) {
         <?php endif; ?>
         <div class="finished-icon">🏆</div>
         <div class="finished-title">¡EXCELENTE!</div>
-        <div class="finished-subtitle">Sesión completada</div>
+        <div class="finished-subtitle">Sesión completada, ¡Gracias por venir!</div>
+    </div>
+
+    <!-- WOD Summary Overlay — toggled by instructor via socket -->
+    <div id="wod-overlay"
+        style="display:none;position:fixed;inset:0;z-index:300;background:rgba(8,8,14,0.97);backdrop-filter:blur(12px);flex-direction:column;align-items:center;justify-content:flex-start;padding:clamp(24px,4vh,60px) clamp(20px,4vw,80px);overflow-y:auto;gap:0">
+        <div style="width:100%;max-width:900px">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;gap:24px;margin-bottom:clamp(20px,3vh,44px)">
+                <?php if ($sala['gym_logo']): ?>
+                    <img src="<?php echo BASE_URL . htmlspecialchars($sala['gym_logo']) ?>"
+                        alt="<?php echo htmlspecialchars($sala['gym_name']) ?>"
+                        style="height:clamp(48px,7vh,90px);max-width:200px;object-fit:contain;filter:brightness(1.15)"
+                        onerror="this.style.display='none'">
+                <?php else: ?>
+                    <div
+                        style="height:clamp(48px,7vh,90px);aspect-ratio:1;border-radius:50%;background:var(--d-accent,#00f5d4);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,3vw,36px);color:#000">
+                        <?php echo htmlspecialchars(strtoupper(substr($sala['gym_name'], 0, 2))) ?>
+                    </div>
+                <?php endif; ?>
+                <div style="display:flex;align-items:baseline;gap:14px">
+                    <div
+                        style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,5vw,72px);letter-spacing:.12em;color:#fff;line-height:1">
+                        WOD</div>
+                    <div id="wod-session-title"
+                        style="font-size:clamp(14px,1.8vw,22px);font-weight:600;color:rgba(255,255,255,0.45);letter-spacing:.06em;text-transform:uppercase">
+                    </div>
+                </div>
+            </div>
+            <!-- Block list -->
+            <div id="wod-block-list" style="display:flex;flex-direction:column;gap:12px"></div>
+        </div>
     </div>
 
     <!-- Flash transition effect -->

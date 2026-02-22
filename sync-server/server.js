@@ -62,7 +62,8 @@ function buildTick(st) {
         elapsed: st.elapsed,
         prep_remaining: st.prepRemaining,
         total_duration: st.totalDuration,
-        auto_play: st.autoPlay !== false,  // include flag in every tick
+        auto_play: st.autoPlay !== false,
+        wod_overlay: st.wodOverlay || { active: false, blocks: [] },
         server_ts: Date.now(),
     };
 }
@@ -391,6 +392,17 @@ io.on('connection', (socket) => {
         st.autoPlay = !!enabled;
         console.log(`[Socket] Sala ${sala_id} autoPlay → ${st.autoPlay}`);
         broadcast(sala_id);  // let display know too
+    });
+
+    // ── Control: WOD OVERLAY ──────────────────────────────────────────────────
+    socket.on('control:wod_overlay', ({ active, blocks }) => {
+        const sala_id = socket.data.salaId;
+        if (!sala_id) return;
+        // Persist state so reconnecting instructor/display gets correct status
+        const st = sessionStates.get(sala_id);
+        if (st) st.wodOverlay = { active: !!active, blocks: active ? (blocks || []) : [] };
+        io.to(`sala:${sala_id}`).emit('display:wod_overlay', { active: !!active, blocks: blocks || [] });
+        console.log(`[Socket] Sala ${sala_id} WOD overlay → ${active}`);
     });
 
     // ── Disconnect ──────────────────────────────────────────────────────────

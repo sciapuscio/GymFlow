@@ -77,6 +77,10 @@ layout_footer($user);
                 </svg>
                 Display
             </a>
+            <button id="btn-wod-overlay" class="btn btn-secondary btn-sm" onclick="toggleWodOverlay()"
+                title="Mostrar/ocultar resumen WOD en sala">
+                📋 WOD
+            </button>
         <?php endif; ?>
         <a href="<?php echo BASE_URL ?>/pages/instructor/builder.php?id=<?php echo $id ?>"
             class="btn btn-secondary btn-sm">
@@ -719,6 +723,19 @@ layout_footer($user);
         document.getElementById('sp-search').value = '';
         document.getElementById('sp-results').innerHTML = '';
         setTimeout(spPollNowPlaying, 1000);
+    }
+
+    // ── WOD Summary Overlay ──────────────────────────────────────────────────
+    let _wodOverlayActive = false;
+    function toggleWodOverlay() {
+        _wodOverlayActive = !_wodOverlayActive;
+        GFLive.emitWodOverlay(_wodOverlayActive, <?php echo json_encode($blocks) ?>);
+        const btn = document.getElementById('btn-wod-overlay');
+        if (btn) {
+            btn.style.background = _wodOverlayActive ? 'var(--gf-accent)' : '';
+            btn.style.color = _wodOverlayActive ? '#000' : '';
+            btn.style.borderColor = _wodOverlayActive ? 'var(--gf-accent)' : '';
+        }
     }
 </script>
 <?php layout_end(); ?>

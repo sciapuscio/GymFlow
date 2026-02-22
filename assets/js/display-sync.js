@@ -40,6 +40,81 @@
         socket.on('disconnect', () => {
             console.warn('[DisplaySync] Disconnected, reconnecting...');
         });
+
+        // ── WOD Summary Overlay ──────────────────────────────────────────────
+        socket.on('display:wod_overlay', ({ active, blocks }) => {
+            _renderWodOverlay(active, blocks);
+        });
+    }   // ← closes connectSocket()
+
+    // Shared WOD overlay renderer (called from socket event & applyState reconnect)
+    function _renderWodOverlay(active, blocks) {
+        const overlay = document.getElementById('wod-overlay');
+        if (!overlay) return;
+        if (!active) { overlay.style.display = 'none'; return; }
+
+        // Populate session title from current state
+        const titleEl = document.getElementById('wod-session-title');
+        if (titleEl && currentState?.session_name) titleEl.textContent = currentState.session_name;
+
+        // Type colors (same palette as live.php)
+        const typeColors = {
+            interval: '#00f5d4', tabata: '#ff6b35', amrap: '#7c3aed',
+            emom: '#0ea5e9', fortime: '#f59e0b', series: '#ec4899',
+            circuit: '#10b981', rest: '#3d5afe', briefing: '#6b7280'
+        };
+
+        const listEl = document.getElementById('wod-block-list');
+        if (listEl) {
+            listEl.innerHTML = blocks.map((b, i) => {
+                const col = typeColors[b.type] || '#888';
+                const exs = b.exercises || [];
+                const exLine = exs.length
+                    ? exs.map(e => {
+                        const n = e?.name || (typeof e === 'string' ? e : '');
+                        const r = e?.reps ? `${e.reps}×` : '';
+                        return r + n;
+                    }).filter(Boolean).join('  ·  ')
+                    : '';
+                const cfg = b.config || {};
+                const metaParts = [];
+                if (cfg.rounds) metaParts.push(`${cfg.rounds} rondas`);
+                if (cfg.sets) metaParts.push(`${cfg.sets} series × ${cfg.reps || '?'} reps`);
+                if (cfg.work) metaParts.push(`${cfg.work}s / ${cfg.rest || 0}s`);
+                if (cfg.duration) metaParts.push(formatDuration(cfg.duration));
+                const meta = metaParts.join(' · ');
+                return `<div style="
+                    display:flex;align-items:center;gap:16px;
+                    padding:clamp(12px,1.8vh,20px) clamp(14px,2vw,24px);
+                    background:rgba(255,255,255,0.04);
+                    border:1px solid rgba(255,255,255,0.08);
+                    border-left:4px solid ${col};
+                    border-radius:10px;
+                ">
+                    <div style="flex-shrink:0;width:clamp(24px,2.5vw,36px);height:clamp(24px,2.5vw,36px);
+                        border-radius:50%;background:${col}22;
+                        display:flex;align-items:center;justify-content:center;
+                        font-family:'Bebas Neue',sans-serif;font-size:clamp(12px,1.3vw,18px);color:${col}">
+                        ${i + 1}
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:clamp(9px,0.9vw,12px);font-weight:700;letter-spacing:.12em;
+                            text-transform:uppercase;color:${col};margin-bottom:4px">
+                            ${(b.type || '').toUpperCase()}
+                        </div>
+                        <div style="font-size:clamp(16px,2vw,26px);font-weight:700;color:#fff;
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                            ${b.name || '—'}
+                        </div>
+                        ${exLine ? `<div style="font-size:clamp(11px,1.1vw,15px);color:rgba(255,255,255,0.5);margin-top:3px;
+                            white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${exLine}</div>` : ''}
+                    </div>
+                    ${meta ? `<div style="flex-shrink:0;font-size:clamp(11px,1.1vw,14px);
+                        color:rgba(255,255,255,0.4);font-weight:600;text-align:right">${meta}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+        overlay.style.display = 'flex';
     }
 
 
@@ -164,6 +239,22 @@
         // Session name
         const sessionNameEl = document.getElementById('display-session-name');
         if (sessionNameEl && state.session_name) sessionNameEl.textContent = state.session_name;
+
+        // WOD overlay: apply from tick so reconnecting displays get correct state
+        if (state.wod_overlay !== undefined) {
+            const wo = state.wod_overlay;
+            const overlay = document.getElementById('wod-overlay');
+            if (overlay) {
+                if (wo.active && wo.blocks?.length) {
+                    // Only re-render if currently hidden (avoid flicker on every tick)
+                    if (overlay.style.display === 'none') {
+                        _renderWodOverlay(true, wo.blocks);
+                    }
+                } else {
+                    overlay.style.display = 'none';
+                }
+            }
+        }
 
         // Update block display
         updateBlockDisplay(block, nextBlock, blockIdx, totalBlocks);
