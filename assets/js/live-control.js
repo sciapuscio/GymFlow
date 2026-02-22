@@ -395,6 +395,19 @@ const GFLive = (() => {
         const blockPrep = (b?.spotify_intro > 0) ? (b.spotify_intro | 0) : null;
         const prep = blockPrep !== null ? blockPrep : (window._gfPrepTime || 0);
         emit('control:goto', { index: idx, prep_remaining: prep });
+
+        // In manual mode, briefly disable Play so a rapid click can't race the goto tick
+        if (!_autoPlay) {
+            const btn = document.getElementById('btn-play');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.4';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                }, 1000);
+            }
+        }
     }
 
     async function setSala(salaId) {
