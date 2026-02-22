@@ -633,18 +633,87 @@
         // ── WALL BALL ─────────────────────────────────────────────────────────
         else if (eq === 'wall_ball') {
             var lw11 = px('lw'); var rw11 = px('rw');
-            var bx = (lw11[0] + rw11[0]) / 2;
-            var by = (lw11[1] + rw11[1]) / 2 - H * 0.02;
+            // Radius
             var br = Math.max(7, H * 0.075);
-            // Shadow
+
+            // ── Target mark on the wall (top-right) ──────────────────────────
+            var targetX = W * 0.82;
+            var targetY = H * 0.12;
+            ctx.beginPath();
+            ctx.arc(targetX, targetY, br * 0.55, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = lw * 0.7;
+            ctx.stroke();
+            // crosshair
+            ctx.beginPath();
+            ctx.moveTo(targetX - br * 0.4, targetY);
+            ctx.lineTo(targetX + br * 0.4, targetY);
+            ctx.moveTo(targetX, targetY - br * 0.4);
+            ctx.lineTo(targetX, targetY + br * 0.4);
+            ctx.stroke();
+
+            // ── Determine ball position along the throw arc ───────────────────
+            // Cycle phases (normalised 0-1):
+            //   0.00 – 0.30 : squat / hold (ball in hands)
+            //   0.30 – 0.55 : throw — ball leaves and climbs to target
+            //   0.55 – 0.80 : fall — ball drops back from target to hands
+            //   0.80 – 1.00 : catch / squat again (ball in hands)
+            var arch = this._archetype;
+            var cycleDur = (arch && arch.cycleDuration) ? arch.cycleDuration : 2000;
+            var cycleT = (elapsed % cycleDur) / cycleDur;  // 0 → 1
+
+            // Wrist midpoint (where "hands" are this frame)
+            var handX = (lw11[0] + rw11[0]) / 2;
+            var handY = (lw11[1] + rw11[1]) / 2 - H * 0.02;
+
+            var bx, by;
+            var inFlight = false;
+
+            if (cycleT < 0.30) {
+                // Holding — ball in hands
+                bx = handX; by = handY;
+            } else if (cycleT < 0.55) {
+                // Throwing — ball travels from hands to target (parabolic ease)
+                var tp = (cycleT - 0.30) / 0.25;           // 0→1
+                var te = tp < 0.5 ? 2 * tp * tp : -1 + (4 - 2 * tp) * tp; // easeInOut
+                bx = handX + (targetX - handX) * te;
+                by = handY + (targetY - handY) * te;
+                inFlight = true;
+            } else if (cycleT < 0.80) {
+                // Falling — ball returns from target to hands
+                var fp = (cycleT - 0.55) / 0.25;           // 0→1
+                var fe = fp < 0.5 ? 2 * fp * fp : -1 + (4 - 2 * fp) * fp;
+                bx = targetX + (handX - targetX) * fe;
+                by = targetY + (handY - targetY) * fe;
+                inFlight = true;
+            } else {
+                // Catching — ball in hands
+                bx = handX; by = handY;
+            }
+
+            // Subtle motion blur trail during flight
+            if (inFlight) {
+                var trailAlpha = 0.12;
+                for (var tr = 1; tr <= 3; tr++) {
+                    ctx.beginPath();
+                    ctx.arc(bx - (bx - handX) * tr * 0.06, by - (by - handY) * tr * 0.06,
+                        br * (1 - tr * 0.15), 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(80,110,80,' + trailAlpha + ')';
+                    ctx.fill();
+                }
+            }
+
+            // Shadow (only when near ground level, fades during flight)
+            var shadowAlpha = inFlight ? Math.max(0, 0.2 - (handY - by) / H * 0.8) : 0.25;
             ctx.beginPath();
             ctx.arc(bx + 2, by + 2, br, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fillStyle = 'rgba(0,0,0,' + shadowAlpha + ')';
             ctx.fill();
+
             // Ball body
             var grad = ctx.createRadialGradient(bx - br * 0.3, by - br * 0.3, br * 0.1, bx, by, br);
-            grad.addColorStop(0, 'rgba(100,130,100,0.90)');
-            grad.addColorStop(1, 'rgba(40,60,40,0.92)');
+            grad.addColorStop(0, 'rgba(100,130,100,0.92)');
+            grad.addColorStop(1, 'rgba(40,60,40,0.95)');
             ctx.beginPath();
             ctx.arc(bx, by, br, 0, Math.PI * 2);
             ctx.fillStyle = grad;
@@ -652,6 +721,7 @@
             ctx.strokeStyle = 'rgba(180,210,180,0.60)';
             ctx.lineWidth = lw * 0.7;
             ctx.stroke();
+
             // Seam lines
             ctx.beginPath();
             ctx.arc(bx, by, br * 0.7, 0.2, Math.PI - 0.2);
