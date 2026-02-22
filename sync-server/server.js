@@ -313,9 +313,29 @@ function stopTimer(salaId) {
     if (t) { clearInterval(t); timers.delete(salaId); }
 }
 
+// ─── Monitor broadcast helper ──────────────────────────────────────────────
+// Emits a structured log entry to all sockets in the 'monitor' room.
+function mon(type, msg, meta = {}) {
+    const entry = { type, msg, meta, ts: Date.now() };
+    io.to('monitor').emit('monitor:log', entry);
+}
+
 // ─── Socket.IO Events ──────────────────────────────────────────────────────
 io.on('connection', (socket) => {
+    const totalClients = io.sockets.sockets.size;
     console.log(`[Socket] Connected: ${socket.id}`);
+    mon('connect', `Nueva conexión: ${socket.id}`, { id: socket.id, total: totalClients });
+
+    // ── Join as MONITOR (superadmin console) ───────────────────────────────
+    socket.on('join:monitor', () => {
+        socket.join('monitor');
+        socket.data.role = 'monitor';
+        const totalClients = io.sockets.sockets.size;
+        const activeSalas = sessionStates.size;
+        console.log(`[Monitor] Console connected: ${socket.id}`);
+        // Send a snapshot on connect
+        socket.emit('monitor:log', { type: 'system', msg: `Monitor conectado. ${totalClients} conexiones activas, ${activeSalas} salas en memoria.`, ts: Date.now(), meta: {} });
+    });
 
     // ── Join as INSTRUCTOR ──────────────────────────────────────────────────
     socket.on('join:session', async ({ session_id, sala_id }) => {
@@ -340,8 +360,10 @@ io.on('connection', (socket) => {
                 startTimer(sala_id);
             }
             socket.emit('session:state', buildTick(st));
+            mon('instructor', `Instructor unido a sala ${sala_id}`, { sala_id, session_id, socketId: socket.id });
             console.log(`[Socket] Instructor joined sala ${sala_id}, session ${session_id}`);
         } catch (e) {
+            mon('error', `Error join:session: ${e.message}`, { socketId: socket.id });
             console.error('[Socket] join:session error:', e.message);
             socket.emit('error', e.message);
         }
@@ -354,6 +376,7 @@ io.on('connection', (socket) => {
         socket.data.role = 'display';
         const st = sessionStates.get(sala_id);
         if (st) socket.emit('session:state', buildTick(st));
+        mon('display', `Pantalla conectada a sala ${sala_id}`, { sala_id, socketId: socket.id });
         console.log(`[Socket] Display joined sala ${sala_id}`);
     });
 
@@ -361,6 +384,7 @@ io.on('connection', (socket) => {
     // No sala room — used only to receive system:broadcast notifications.
     socket.on('join:system', ({ role }) => {
         socket.data.role = role || 'admin'; // admin | instructor | superadmin
+        mon('system', `Dashboard conectado como ${socket.data.role}`, { role: socket.data.role, socketId: socket.id });
         console.log(`[Socket] System join: ${socket.id} as ${socket.data.role}`);
     });
 
@@ -374,6 +398,7 @@ io.on('connection', (socket) => {
         startTimer(sala_id);
         await persistState(st, 'play');
         broadcast(sala_id);
+        mon('play', `▶ PLAY  sala ${sala_id} — bloque ${st.currentBlockIndex + 1}/${st.blocks.length}`, { sala_id, block: st.currentBlockIndex });
     });
 
     // ── Control: PAUSE ──────────────────────────────────────────────────────
@@ -386,6 +411,7 @@ io.on('connection', (socket) => {
         stopTimer(sala_id);
         await persistState(st, 'pause');
         broadcast(sala_id);
+        mon('pause', `⏸ PAUSE sala ${sala_id}`, { sala_id });
     });
 
     // ── Control: STOP ───────────────────────────────────────────────────────
@@ -397,6 +423,7 @@ io.on('connection', (socket) => {
         stopTimer(sala_id);
         await persistState(st, 'stop');
         broadcast(sala_id);
+        mon('stop', `⏹ STOP  sala ${sala_id} — sesión finalizada`, { sala_id });
     });
 
     // ── Control: SKIP ───────────────────────────────────────────────────────
@@ -419,6 +446,7 @@ io.on('connection', (socket) => {
         });
         if (wasPlaying) startTimer(sala_id);
         broadcast(sala_id);
+        mon('skip', `⏭ SKIP  sala ${sala_id}`, { sala_id, block: st.currentBlockIndex });
     });
 
     // ── Control: PREV ───────────────────────────────────────────────────────
