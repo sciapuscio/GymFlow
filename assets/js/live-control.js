@@ -415,6 +415,7 @@ const GFLive = (() => {
         if (block.spotify_uri === _lastAutoPlayUri) return;
         _lastAutoPlayUri = block.spotify_uri;
         try {
+            spotifySetVolume(100); // always restore volume before playing
             const isPlaylist = block.spotify_uri.startsWith('spotify:playlist:') || block.spotify_uri.startsWith('spotify:album:');
             const body = isPlaylist ? { context_uri: block.spotify_uri } : { uris: [block.spotify_uri] };
             const res = await GF.post(window.GF_BASE + '/api/spotify.php?action=play', body);
