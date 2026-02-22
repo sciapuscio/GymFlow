@@ -111,7 +111,7 @@ function login(string $email, string $password): ?array
         $gymRow->execute([$user['gym_id']]);
         $gymActive = $gymRow->fetchColumn();
         if ($gymActive === false || !(int) $gymActive) {
-            return null; // Reject login silently (same as wrong password UX)
+            return ['error' => 'gym_inactive'];
         }
     }
 

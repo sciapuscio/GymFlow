@@ -19,7 +19,7 @@ if ($user) {
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = login($_POST['email'] ?? '', $_POST['password'] ?? '');
-    if ($result) {
+    if ($result && empty($result['error'])) {
         setcookie('gf_token', $result['token'], time() + SESSION_LIFETIME, '/', '', false, true);
         $dest = match ($result['role']) {
             'superadmin' => BASE_URL . '/pages/superadmin/dashboard.php',
@@ -29,7 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: $dest");
         exit;
     }
-    $error = 'Email o contraseña incorrectos';
+    $error = ($result['error'] ?? '') === 'gym_inactive'
+        ? 'Tu cuenta está suspendida. Contactá al administrador.'
+        : 'Email o contraseña incorrectos';
 }
 ?>
 <!DOCTYPE html>
