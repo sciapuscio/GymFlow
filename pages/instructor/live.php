@@ -429,6 +429,60 @@ layout_footer($user);
         background: var(--gf-accent);
     }
 
+    /* ── Block-select loading state ─────────────────────────────────────── */
+    #btn-play.preparing {
+        color: transparent !important;
+        /* hide ▶ icon */
+        pointer-events: none;
+        position: relative;
+        overflow: visible;
+        background: var(--gf-surface-2) !important;
+        border-color: transparent !important;
+        box-shadow: 0 0 0 0 rgba(0, 245, 212, 0);
+    }
+
+    /* Spinning arc via pseudo-element */
+    #btn-play.preparing::before {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 3px solid transparent;
+        border-top-color: var(--gf-accent, #00f5d4);
+        border-right-color: var(--gf-accent, #00f5d4);
+        animation: gf-btn-spin 0.75s linear infinite;
+    }
+
+    /* Outer glow ring */
+    #btn-play.preparing::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 245, 212, 0.20);
+        animation: gf-btn-pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes gf-btn-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes gf-btn-pulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: .6;
+        }
+
+        50% {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+    }
+
     .prep-btn {
         background: var(--gf-surface-2);
         border: 1px solid var(--gf-border);

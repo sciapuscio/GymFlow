@@ -401,10 +401,10 @@ const GFLive = (() => {
             const btn = document.getElementById('btn-play');
             if (btn) {
                 btn.disabled = true;
-                btn.style.opacity = '0.4';
+                btn.classList.add('preparing');
                 setTimeout(() => {
                     btn.disabled = false;
-                    btn.style.opacity = '';
+                    btn.classList.remove('preparing');
                 }, 1000);
             }
         }
