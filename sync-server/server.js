@@ -462,7 +462,9 @@ io.on('connection', (socket) => {
         await persistState(st, 'play');
         broadcast(sala_id);
         const who = socket.data.userName ? `${socket.data.userName} [${socket.data.gymName}]` : socket.id;
-        mon('play', `▶ PLAY  sala ${sala_id} · bloque ${st.currentBlockIndex + 1}/${st.blocks.length} · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
+        const blk = st.blocks[st.currentBlockIndex];
+        const blkLabel = blk ? `"${blk.name || blk.type}" (${blk.type})` : `bloque ${st.currentBlockIndex + 1}`;
+        mon('play', `▶ PLAY  sala ${sala_id} · ${blkLabel} [${st.currentBlockIndex + 1}/${st.blocks.length}] · ${who}`, { sala_id, block: st.currentBlockIndex, user: socket.data.userName, gym: socket.data.gymName });
     });
 
     // ── Control: PAUSE ──────────────────────────────────────────────────────
