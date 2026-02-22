@@ -53,6 +53,12 @@ if (strlen($adminPass) < 8)
 if ($adminPass !== $adminPass2)
     $errors['admin_password2'] = 'Las contraseñas no coinciden.';
 
+// Plan
+$plan = trim($data['plan'] ?? 'gimnasio');
+$allowedPlans = ['instructor', 'gimnasio', 'centro'];
+if (!in_array($plan, $allowedPlans, true))
+    $errors['plan'] = 'Plan inválido. Elegí uno de los planes disponibles.';
+
 if (!empty($errors)) {
     jsonResponse(['error' => 'Validation failed', 'fields' => $errors], 422);
 }
@@ -94,12 +100,11 @@ try {
     db()->beginTransaction();
 
     // 1. Create gym
-    $instructorsCount = trim($data['instructors_count'] ?? '');
     $stmt = db()->prepare(
-        "INSERT INTO gyms (name, slug, city, phone, gym_type, instructors_count, primary_color, secondary_color, font_family, font_display, spotify_mode, active)
-         VALUES (?, ?, ?, ?, ?, ?, '#e5ff3d', '#6c63ff', 'Inter', 'Outfit', 'disabled', 1)"
+        "INSERT INTO gyms (name, slug, city, phone, gym_type, primary_color, secondary_color, font_family, font_display, spotify_mode, active)
+         VALUES (?, ?, ?, ?, ?, '#e5ff3d', '#6c63ff', 'Inter', 'Outfit', 'disabled', 1)"
     );
-    $stmt->execute([sanitize($gymName), $slug, sanitize($city), sanitize($phone), sanitize($gymType), sanitize($instructorsCount)]);
+    $stmt->execute([sanitize($gymName), $slug, sanitize($city), sanitize($phone), sanitize($gymType)]);
     $gymId = (int) db()->lastInsertId();
 
     // 2. Create admin user (role = admin, linked to this gym)
@@ -136,13 +141,13 @@ try {
     );
     $stmt->execute([$gymId, $dc]);
 
-    // 5. Create 30-day trial subscription
+    // 5. Create 30-day trial subscription with the chosen plan
     $trialEnd = date('Y-m-d', strtotime('+30 days'));
     db()->prepare(
         "INSERT INTO gym_subscriptions
-            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end)
-         VALUES (?, 'trial', 'active', ?, CURDATE(), ?)"
-    )->execute([$gymId, $trialEnd, $trialEnd]);
+            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end, extra_salas, price_ars)
+         VALUES (?, ?, 'active', ?, CURDATE(), ?, 0, 0)"
+    )->execute([$gymId, $plan, $trialEnd, $trialEnd]);
 
     // 6. Generate auth session token → log the user in immediately
     require_once __DIR__ . '/../config/app.php';
@@ -162,19 +167,20 @@ try {
     ]);
 
     jsonResponse([
-        'success' => true,
-        'message' => '¡Bienvenido a GymFlow! Tu prueba gratuita de 30 días ha comenzado.',
-        'token' => $token,
+        'success'    => true,
+        'message'    => '¡Bienvenido a GymFlow! Tu prueba gratuita de 30 días ha comenzado.',
+        'token'      => $token,
         'expires_at' => $expires,
-        'gym_id' => $gymId,
-        'gym_name' => $gymName,
-        'gym_slug' => $slug,
-        'user_id' => $userId,
-        'user_name' => $adminName,
+        'gym_id'     => $gymId,
+        'gym_name'   => $gymName,
+        'gym_slug'   => $slug,
+        'user_id'    => $userId,
+        'user_name'  => $adminName,
         'user_email' => $adminEmail,
-        'role' => 'admin',
+        'role'       => 'admin',
+        'plan'       => $plan,
         'trial_ends' => $trialEnd,
-        'redirect' => '../index.php',
+        'redirect'   => '../index.php',
     ], 201);
 
 } catch (Exception $e) {

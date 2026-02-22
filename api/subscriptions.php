@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/plans.php';
 
 handleCors();
 header('Content-Type: application/json; charset=utf-8');
@@ -23,6 +24,10 @@ if ($method === 'GET' && $gymId) {
     $sub = $stmt->fetch();
     if (!$sub)
         jsonError('Subscription not found', 404);
+
+    // Attach plan limits and usage for convenience
+    $sub['plan_info'] = getPlanLimits($sub['plan'], (int) ($sub['extra_salas'] ?? 0));
+    $sub['usage'] = getGymUsage($gymId);
     jsonResponse($sub);
 }
 
@@ -31,7 +36,8 @@ if ($method === 'GET') {
     $rows = db()->query(
         "SELECT g.id, g.name, g.slug, g.active,
                 gs.plan, gs.status, gs.trial_ends_at,
-                gs.current_period_start, gs.current_period_end, gs.notes,
+                gs.current_period_start, gs.current_period_end,
+                gs.extra_salas, gs.price_ars, gs.notes,
                 CASE
                     WHEN gs.id IS NULL THEN 'no_subscription'
                     WHEN gs.status = 'suspended' THEN 'suspended'
@@ -53,25 +59,32 @@ if ($method === 'POST') {
         jsonError('gym_id required');
 
     $gid = (int) $data['gym_id'];
-    $plan = $data['plan'] ?? 'trial';
-    $days = $plan === 'annual' ? 365 : 30;
+    $plan = $data['plan'] ?? 'instructor';
+    $days = 30;
     $start = date('Y-m-d');
     $end = date('Y-m-d', strtotime("+{$days} days"));
+    $extra = max(0, (int) ($data['extra_salas'] ?? 0));
+
+    // Compute price_ars from plan definitions
+    $planInfo = getPlanLimits($plan, $extra);
+    $priceArs = $planInfo['total_price'];
 
     $stmt = db()->prepare(
         "INSERT INTO gym_subscriptions 
-            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end, notes)
-         VALUES (?, ?, 'active', ?, ?, ?, ?)
+            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end, extra_salas, price_ars, notes)
+         VALUES (?, ?, 'active', ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
             plan = VALUES(plan),
             status = 'active',
             current_period_start = VALUES(current_period_start),
             current_period_end = VALUES(current_period_end),
+            extra_salas = VALUES(extra_salas),
+            price_ars = VALUES(price_ars),
             notes = VALUES(notes),
             updated_at = NOW()"
     );
-    $trialEnd = $plan === 'trial' ? $end : null;
-    $stmt->execute([$gid, $plan, $trialEnd, $start, $end, $data['notes'] ?? null]);
+    $trialEnd = ($plan === 'trial') ? $end : null;
+    $stmt->execute([$gid, $plan, $trialEnd, $start, $end, $extra, $priceArs, $data['notes'] ?? null]);
 
     jsonResponse(['success' => true, 'period_end' => $end], 201);
 }
@@ -83,12 +96,25 @@ if ($method === 'PUT' && $gymId) {
     $fields = [];
     $params = [];
 
-    $allowed = ['plan', 'status', 'current_period_start', 'current_period_end', 'trial_ends_at', 'notes'];
+    $allowed = ['plan', 'status', 'current_period_start', 'current_period_end', 'trial_ends_at', 'extra_salas', 'notes'];
     foreach ($allowed as $f) {
         if (array_key_exists($f, $data)) {
             $fields[] = "$f = ?";
             $params[] = $data[$f];
         }
+    }
+
+    // Auto-recompute price_ars when plan or extra_salas changes
+    if (isset($data['plan']) || isset($data['extra_salas'])) {
+        // Fetch current values to merge
+        $cur = db()->prepare("SELECT plan, extra_salas FROM gym_subscriptions WHERE gym_id = ?");
+        $cur->execute([$gymId]);
+        $curRow = $cur->fetch() ?: [];
+        $effectivePlan = $data['plan'] ?? ($curRow['plan'] ?? 'instructor');
+        $effectiveExtra = (int) ($data['extra_salas'] ?? ($curRow['extra_salas'] ?? 0));
+        $planInfo = getPlanLimits($effectivePlan, $effectiveExtra);
+        $fields[] = "price_ars = ?";
+        $params[] = $planInfo['total_price'];
     }
 
     // Shorthand: extend by N days from today or from current end (whichever is later)

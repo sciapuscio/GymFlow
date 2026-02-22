@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../../includes/plans.php';
 
 $user = requireAuth('admin', 'superadmin');
 // Allow superadmin to view any gym via GET param
@@ -34,6 +35,7 @@ $sc->execute([$gymId]);
 $sessionCount = (int) $sc->fetchColumn();
 
 $sub = getGymSubscription($gymId);
+$planInfo = $sub ? getGymPlanInfo($gymId) : null;
 
 // Compute subscription display state
 $subBanner = null;
@@ -122,18 +124,27 @@ layout_footer($user);
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="background:rgba(16,185,129,.15);color:#10b981">
+            <div class="stat-icon" style="background:rgba(99,102,241,.15);color:#818cf8">
                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" stroke-width="2" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
             </div>
-            <div>
-                <div class="stat-value"
-                    style="font-size:16px;color:<?php echo htmlspecialchars($gym['primary_color']) ?>">
-                    <?php echo htmlspecialchars($gym['primary_color']) ?>
+            <div style="flex:1;min-width:0">
+                <?php
+                $planLabel = $planInfo ? $planInfo['limits']['label'] : 'Sin plan';
+                $salaUsed = $planInfo ? $planInfo['usage']['salas'] : count($salas);
+                $salaLimit = $planInfo ? $planInfo['limits']['salas'] : '?';
+                $salaAtLimit = $planInfo && !$planInfo['can_add_sala'];
+                ?>
+                <div class="stat-value" style="font-size:16px;color:#818cf8"><?php echo htmlspecialchars($planLabel) ?>
                 </div>
-                <div class="stat-label">Color Primario</div>
+                <div class="stat-label">
+                    Salas <?php echo $salaUsed ?>/<?php echo $salaLimit ?>
+                    <?php if ($salaAtLimit): ?>
+                        <span style="color:#f59e0b;font-weight:700"> · límite</span>
+                    <?php endif ?>
+                </div>
             </div>
         </div>
     </div>
@@ -184,6 +195,31 @@ layout_footer($user);
                 document.getElementById('sub-banner').style.display = 'none';
             }
         </script>
+    <?php endif; ?>
+
+    <?php
+    // ── Limit-reached banner ────────────────────────────────────────────────
+    $showSalaLimitBanner = $planInfo && !$planInfo['can_add_sala'] && $user['role'] !== 'superadmin';
+    $showInstrLimitBanner = $planInfo && !$planInfo['can_add_instructor'] && $user['role'] !== 'superadmin';
+    if ($showSalaLimitBanner || $showInstrLimitBanner):
+        ?>
+        <div
+            style="margin-bottom:20px;padding:14px 18px;border-radius:12px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;gap:14px;font-size:14px">
+            <span style="font-size:20px;flex-shrink:0">📦</span>
+            <div style="flex:1;line-height:1.5">
+                <?php if ($showSalaLimitBanner): ?>
+                    <strong>Límite de salas alcanzado.</strong> Tu plan
+                    <em><?php echo htmlspecialchars($planInfo['limits']['label']) ?></em> permite
+                    <?php echo $planInfo['limits']['salas'] ?> sala<?php echo $planInfo['limits']['salas'] !== 1 ? 's' : '' ?>.
+                <?php endif ?>
+                <?php if ($showInstrLimitBanner): ?>
+                    <?php if ($showSalaLimitBanner): ?> &nbsp;·&nbsp; <?php endif ?>
+                    <strong>Límite de instructores alcanzado.</strong> Tu plan permite 1 instructor.
+                <?php endif ?>
+                <span style="color:var(--gf-text-muted)"> Contactá a GymFlow para ampliar tu plan o agregar salas
+                    extra.</span>
+            </div>
+        </div>
     <?php endif; ?>
 
     <div class="grid grid-2">
@@ -390,7 +426,11 @@ layout_footer($user);
         e.preventDefault();
         const form = e.target;
         const data = { name: form.name.value, capacity: +form.capacity.value, gym_id: GYM_ID };
-        await GF.post(window.GF_BASE + '/api/salas.php', data);
+        const res = await GF.post(window.GF_BASE + '/api/salas.php', data);
+        if (res && res.code === 'SALA_LIMIT') {
+            showToast(`Límite de salas alcanzado (${res.current}/${res.limit}). Contactá a GymFlow para ampliar tu plan.`, 'error');
+            return;
+        }
         showToast('Sala creada', 'success');
         location.reload();
     }
@@ -404,7 +444,11 @@ layout_footer($user);
     async function createUser(e) {
         e.preventDefault();
         const data = { name: document.getElementById('u-name').value, email: document.getElementById('u-email').value, password: document.getElementById('u-pass').value, role: document.getElementById('u-role').value, gym_id: GYM_ID };
-        await GF.post(window.GF_BASE + '/api/users.php', data);
+        const res = await GF.post(window.GF_BASE + '/api/users.php', data);
+        if (res && res.code === 'INSTRUCTOR_LIMIT') {
+            showToast(`Límite de instructores alcanzado. Contactá a GymFlow para mejorar tu plan.`, 'error');
+            return;
+        }
         showToast('Usuario creado', 'success');
         location.reload();
     }

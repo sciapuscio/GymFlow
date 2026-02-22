@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
+require_once __DIR__ . '/../../includes/plans.php';
 
 $user = requireAuth('superadmin');
 
@@ -13,6 +14,8 @@ $gymnList = db()->query(
             gs.plan, gs.status as sub_status,
             gs.current_period_end,
             gs.trial_ends_at,
+            gs.extra_salas,
+            gs.price_ars,
             CASE
                 WHEN gs.id IS NULL THEN 'no_sub'
                 WHEN gs.status = 'suspended' THEN 'suspended'
@@ -66,12 +69,7 @@ layout_footer($user);
         border: 1px solid rgba(239, 68, 68, .25);
     }
 
-    .sub-suspended {
-        background: rgba(107, 114, 128, .12);
-        color: #6b7280;
-        border: 1px solid rgba(107, 114, 128, .25);
-    }
-
+    .sub-suspended,
     .sub-no_sub {
         background: rgba(107, 114, 128, .12);
         color: #6b7280;
@@ -101,6 +99,85 @@ layout_footer($user);
     .dot-no_sub {
         background: #6b7280;
     }
+
+    .plan-badge {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
+
+    .plan-instructor {
+        background: rgba(99, 102, 241, .15);
+        color: #818cf8;
+    }
+
+    .plan-gimnasio {
+        background: rgba(16, 185, 129, .15);
+        color: #10b981;
+    }
+
+    .plan-centro {
+        background: rgba(245, 158, 11, .15);
+        color: #f59e0b;
+    }
+
+    .plan-trial {
+        background: rgba(107, 114, 128, .12);
+        color: #9ca3af;
+    }
+
+    .usage-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .usage-bar {
+        flex: 1;
+        height: 4px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, .08);
+        overflow: hidden;
+    }
+
+    .usage-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width .3s;
+    }
+
+    .usage-ok {
+        background: #10b981;
+    }
+
+    .usage-warn {
+        background: #f59e0b;
+    }
+
+    .usage-full {
+        background: #ef4444;
+    }
+
+    .price-preview {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--gf-text-muted);
+        text-align: right;
+        margin-top: 4px;
+    }
+
+    .price-preview strong {
+        color: var(--gf-accent);
+    }
+
+    .addon-note {
+        font-size: 11px;
+        color: var(--gf-text-muted);
+        margin-top: 4px;
+    }
 </style>
 
 <div class="page-header">
@@ -115,9 +192,9 @@ layout_footer($user);
                 <thead>
                     <tr>
                         <th>Nombre</th>
-                        <th>Usuarios</th>
-                        <th>Salas</th>
                         <th>Plan</th>
+                        <th>Salas</th>
+                        <th>Usuarios</th>
                         <th>Vencimiento</th>
                         <th>Estado</th>
                         <th>Acciones</th>
@@ -126,6 +203,21 @@ layout_footer($user);
                 <tbody>
                     <?php foreach ($gymnList as $g):
                         $sc = $g['sub_computed'] ?? 'no_sub';
+                        $plan = $g['plan'] ?? 'trial';
+                        $extraSalas = (int) ($g['extra_salas'] ?? 0);
+                        $limits = getPlanLimits($plan, $extraSalas);
+                        $salaCount = (int) $g['sala_count'];
+                        $userCount = (int) $g['user_count'];
+                        $salaPct = $limits['salas'] > 0 ? min(100, round($salaCount / $limits['salas'] * 100)) : 0;
+                        $salaBarClass = $salaPct >= 100 ? 'usage-full' : ($salaPct >= 80 ? 'usage-warn' : 'usage-ok');
+
+                        $planBadgeClass = match ($plan) {
+                            'instructor' => 'plan-instructor',
+                            'gimnasio' => 'plan-gimnasio',
+                            'centro' => 'plan-centro',
+                            default => 'plan-trial',
+                        };
+
                         $labels = [
                             'active' => 'Activo',
                             'expiring' => 'Por vencer',
@@ -133,7 +225,6 @@ layout_footer($user);
                             'suspended' => 'Suspendido',
                             'no_sub' => 'Sin suscripción',
                         ];
-                        $planLabels = ['trial' => 'Trial', 'monthly' => 'Mensual', 'annual' => 'Anual'];
                         ?>
                         <tr>
                             <td>
@@ -145,14 +236,32 @@ layout_footer($user);
                                     <div>
                                         <strong><?php echo htmlspecialchars($g['name']) ?></strong>
                                         <div style="font-size:11px;color:var(--gf-text-muted)">
-                                            <?php echo htmlspecialchars($g['slug']) ?></div>
+                                            <?php echo htmlspecialchars($g['slug']) ?>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
-                            <td><?php echo $g['user_count'] ?></td>
-                            <td><?php echo $g['sala_count'] ?></td>
-                            <td style="font-size:13px;color:var(--gf-text-muted)">
-                                <?php echo $planLabels[$g['plan'] ?? ''] ?? '—' ?></td>
+                            <td>
+                                <span class="plan-badge <?php echo $planBadgeClass ?>">
+                                    <?php echo $limits['label'] ?>
+                                </span>
+                                <?php if ($extraSalas > 0): ?>
+                                    <div style="font-size:10px;color:var(--gf-text-muted);margin-top:2px">
+                                        +<?php echo $extraSalas ?> sala<?php echo $extraSalas > 1 ? 's' : '' ?> add-on</div>
+                                <?php endif ?>
+                            </td>
+                            <td style="min-width:90px">
+                                <div class="usage-bar-wrap">
+                                    <span style="font-size:12px;font-weight:600;white-space:nowrap">
+                                        <?php echo $salaCount ?>/<?php echo $limits['salas'] ?>
+                                    </span>
+                                    <div class="usage-bar">
+                                        <div class="usage-bar-fill <?php echo $salaBarClass ?>"
+                                            style="width:<?php echo $salaPct ?>%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><?php echo $userCount ?></td>
                             <td style="font-size:13px">
                                 <?php if ($g['current_period_end']): ?>
                                     <?php
@@ -182,6 +291,7 @@ layout_footer($user);
                                     'plan' => $g['plan'] ?? 'trial',
                                     'status' => $g['sub_status'] ?? 'active',
                                     'end' => $g['current_period_end'] ?? '',
+                                    'extra_salas' => (int) ($g['extra_salas'] ?? 0),
                                     'notes' => '',
                                 ])) ?>)">Ciclo</button>
                                 <button class="btn <?php echo $g['active'] ? 'btn-danger' : 'btn-primary' ?> btn-sm"
@@ -220,15 +330,22 @@ layout_footer($user);
                 <div class="form-group"><label class="form-label">Color Secundario</label><input type="color"
                         class="form-control" id="g-secondary" value="#ff6b35"></div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Gimnasio (Trial 30
-                días)</button>
+            <div class="form-group">
+                <label class="form-label">Plan inicial</label>
+                <select class="form-control" id="g-plan">
+                    <option value="instructor">Instructor — Trial 30 días</option>
+                    <option value="gimnasio">Gimnasio</option>
+                    <option value="centro">Centro</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Gimnasio</button>
         </form>
     </div>
 </div>
 
-<!-- ── Subscription Modal ─────────────────────────────────────────────────── -->
+<!-- ── Subscription / Cycle Modal ─────────────────────────────────────────── -->
 <div class="modal-overlay" id="sub-modal">
-    <div class="modal" style="max-width:480px">
+    <div class="modal" style="max-width:520px">
         <div class="modal-header">
             <h3 class="modal-title">Ciclo de facturación — <span id="sub-gym-name"></span></h3>
             <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')"><svg
@@ -237,13 +354,16 @@ layout_footer($user);
                 </svg></button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px">
+
+            <!-- Plan selector -->
             <div class="param-row">
                 <div class="form-group">
                     <label class="form-label">Plan</label>
-                    <select class="form-control" id="sub-plan">
-                        <option value="trial">Trial</option>
-                        <option value="monthly">Mensual</option>
-                        <option value="annual">Anual</option>
+                    <select class="form-control" id="sub-plan" onchange="updatePricePreview()">
+                        <option value="trial">Trial (gratis)</option>
+                        <option value="instructor">Instructor — $12.000/mes</option>
+                        <option value="gimnasio">Gimnasio — $29.000/mes</option>
+                        <option value="centro">Centro — $55.000/mes</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -255,8 +375,24 @@ layout_footer($user);
                     </select>
                 </div>
             </div>
+
+            <!-- Extra salas add-on -->
             <div class="form-group">
-                <label class="form-label">Vencimiento</label>
+                <label class="form-label">Add-on: Salas extra <span
+                        style="font-weight:400;color:var(--gf-text-muted)">(+$9.000 ARS c/u)</span></label>
+                <input type="number" class="form-control" id="sub-extra-salas" min="0" max="20" value="0"
+                    oninput="updatePricePreview()">
+                <div class="addon-note" id="sub-sala-info">Salas totales: —</div>
+            </div>
+
+            <!-- Price preview -->
+            <div class="price-preview" id="sub-price-preview">
+                Total mensual: <strong>—</strong>
+            </div>
+
+            <!-- Date -->
+            <div class="form-group">
+                <label class="form-label">Vencimiento del ciclo</label>
                 <input type="date" class="form-control" id="sub-end">
             </div>
             <div style="display:flex;gap:8px">
@@ -264,6 +400,8 @@ layout_footer($user);
                 <button class="btn btn-secondary" style="flex:1" onclick="extendDays(90)">+ 3 meses</button>
                 <button class="btn btn-secondary" style="flex:1" onclick="extendDays(365)">+ 1 año</button>
             </div>
+
+            <!-- Notes -->
             <div class="form-group">
                 <label class="form-label">Notas internas</label>
                 <textarea class="form-control" id="sub-notes" rows="2"
@@ -278,6 +416,10 @@ layout_footer($user);
 <script>
     let _subGymId = null;
 
+    const PLAN_PRICES = { trial: 0, instructor: 12000, gimnasio: 29000, centro: 55000 };
+    const PLAN_SALAS = { trial: 1, instructor: 1, gimnasio: 3, centro: 8 };
+    const ADDON_PRICE = 9000;
+
     function openNewGymModal() {
         document.getElementById('gym-modal').classList.add('open');
     }
@@ -289,13 +431,21 @@ layout_footer($user);
 
     async function createGym(e) {
         e.preventDefault();
+        const plan = document.getElementById('g-plan').value;
         const data = {
             name: document.getElementById('g-name').value,
             slug: document.getElementById('g-slug').value,
             primary_color: document.getElementById('g-primary').value,
             secondary_color: document.getElementById('g-secondary').value,
         };
-        await GF.post(window.GF_BASE + '/api/gyms.php', data);
+        const res = await GF.post(window.GF_BASE + '/api/gyms.php', data);
+        if (res && res.id) {
+            // Set plan to the selected value (trial is default from register but we override)
+            await GF.put(`${window.GF_BASE}/api/subscriptions.php?gym_id=${res.id}`, {
+                plan: plan,
+                status: 'active',
+            });
+        }
         location.reload();
     }
 
@@ -307,11 +457,30 @@ layout_footer($user);
     function openSubModal(gym) {
         _subGymId = gym.id;
         document.getElementById('sub-gym-name').textContent = gym.name;
-        document.getElementById('sub-plan').value = gym.plan || 'trial';
+        document.getElementById('sub-plan').value = gym.plan || 'instructor';
         document.getElementById('sub-status').value = gym.status || 'active';
         document.getElementById('sub-end').value = gym.end || '';
+        document.getElementById('sub-extra-salas').value = gym.extra_salas ?? 0;
         document.getElementById('sub-notes').value = gym.notes || '';
+        updatePricePreview();
         document.getElementById('sub-modal').classList.add('open');
+    }
+
+    function updatePricePreview() {
+        const plan = document.getElementById('sub-plan').value;
+        const extras = Math.max(0, parseInt(document.getElementById('sub-extra-salas').value) || 0);
+        const base = PLAN_PRICES[plan] ?? 0;
+        const addon = extras * ADDON_PRICE;
+        const total = base + addon;
+        const salas = (PLAN_SALAS[plan] ?? 1) + extras;
+
+        const fmt = n => n.toLocaleString('es-AR') + ' ARS';
+        document.getElementById('sub-price-preview').innerHTML =
+            `Total mensual: <strong>${fmt(total)}</strong>` +
+            (addon > 0 ? ` <span style="font-size:11px;color:var(--gf-text-muted)">(base ${fmt(base)} + add-on ${fmt(addon)})</span>` : '');
+
+        document.getElementById('sub-sala-info').textContent =
+            `Salas totales permitidas: ${salas} (${PLAN_SALAS[plan] ?? 1} base${extras > 0 ? ' + ' + extras + ' extra' : ''})`;
     }
 
     function extendDays(days) {
@@ -328,6 +497,7 @@ layout_footer($user);
             plan: document.getElementById('sub-plan').value,
             status: document.getElementById('sub-status').value,
             current_period_end: document.getElementById('sub-end').value,
+            extra_salas: parseInt(document.getElementById('sub-extra-salas').value) || 0,
             notes: document.getElementById('sub-notes').value,
         });
         document.getElementById('sub-modal').classList.remove('open');
@@ -337,6 +507,9 @@ layout_footer($user);
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
     });
+
+    // Init price preview on load
+    updatePricePreview();
 </script>
 
 <?php layout_end(); ?>

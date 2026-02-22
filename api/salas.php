@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/plans.php';
 
 handleCors();
 header('Content-Type: application/json; charset=utf-8');
@@ -62,6 +63,20 @@ if ($method === 'POST') {
     $gymId = $user['role'] === 'superadmin' ? (int) ($data['gym_id'] ?? 0) : (int) $user['gym_id'];
     if (!$gymId)
         jsonError('gym_id required');
+
+    // ── Plan limit check (skipped for superadmin) ───────────────────────────
+    if ($user['role'] !== 'superadmin') {
+        if (!checkSalaLimit($gymId)) {
+            $info = getGymPlanInfo($gymId);
+            $limit = $info['limits']['salas'] ?? 1;
+            jsonResponse([
+                'error' => 'Límite de salas alcanzado para tu plan.',
+                'code' => 'SALA_LIMIT',
+                'limit' => $limit,
+                'current' => $info['usage']['salas'] ?? 0,
+            ], 403);
+        }
+    }
 
     $code = strtoupper(preg_replace('/[^A-Z0-9]/', '', strtoupper($data['name'])));
     $code = substr($code, 0, 6) . '-' . strtoupper(substr(uniqid(), -4));

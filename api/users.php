@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/plans.php';
 
 handleCors();
 header('Content-Type: application/json; charset=utf-8');
@@ -28,10 +29,26 @@ if ($method === 'POST') {
     if (empty($data['email']) || empty($data['password']))
         jsonError('Email and password required');
     $targetGymId = $user['role'] === 'superadmin' ? ($data['gym_id'] ?? null) : $user['gym_id'];
+    $newRole = $data['role'] ?? 'instructor';
+
+    // ── Plan limit check for instructor creation (skipped for superadmin) ───
+    if ($user['role'] !== 'superadmin' && $newRole === 'instructor' && $targetGymId) {
+        if (!checkInstructorLimit((int) $targetGymId)) {
+            $info = getGymPlanInfo((int) $targetGymId);
+            $limit = $info['limits']['instructors'] ?? 1;
+            jsonResponse([
+                'error' => 'Límite de instructores alcanzado para tu plan.',
+                'code' => 'INSTRUCTOR_LIMIT',
+                'limit' => $limit,
+                'current' => $info['usage']['instructors'] ?? 0,
+            ], 403);
+        }
+    }
+
     $stmt = db()->prepare("INSERT INTO users (gym_id, name, email, password_hash, role) VALUES (?,?,?,?,?)");
-    $stmt->execute([$targetGymId, sanitize($data['name'] ?? ''), strtolower(trim($data['email'])), password_hash($data['password'], PASSWORD_BCRYPT), $data['role'] ?? 'instructor']);
+    $stmt->execute([$targetGymId, sanitize($data['name'] ?? ''), strtolower(trim($data['email'])), password_hash($data['password'], PASSWORD_BCRYPT), $newRole]);
     $newId = db()->lastInsertId();
-    if (($data['role'] ?? '') === 'instructor')
+    if ($newRole === 'instructor')
         db()->prepare("INSERT INTO instructor_profiles (user_id) VALUES (?)")->execute([$newId]);
     jsonResponse(['id' => $newId], 201);
 }

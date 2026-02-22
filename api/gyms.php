@@ -77,8 +77,8 @@ if ($method === 'POST' && !isset($_GET['logo'])) {
     $trialEnd = date('Y-m-d', strtotime('+30 days'));
     db()->prepare(
         "INSERT IGNORE INTO gym_subscriptions 
-            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end)
-         VALUES (?, 'trial', 'active', ?, CURDATE(), ?)"
+            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end, extra_salas, price_ars)
+         VALUES (?, 'instructor', 'active', ?, CURDATE(), ?, 0, 0)"
     )->execute([$newId, $trialEnd, $trialEnd]);
 
     jsonResponse(['id' => $newId, 'slug' => $slug], 201);
