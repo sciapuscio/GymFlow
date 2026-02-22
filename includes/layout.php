@@ -280,7 +280,7 @@ function layout_footer(array $user): void
                                 const sock = io(window.GF_SOCKET_URL || 'http://localhost:3001',
                                     { transports: ['websocket', 'polling'] });
                                 sock.on('connect', () => {
-                                    sock.emit('join:system', { role: '<?php echo $broadcastRole ?>' });
+                                    sock.emit('join:system', { role: <?php echo json_encode($user['role'] ?? 'admin'); ?> });
                                 });
                                 sock.on('system:broadcast', showBroadcast);
                             }

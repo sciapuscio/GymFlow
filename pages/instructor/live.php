@@ -1032,8 +1032,8 @@ layout_footer($user);
 <script src="<?php echo BASE_URL ?>/assets/js/stickman.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/live-control.js"></script>
 <script>
-    const SESSION_DATA = <?php echo json_encode(['id' => $id, 'blocks' => $blocks, 'status' => $session['status'], 'sala_id' => (int) $session['sala_id'], 'current_block_index' => (int) $session['current_block_index'], 'current_block_elapsed' => (int) $session['current_block_elapsed']]) ?>;
-    const SALAS = <?php echo json_encode($salas) ?>;
+    const SESSION_DATA = <?php echo json_encode(['id' => $id, 'blocks' => $blocks, 'status' => $session['status'], 'sala_id' => (int) $session['sala_id'], 'current_block_index' => (int) $session['current_block_index'], 'current_block_elapsed' => (int) $session['current_block_elapsed']], JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+    const SALAS = <?php echo json_encode($salas, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
     const SPOTIFY_CONNECTED = <?php echo $spotifyConnected ? 'true' : 'false' ?>;
     window.GF_SOCKET_URL = 'http://localhost:3001';
 
