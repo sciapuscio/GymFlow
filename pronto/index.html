@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GymFlow – Muy Pronto | La plataforma de entrenamiento que estabas esperando</title>
+    <meta name="description"
+        content="GymFlow está a punto de lanzarse. La plataforma profesional para gimnasios de HIIT, funcional y CrossFit. Anotate y accedé primero." />
+    <meta name="robots" content="noindex, follow" />
+
+    <!-- OG -->
+    <meta property="og:title" content="GymFlow – Muy Pronto 🚀" />
+    <meta property="og:description"
+        content="La plataforma que tus alumnos van a sentir desde el primer segundo. Estamos a punto de lanzar." />
+    <meta property="og:image" content="https://www.gymflow.com.ar/web/og-image.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_AR" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../web/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="../web/favicon.svg" />
+    <link rel="apple-touch-icon" href="../web/apple-touch-icon.png" />
+    <meta name="theme-color" content="#e5ff3d" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+
+    <style>
+        /* ── TOKENS ──────────────────────────────────────────── */
+        :root {
+            --bg: #0a0b0f;
+            --bg2: #0f1117;
+            --surface: #1a1d27;
+            --border: rgba(255, 255, 255, 0.07);
+            --primary: #e5ff3d;
+            --primary2: #b8f200;
+            --purple: #6c63ff;
+            --text: #ffffff;
+            --muted: rgba(255, 255, 255, 0.55);
+            --dim: rgba(255, 255, 255, 0.3);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --grad: linear-gradient(135deg, #e5ff3d 0%, #b8f200 100%);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── CANVAS BG ───────────────────────────────────────── */
+        #bgCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Gradient orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+            animation: orbFloat 12s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: #e5ff3d;
+            top: -200px;
+            right: -150px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: #6c63ff;
+            bottom: -100px;
+            left: -150px;
+            animation-delay: -5s;
+        }
+
+        .orb-3 {
+            width: 350px;
+            height: 350px;
+            background: #e5ff3d;
+            bottom: 30%;
+            right: 10%;
+            opacity: 0.1;
+            animation-delay: -8s;
+        }
+
+        @keyframes orbFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(30px, -40px) scale(1.05);
+            }
+
+            66% {
+                transform: translate(-20px, 20px) scale(0.97);
+            }
+        }
+
+        /* ── GRID LINES OVERLAY ──────────────────────────────── */
+        .grid-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(229, 255, 61, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(229, 255, 61, 0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        /* ── LAYOUT ──────────────────────────────────────────── */
+        .page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 24px;
+        }
+
+        /* ── HEADER ──────────────────────────────────────────── */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 40px;
+            background: rgba(10, 11, 15, 0.7);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            text-decoration: none;
+        }
+
+        .logo-gym {
+            color: var(--primary);
+        }
+
+        .logo-flow {
+            color: var(--text);
+        }
+
+        .btn-wa {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(37, 211, 102, 0.12);
+            border: 1px solid rgba(37, 211, 102, 0.3);
+            color: #25d366;
+            text-decoration: none;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 9px 18px;
+            border-radius: 100px;
+            transition: all 0.2s;
+        }
+
+        .btn-wa:hover {
+            background: rgba(37, 211, 102, 0.22);
+            transform: translateY(-1px);
+        }
+
+        /* ── HERO ────────────────────────────────────────────── */
+        .hero {
+            text-align: center;
+            max-width: 780px;
+            padding-top: 80px;
+        }
+
+        /* Badge "Muy pronto" */
+        .badge-soon {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(229, 255, 61, 0.08);
+            border: 1px solid rgba(229, 255, 61, 0.25);
+            border-radius: 100px;
+            padding: 8px 20px;
+            font-family: var(--font-display);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 36px;
+            animation: fadeUp 0.8s ease both;
+        }
+
+        .badge-dot-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(229, 255, 61, .5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 7px rgba(229, 255, 61, 0);
+            }
+        }
+
+        /* Main headline */
+        h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.8rem, 7vw, 5.5rem);
+            font-weight: 900;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            margin-bottom: 28px;
+            animation: fadeUp 0.8s 0.1s ease both;
+        }
+
+        .gradient-text {
+            background: var(--grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: var(--muted);
+            line-height: 1.7;
+            max-width: 540px;
+            margin: 0 auto 52px;
+            animation: fadeUp 0.8s 0.2s ease both;
+        }
+
+        /* ── COUNTDOWN ───────────────────────────────────────── */
+        .countdown {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 56px;
+            animation: fadeUp 0.8s 0.3s ease both;
+        }
+
+        .cd-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cd-num {
+            font-family: var(--font-display);
+            font-size: clamp(2.4rem, 6vw, 4rem);
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 28px;
+            min-width: 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cd-num::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(229, 255, 61, 0.06) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .cd-label {
+            font-family: var(--font-display);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--dim);
+        }
+
+        .cd-sep {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            color: rgba(229, 255, 61, 0.4);
+            align-self: flex-start;
+            padding-top: 14px;
+        }
+
+        /* ── EMAIL FORM ──────────────────────────────────────── */
+        .email-section {
+            width: 100%;
+            max-width: 520px;
+            margin: 0 auto;
+            animation: fadeUp 0.8s 0.4s ease both;
+        }
+
+        .email-label {
+            font-family: var(--font-display);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .email-form {
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1.5px solid var(--border);
+            border-radius: 100px;
+            padding: 6px 6px 6px 24px;
+            transition: border-color 0.2s;
+        }
+
+        .email-form:focus-within {
+            border-color: rgba(229, 255, 61, 0.5);
+        }
+
+        .email-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            color: var(--text);
+            min-width: 0;
+        }
+
+        .email-input::placeholder {
+            color: var(--dim);
+        }
+
+        .btn-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--grad);
+            color: #0a0b0f;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 0.9rem;
+            border: none;
+            border-radius: 100px;
+            padding: 12px 24px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px rgba(229, 255, 61, 0.35);
+        }
+
+        .btn-cta:active {
+            transform: translateY(0);
+        }
+
+        .email-note {
+            font-size: 0.78rem;
+            color: var(--dim);
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        /* ─ Success state ─ */
+        .email-success {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: rgba(229, 255, 61, 0.07);
+            border: 1px solid rgba(229, 255, 61, 0.3);
+            border-radius: 100px;
+            padding: 16px 24px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .email-success.show {
+            display: flex;
+        }
+
+        /* ── FEATURES ROW ────────────────────────────────────── */
+        .features-row {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 64px;
+            animation: fadeUp 0.8s 0.5s ease both;
+        }
+
+        .feat-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 9px 18px;
+            font-family: var(--font-display);
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: var(--muted);
+            transition: all 0.25s;
+        }
+
+        .feat-chip:hover {
+            background: rgba(229, 255, 61, 0.07);
+            border-color: rgba(229, 255, 61, 0.2);
+            color: var(--text);
+        }
+
+        .feat-chip-icon {
+            font-size: 1rem;
+        }
+
+        /* ── FOOTER ──────────────────────────────────────────── */
+        footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 32px 24px;
+            border-top: 1px solid var(--border);
+            margin-top: 80px;
+            width: 100%;
+        }
+
+        .footer-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .footer-logo {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 900;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            color: var(--dim);
+            text-decoration: none;
+            font-size: 0.82rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-copy {
+            font-size: 0.78rem;
+            color: var(--dim);
+        }
+
+        /* ── ANIMATIONS ──────────────────────────────────────── */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(24px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── RESPONSIVE ──────────────────────────────────────── */
+        @media (max-width: 600px) {
+            header {
+                padding: 16px 20px;
+            }
+
+            .btn-wa span {
+                display: none;
+            }
+
+            .countdown {
+                gap: 10px;
+            }
+
+            .cd-num {
+                min-width: 72px;
+                padding: 14px 18px;
+            }
+
+            .email-form {
+                flex-direction: column;
+                border-radius: 16px;
+                padding: 14px;
+                gap: 12px;
+            }
+
+            .btn-cta {
+                border-radius: 100px;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .email-input {
+                text-align: center;
+            }
+
+            .cd-sep {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-overlay"></div>
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Header -->
+    <header>
+        <a href="#" class="logo">
+            <span class="logo-gym">Gym</span><span class="logo-flow">Flow</span>
+        </a>
+        <a href="https://wa.me/5491133786503" class="btn-wa" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+            </svg>
+            <span>Hablanos</span>
+        </a>
+    </header>
+
+    <!-- Main -->
+    <main class="page">
+        <section class="hero" aria-label="Próximo lanzamiento GymFlow">
+
+            <!-- Badge -->
+            <div class="badge-soon">
+                <span class="badge-dot-pulse"></span>
+                Muy pronto
+            </div>
+
+            <!-- H1 -->
+            <h1>
+                La herramienta que<br />
+                <span class="gradient-text">transforma cada clase</span><br />
+                está llegando
+            </h1>
+
+            <p class="subtitle">
+                GymFlow es la plataforma profesional para gimnasios de funcional, HIIT y CrossFit.
+                Sesiones en vivo, cronómetros inteligentes, música sincronizada y
+                la experiencia que tus alumnos van a recordar.
+            </p>
+
+            <!-- Countdown -->
+            <div class="countdown" role="timer" aria-label="Cuenta regresiva al lanzamiento">
+                <div class="cd-block">
+                    <span class="cd-num" id="cd-days">00</span>
+                    <span class="cd-label">Días</span>
+                </div>
+                <span class="cd-sep" aria-hidden="true">:</span>
+                <div class="cd-block">
+                    <span class="cd-num" id="cd-hours">00</span>
+                    <span class="cd-label">Hs</span>
+                </div>
+                <span class="cd-sep" aria-hidden="true">:</span>
+                <div class="cd-block">
+                    <span class="cd-num" id="cd-mins">00</span>
+                    <span class="cd-label">Min</span>
+                </div>
+                <span class="cd-sep" aria-hidden="true">:</span>
+                <div class="cd-block">
+                    <span class="cd-num" id="cd-secs">00</span>
+                    <span class="cd-label">Seg</span>
+                </div>
+            </div>
+
+            <!-- Email form -->
+            <div class="email-section">
+                <span class="email-label">Anotate y sé de los primeros en acceder al lanzamiento</span>
+
+                <form class="email-form" id="emailForm" novalidate>
+                    <input class="email-input" id="emailInput" type="email" placeholder="tu@email.com"
+                        autocomplete="email" aria-label="Tu email" />
+                    <button type="submit" class="btn-cta">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <line x1="22" y1="2" x2="11" y2="13" />
+                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                        Anotarme
+                    </button>
+                </form>
+
+                <div class="email-success" id="emailSuccess" role="status">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                        aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    ¡Listo! Te avisamos el día del lanzamiento.
+                </div>
+
+                <p class="email-note">Sin spam. Solo te avisamos cuando esté disponible.</p>
+            </div>
+
+            <!-- Feature chips -->
+            <div class="features-row" aria-label="Características principales">
+                <div class="feat-chip"><span class="feat-chip-icon">⚡</span>HIIT &amp; Tabata</div>
+                <div class="feat-chip"><span class="feat-chip-icon">🎵</span>Integración Spotify</div>
+                <div class="feat-chip"><span class="feat-chip-icon">📺</span>Pantalla para alumnos</div>
+                <div class="feat-chip"><span class="feat-chip-icon">🏋️</span>Multi-sala</div>
+                <div class="feat-chip"><span class="feat-chip-icon">📚</span>Biblioteca de ejercicios</div>
+                <div class="feat-chip"><span class="feat-chip-icon">🇦🇷</span>Hecho en Argentina</div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-logo">
+                <span class="logo-gym">Gym</span><span class="logo-flow">Flow</span>
+            </div>
+            <nav class="footer-links" aria-label="Links del pie">
+                <a href="https://wa.me/5491133786503" target="_blank" rel="noopener">WhatsApp</a>
+                <a href="mailto:hola@gymflow.com.ar">Email</a>
+                <a href="https://www.gymflow.com.ar">Sitio oficial</a>
+            </nav>
+            <p class="footer-copy">&copy; 2026 GymFlow · Argentina · Hecho con ⚡ para instructores que van en serio</p>
+        </div>
+    </footer>
+
+    <script>
+        // ── COUNTDOWN ──────────────────────────────────────────────────────────────
+        // Launch date: 30 days from page creation date
+        const LAUNCH = new Date('2026-03-25T00:00:00-03:00');
+
+        function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+
+        function tick() {
+            const now = Date.now();
+            const diff = LAUNCH - now;
+
+            if (diff <= 0) {
+                document.getElementById('cd-days').textContent = '00';
+                document.getElementById('cd-hours').textContent = '00';
+                document.getElementById('cd-mins').textContent = '00';
+                document.getElementById('cd-secs').textContent = '00';
+                return;
+            }
+
+            const days = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+
+            document.getElementById('cd-days').textContent = pad(days);
+            document.getElementById('cd-hours').textContent = pad(hours);
+            document.getElementById('cd-mins').textContent = pad(mins);
+            document.getElementById('cd-secs').textContent = pad(secs);
+        }
+        tick();
+        setInterval(tick, 1000);
+
+        // ── EMAIL FORM ─────────────────────────────────────────────────────────────
+        const form = document.getElementById('emailForm');
+        const input = document.getElementById('emailInput');
+        const success = document.getElementById('emailSuccess');
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            const email = input.value.trim();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                input.style.setProperty('color', '#ff5f5f');
+                input.focus();
+                setTimeout(() => input.style.removeProperty('color'), 1500);
+                return;
+            }
+
+            // Save to localStorage (backend later)
+            const leads = JSON.parse(localStorage.getItem('gf_leads') || '[]');
+            if (!leads.includes(email)) { leads.push(email); }
+            localStorage.setItem('gf_leads', JSON.stringify(leads));
+
+            // Show success
+            form.style.display = 'none';
+            success.classList.add('show');
+        });
+
+        // ── PARTICLES CANVAS ───────────────────────────────────────────────────────
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let W, H, particles;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+            particles = Array.from({ length: 55 }, () => ({
+                x: Math.random() * W,
+                y: Math.random() * H,
+                r: Math.random() * 1.8 + 0.4,
+                dx: (Math.random() - 0.5) * 0.3,
+                dy: (Math.random() - 0.5) * 0.3,
+                a: Math.random() * 0.5 + 0.1,
+            }));
+        }
+
+        function drawParticles() {
+            ctx.clearRect(0, 0, W, H);
+            for (const p of particles) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(229,255,61,${p.a})`;
+                ctx.fill();
+                p.x += p.dx; p.y += p.dy;
+                if (p.x < 0) p.x = W;
+                if (p.x > W) p.x = 0;
+                if (p.y < 0) p.y = H;
+                if (p.y > H) p.y = 0;
+            }
+            requestAnimationFrame(drawParticles);
+        }
+
+        window.addEventListener('resize', () => { resize(); initParticles(); });
+        resize();
+        initParticles();
+        drawParticles();
+    </script>
+
+</body>
+
+</html>
