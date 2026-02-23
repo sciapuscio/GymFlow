@@ -144,6 +144,7 @@ function layout_footer(array $user): void
                 <script>
                     window.GF_USER = <?php echo json_encode(['id' => $user['id'], 'role' => $user['role'], 'gym_id' => $user['gym_id'] ?? null, 'name' => $user['name']]) ?>;
                     window.GF_BASE = '<?php echo defined('BASE_URL') ? BASE_URL : '' ?>';
+                    window.GF_SOCKET_URL = '<?php echo defined('SOCKET_URL') ? SOCKET_URL : 'http://localhost:3000' ?>';
 
                     function showToast(msg, type = 'info') {
                         const t = document.createElement('div');
@@ -307,7 +308,7 @@ function layout_footer(array $user): void
                     <script>
                         if (typeof io === 'undefined') {
                             var _s = document.createElement('script');
-                            _s.src = 'http://localhost:3001/socket.io/socket.io.js';
+                            _s.src = (window.GF_SOCKET_URL || 'http://localhost:3000') + '/socket.io/socket.io.js';
                             _s.onerror = function () { };
                             document.head.appendChild(_s);
                         }
