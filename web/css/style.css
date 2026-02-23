@@ -1860,6 +1860,12 @@ ul {
     color: var(--color-text-dim);
 }
 
+.footer-bottom-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
 .footer-legal {
     display: flex;
     gap: 24px;
@@ -1873,6 +1879,36 @@ ul {
 
 .footer-legal a:hover {
     color: var(--color-text-muted);
+}
+
+/* ── TRABAJO ARGENTINO BADGE ─────────────────────── */
+.ar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(116, 172, 223, 0.18);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-family: var(--font-display);
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+    transition: all 0.25s;
+    white-space: nowrap;
+}
+
+.ar-badge:hover {
+    background: rgba(116, 172, 223, 0.08);
+    border-color: rgba(116, 172, 223, 0.35);
+    color: var(--color-text-muted);
+}
+
+.ar-badge svg {
+    border-radius: 3px;
+    flex-shrink: 0;
 }
 
 /* ============================================================

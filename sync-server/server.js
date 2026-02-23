@@ -1,16 +1,23 @@
 /**
  * GymFlow Sync Server — Socket.IO Real-Time Session Brain
  * The ONLY clock in the system. Clients receive ticks, they never count.
- * Port: 3001
  */
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env.local') });
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mysql = require('mysql2/promise');
 
 // ─── Config ────────────────────────────────────────────────────────────────
-const PORT = 3001;
-const DB = { host: 'localhost', user: 'root', password: '', database: 'gymflow' };
+const PORT = parseInt(process.env.PORT) || 3001;
+const DB = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'gymflow',
+};
 
 // ─── Setup ─────────────────────────────────────────────────────────────────
 const app = express();

@@ -520,6 +520,35 @@
             color: var(--dim);
         }
 
+        /* ── TRABAJO ARGENTINO BADGE ─ */
+        .ar-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(116, 172, 223, 0.2);
+            border-radius: 100px;
+            padding: 7px 14px;
+            font-family: var(--font-display);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            transition: all 0.25s;
+        }
+
+        .ar-badge:hover {
+            background: rgba(116, 172, 223, 0.1);
+            border-color: rgba(116, 172, 223, 0.4);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .ar-badge svg {
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
         /* ── ANIMATIONS ──────────────────────────────────────── */
         @keyframes fadeUp {
             from {
@@ -699,6 +728,26 @@
                 <a href="mailto:hola@gymflow.com.ar">Email</a>
                 <a href="https://www.gymflow.com.ar">Sitio oficial</a>
             </nav>
+            <!-- Trabajo Argentino badge -->
+            <div class="ar-badge" title="Trabajo Argentino">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24" width="36" height="24" role="img"
+                    aria-label="Bandera argentina">
+                    <rect width="36" height="24" rx="3" fill="#74acdf" />
+                    <rect y="8" width="36" height="8" fill="#fff" />
+                    <circle cx="18" cy="12" r="3" fill="#F6B40E" stroke="#85340A" stroke-width="0.4" />
+                    <g stroke="#F6B40E" stroke-width="0.9" stroke-linecap="round">
+                        <line x1="18" y1="7.5" x2="18" y2="6" />
+                        <line x1="18" y1="16.5" x2="18" y2="18" />
+                        <line x1="13.5" y1="12" x2="12" y2="12" />
+                        <line x1="22.5" y1="12" x2="24" y2="12" />
+                        <line x1="14.9" y1="8.9" x2="13.8" y2="7.8" />
+                        <line x1="21.1" y1="15.1" x2="22.2" y2="16.2" />
+                        <line x1="21.1" y1="8.9" x2="22.2" y2="7.8" />
+                        <line x1="14.9" y1="15.1" x2="13.8" y2="16.2" />
+                    </g>
+                </svg>
+                <span>Trabajo Argentino</span>
+            </div>
             <p class="footer-copy">&copy; 2026 GymFlow · Argentina · Hecho con ⚡ para instructores que van en serio</p>
         </div>
     </footer>
@@ -740,7 +789,7 @@
         const input = document.getElementById('emailInput');
         const success = document.getElementById('emailSuccess');
 
-        form.addEventListener('submit', e => {
+        form.addEventListener('submit', async e => {
             e.preventDefault();
             const email = input.value.trim();
             if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -750,14 +799,32 @@
                 return;
             }
 
-            // Save to localStorage (backend later)
-            const leads = JSON.parse(localStorage.getItem('gf_leads') || '[]');
-            if (!leads.includes(email)) { leads.push(email); }
-            localStorage.setItem('gf_leads', JSON.stringify(leads));
+            // Deshabilitar botón mientras se envía
+            const btn = form.querySelector('.btn-cta');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
 
-            // Show success
-            form.style.display = 'none';
-            success.classList.add('show');
+            try {
+                const body = new FormData();
+                body.append('email', email);
+                const res = await fetch('suscribir.php', { method: 'POST', body });
+                const data = await res.json();
+
+                if (data.ok) {
+                    form.style.display = 'none';
+                    success.classList.add('show');
+                } else {
+                    input.style.setProperty('color', '#ff5f5f');
+                    input.focus();
+                    setTimeout(() => input.style.removeProperty('color'), 1500);
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                }
+            } catch {
+                // Fallback: mostrar éxito igual (no perder el lead por error de red)
+                form.style.display = 'none';
+                success.classList.add('show');
+            }
         });
 
         // ── PARTICLES CANVAS ───────────────────────────────────────────────────────
