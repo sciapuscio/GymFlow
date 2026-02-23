@@ -350,7 +350,7 @@ const GFBuilder = (() => {
         const ex = exercises.find(e => e.id == exId);
         if (!ex) return;
         if (!blocks[selectedIdx].exercises) blocks[selectedIdx].exercises = [];
-        blocks[selectedIdx].exercises.push({ id: ex.id, name: ex.name, reps: 10, duration: ex.duration_rec });
+        blocks[selectedIdx].exercises.push({ id: ex.id, name: ex.name, reps: 10 });
         renderCanvas();
         selectBlock(selectedIdx);
         updateSummary();
@@ -361,7 +361,7 @@ const GFBuilder = (() => {
         const usedMuscles = blocks.filter((_, i) => i !== blockIdx && i > blockIdx - 2).flatMap(b => (b.exercises || []).map(e => exercises.find(x => x.id === e.id)?.muscle_group)).filter(Boolean);
         try {
             const result = await GF.post(window.GF_BASE + '/api/exercises.php?random=1', { count: 3, exclude_muscle: usedMuscles });
-            block.exercises = result.map(e => ({ id: e.id, name: e.name, reps: 10, duration: e.duration_rec }));
+            block.exercises = result.map(e => ({ id: e.id, name: e.name, reps: 10 }));
             renderCanvas();
             selectBlock(blockIdx);
             showToast('Ejercicios generados', 'success');

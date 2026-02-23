@@ -103,7 +103,7 @@
                     ? exs.map(e => {
                         const n = e?.name || (typeof e === 'string' ? e : '');
                         // Isometric exercises have duration instead of reps
-                        const r = e?.duration ? `${e.duration}s` : (e?.reps ? `${e.reps}×` : '');
+                        const r = e?.reps ? `${e.reps}×` : (e?.duration ? `${e.duration}s` : '');
                         return r ? `${r} ${n}` : n;
                     }).filter(Boolean).join('  ·  ')
                     : '';
