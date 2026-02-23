@@ -100,6 +100,7 @@ layout_footer($user);
             </form>
         </div>
 
+
         <!-- Change password -->
         <div class="card">
             <h2 style="font-size:15px;font-weight:700;margin-bottom:20px">Cambiar contraseña</h2>
@@ -126,8 +127,85 @@ layout_footer($user);
             </form>
         </div>
 
+        <!-- 2FA / OTP card -->
+        <?php
+        $otpRow = db()->prepare("SELECT otp_enabled FROM users WHERE id = ?");
+        $otpRow->execute([$user['id']]);
+        $otpEnabled = (bool) $otpRow->fetchColumn();
+        ?>
+        <div class="card" id="otp-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <h2 style="font-size:15px;font-weight:700;margin-bottom:0">🔒 Autenticación de dos factores</h2>
+                <?php if ($otpEnabled): ?>
+                    <span class="badge badge-success" style="font-size:11px">Activo 🔒</span>
+                <?php endif; ?>
+            </div>
+            <p style="font-size:13px;color:var(--gf-text-muted);margin-bottom:18px;line-height:1.6">
+                Usá Google Authenticator, Authy o cualquier app TOTP para proteger tu cuenta con un código de 6 dígitos
+                al iniciar sesión.
+            </p>
+
+            <?php if (!$otpEnabled): ?>
+                <!-- Setup flow (OTP not yet active) -->
+                <div id="otp-setup-idle">
+                    <button class="btn btn-primary btn-sm" onclick="otpStartSetup()">Activar 2FA</button>
+                </div>
+                <div id="otp-setup-qr" style="display:none">
+                    <p style="font-size:13px;margin-bottom:16px">
+                        1. Escaneá el QR con tu app autenticadora (o ingresá el código manualmente).<br>
+                        2. Ingresá el código de 6 dígitos que te genera la app para confirmar.
+                    </p>
+                    <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px">
+                        <img id="otp-qr-img" src="" alt="QR Code"
+                            style="width:160px;height:160px;border-radius:10px;border:2px solid var(--gf-border)">
+                        <div>
+                            <div
+                                style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gf-text-muted);margin-bottom:6px">
+                                Código manual</div>
+                            <code id="otp-secret-txt"
+                                style="font-size:13px;letter-spacing:.12em;background:var(--gf-surface-2);padding:6px 10px;border-radius:6px;border:1px solid var(--gf-border)"></code>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:flex-end">
+                        <div style="flex:1">
+                            <label class="form-label">Código de verificación</label>
+                            <input type="text" id="otp-verify-code" class="form-input" maxlength="6" inputmode="numeric"
+                                pattern="[0-9]*" placeholder="123456"
+                                style="letter-spacing:.2em;font-size:18px;font-weight:700"
+                                oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+                        </div>
+                        <button class="btn btn-primary" onclick="otpConfirmEnable()"
+                            style="height:44px;white-space:nowrap">Confirmar activación</button>
+                    </div>
+                    <div id="otp-setup-error" style="font-size:12px;color:#f87171;margin-top:8px;min-height:16px"></div>
+                </div>
+            <?php else: ?>
+                <!-- Disable flow (OTP active) -->
+                <div id="otp-disable-idle">
+                    <button class="btn btn-secondary btn-sm"
+                        onclick="document.getElementById('otp-disable-form').style.display='flex'; this.style.display='none'">
+                        Desactivar 2FA
+                    </button>
+                </div>
+                <div id="otp-disable-form" style="display:none;flex-direction:column;gap:12px">
+                    <div>
+                        <label class="form-label">Código actual de tu app para confirmar</label>
+                        <input type="text" id="otp-disable-code" class="form-input" maxlength="6" inputmode="numeric"
+                            pattern="[0-9]*" placeholder="123456"
+                            style="letter-spacing:.2em;font-size:18px;font-weight:700;max-width:180px"
+                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+                        <div id="otp-disable-error" style="font-size:12px;color:#f87171;margin-top:4px;min-height:16px">
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" style="align-self:flex-start" onclick="otpDisable()">Desactivar
+                        definitivamente</button>
+                </div>
+            <?php endif; ?>
+        </div>
+
     </div>
 </div>
+
 
 <style>
     .form-label {
@@ -236,5 +314,44 @@ layout_footer($user);
             showToast(res?.error || 'Error al cambiar la contraseña', 'error');
         }
     });
+
+    // ── 2FA / OTP ─────────────────────────────────────────────────────────────────
+    async function otpStartSetup() {
+        const res = await GF.post(`${window.GF_BASE}/api/auth.php?action=otp_setup`, {});
+        if (!res?.secret) { showToast('Error al generar el código OTP', 'error'); return; }
+        document.getElementById('otp-qr-img').src = res.qr_url;
+        document.getElementById('otp-secret-txt').textContent = res.secret;
+        document.getElementById('otp-setup-idle').style.display = 'none';
+        document.getElementById('otp-setup-qr').style.display = 'block';
+        document.getElementById('otp-verify-code').focus();
+    }
+
+    async function otpConfirmEnable() {
+        const code = document.getElementById('otp-verify-code').value.trim();
+        const errEl = document.getElementById('otp-setup-error');
+        errEl.textContent = '';
+        if (code.length !== 6) { errEl.textContent = 'Ingresá los 6 dígitos'; return; }
+        const res = await GF.post(`${window.GF_BASE}/api/auth.php?action=otp_enable`, { code });
+        if (res?.ok) {
+            showToast('2FA activado correctamente 🔒', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            errEl.textContent = res?.error || 'Código incorrecto. Intentá de nuevo.';
+        }
+    }
+
+    async function otpDisable() {
+        const code = document.getElementById('otp-disable-code').value.trim();
+        const errEl = document.getElementById('otp-disable-error');
+        errEl.textContent = '';
+        if (code.length !== 6) { errEl.textContent = 'Ingresá los 6 dígitos'; return; }
+        const res = await GF.post(`${window.GF_BASE}/api/auth.php?action=otp_disable`, { code });
+        if (res?.ok) {
+            showToast('2FA desactivado', 'info');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            errEl.textContent = res?.error || 'Código incorrecto. Intentá de nuevo.';
+        }
+    }
 </script>
 <?php layout_end(); ?>

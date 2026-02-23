@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../includes/totp.php';
 
 function getCurrentUser(): ?array
 {
@@ -115,20 +116,80 @@ function login(string $email, string $password): ?array
         }
     }
 
-    // Generate token
+    // ── OTP check: if enabled, don't create a full session yet ───────────────
+    if (!empty($user['otp_enabled']) && !empty($user['otp_secret'])) {
+        return [
+            'otp_required' => true,
+            'otp_token' => _signOtpTempToken((int) $user['id']),
+        ];
+    }
+
+    return _createSession($user);
+}
+
+/**
+ * Second step of OTP login: verify the 6-digit code and create a full session.
+ * Returns the same shape as login() on success, or null on failure.
+ */
+function verifyOtpLogin(string $otpToken, string $code): ?array
+{
+    $userId = _verifyOtpTempToken($otpToken);
+    if (!$userId)
+        return null;
+
+    $stmt = db()->prepare("SELECT * FROM users WHERE id = ? AND active = 1");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+    if (!$user || empty($user['otp_secret']))
+        return null;
+
+    if (!TOTP::verify($user['otp_secret'], $code))
+        return null;
+
+    return _createSession($user);
+}
+
+/** Build a token that signs user_id + expiry with a server-side HMAC. */
+function _signOtpTempToken(int $userId): string
+{
+    $expires = time() + 300; // 5 minutes
+    $payload = $userId . ':' . $expires;
+    $sig = hash_hmac('sha256', $payload, defined('OTP_HMAC_KEY') ? OTP_HMAC_KEY : 'gymflow_otp_key');
+    return base64_encode($payload . ':' . $sig);
+}
+
+/** Verify and extract user_id from a temp OTP token. Returns null if invalid/expired. */
+function _verifyOtpTempToken(string $token): ?int
+{
+    $raw = base64_decode($token);
+    if ($raw === false)
+        return null;
+    $parts = explode(':', $raw, 3);
+    if (count($parts) !== 3)
+        return null;
+    [$userId, $expires, $sig] = $parts;
+    $payload = $userId . ':' . $expires;
+    $expected = hash_hmac('sha256', $payload, defined('OTP_HMAC_KEY') ? OTP_HMAC_KEY : 'gymflow_otp_key');
+    if (!hash_equals($expected, $sig))
+        return null;
+    if ((int) $expires < time())
+        return null;
+    return (int) $userId;
+}
+
+/** Create a full session for a user row and return the auth payload. */
+function _createSession(array $user): array
+{
     $token = bin2hex(random_bytes(SESSION_TOKEN_BYTES));
     $expires = date('Y-m-d H:i:s', time() + SESSION_LIFETIME);
 
     db()->prepare("INSERT INTO sessions_auth (user_id, token, expires_at) VALUES (?,?,?)")
         ->execute([$user['id'], $token, $expires]);
 
-    // Only update last_login if the user has logged in before.
-    // New users (last_login IS NULL) keep NULL so the onboarding tour fires.
-    // The tour's dismiss/finish calls ?action=first_login which sets it.
     db()->prepare("UPDATE users SET last_login = NOW() WHERE id = ? AND last_login IS NOT NULL")
         ->execute([$user['id']]);
 
-    unset($user['password_hash']);
+    unset($user['password_hash'], $user['otp_secret']);
     $user['token'] = $token;
     $user['expires_at'] = $expires;
     return $user;

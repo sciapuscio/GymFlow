@@ -1,10 +1,8 @@
 ﻿<?php
 require_once __DIR__ . '/config/app.php';
-require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
-require_once __DIR__ . '/includes/helpers.php';
 
-// Check if already logged in
+// Redirect if already logged in
 $user = getCurrentUser();
 if ($user) {
     $dest = match ($user['role']) {
@@ -14,24 +12,6 @@ if ($user) {
     };
     header("Location: $dest");
     exit;
-}
-
-$error = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $result = login($_POST['email'] ?? '', $_POST['password'] ?? '');
-    if ($result && empty($result['error'])) {
-        setcookie('gf_token', $result['token'], time() + SESSION_LIFETIME, '/', '', false, true);
-        $dest = match ($result['role']) {
-            'superadmin' => BASE_URL . '/pages/superadmin/dashboard.php',
-            'admin' => BASE_URL . '/pages/admin/dashboard.php',
-            default => BASE_URL . '/pages/instructor/dashboard.php',
-        };
-        header("Location: $dest");
-        exit;
-    }
-    $error = ($result['error'] ?? '') === 'gym_inactive'
-        ? 'Tu cuenta está suspendida. Contactá al administrador.'
-        : 'Email o contraseña incorrectos';
 }
 ?>
 <!DOCTYPE html>
@@ -235,31 +215,145 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="login-subtitle">Gestión de Clases Premium</div>
         </div>
 
-        <?php if ($error): ?>
-            <div class="error-toast">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <?php echo htmlspecialchars($error) ?>
-            </div>
-        <?php endif; ?>
+        <!-- ── Error banner ─────────────────────────────────────── -->
+        <div class="error-toast" id="login-error" style="display:none">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span id="login-error-msg">Error</span>
+        </div>
 
-        <form method="POST">
+        <!-- ── Step 1: email + password ──────────────────────────── -->
+        <form id="login-form" style="display:flex;flex-direction:column;gap:0">
             <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" name="email" class="form-control" placeholder="tu@gimnasio.com" required autofocus
-                    value="<?php echo htmlspecialchars($_POST['email'] ?? '') ?>">
+                <input type="email" id="f-email" class="form-control" placeholder="tu@gimnasio.com" required autofocus>
             </div>
             <div class="form-group">
                 <label class="form-label">Contraseña</label>
-                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                <input type="password" id="f-password" class="form-control" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="login-btn">INGRESAR</button>
+            <button type="submit" id="login-btn" class="login-btn" style="margin-top:8px">INGRESAR</button>
         </form>
 
-
+        <!-- ── Step 2: OTP code ───────────────────────────────────── -->
+        <div id="otp-step" style="display:none;flex-direction:column;gap:0;text-align:center">
+            <div style="font-size:40px;margin-bottom:8px">🔐</div>
+            <div style="font-size:15px;font-weight:600;margin-bottom:4px">Verificación en dos pasos</div>
+            <div style="font-size:13px;color:#8888aa;margin-bottom:24px">Ingresá el código de 6 dígitos de tu app
+                autenticadora</div>
+            <div style="position:relative;margin-bottom:16px">
+                <input type="text" id="otp-code" class="form-control" maxlength="6" inputmode="numeric" pattern="[0-9]*"
+                    placeholder="000000"
+                    style="text-align:center;font-size:28px;font-weight:700;letter-spacing:.35em;padding:14px">
+            </div>
+            <button id="otp-btn" class="login-btn">VERIFICAR</button>
+            <button onclick="cancelOtp()"
+                style="margin-top:12px;background:none;border:none;color:#8888aa;font-size:13px;cursor:pointer;font-family:inherit">←
+                Volver al login</button>
+        </div>
     </div>
+
+    <script>
+        const BASE = '<?php echo BASE_URL ?>';
+        let _otpToken = null;
+
+        function showError(msg) {
+            document.getElementById('login-error-msg').textContent = msg;
+            document.getElementById('login-error').style.display = 'flex';
+        }
+        function hideError() { document.getElementById('login-error').style.display = 'none'; }
+
+        // Redirect after successful login
+        function redirect(role) {
+            const map = { superadmin: '/pages/superadmin/dashboard.php', admin: '/pages/admin/dashboard.php' };
+            location.href = BASE + (map[role] || '/pages/instructor/dashboard.php');
+        }
+
+        // ── Step 1: email + password ─────────────────────────────────────────────
+        document.getElementById('login-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            hideError();
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true; btn.textContent = 'VERIFICANDO…';
+
+            try {
+                const res = await fetch(BASE + '/api/auth.php?action=login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: document.getElementById('f-email').value,
+                        password: document.getElementById('f-password').value,
+                    }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showError(data.error === 'gym_inactive'
+                        ? 'Tu cuenta está suspendida. Contactá al administrador.'
+                        : 'Email o contraseña incorrectos');
+                    return;
+                }
+
+                if (data.otp_required) {
+                    // Show OTP step
+                    _otpToken = data.otp_token;
+                    document.getElementById('login-form').style.display = 'none';
+                    const otpStep = document.getElementById('otp-step');
+                    otpStep.style.display = 'flex';
+                    document.getElementById('otp-code').focus();
+                } else {
+                    redirect(data.role);
+                }
+            } catch { showError('Error de conexión'); }
+            finally { btn.disabled = false; btn.textContent = 'INGRESAR'; }
+        });
+
+        // ── Step 2: OTP code ─────────────────────────────────────────────────────
+        async function submitOtp() {
+            hideError();
+            const code = document.getElementById('otp-code').value.trim();
+            if (code.length !== 6) return;
+            const btn = document.getElementById('otp-btn');
+            btn.disabled = true; btn.textContent = 'VERIFICANDO…';
+
+            try {
+                const res = await fetch(BASE + '/api/auth.php?action=otp_verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ otp_token: _otpToken, code }),
+                });
+                const data = await res.json();
+                if (!res.ok) { showError(data.error || 'Código incorrecto'); return; }
+                redirect(data.role);
+            } catch { showError('Error de conexión'); }
+            finally { btn.disabled = false; btn.textContent = 'VERIFICAR'; }
+        }
+
+        document.getElementById('otp-btn').addEventListener('click', submitOtp);
+
+        // Auto-submit when 6 digits typed
+        document.getElementById('otp-code').addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+            if (this.value.length === 6) submitOtp();
+        });
+
+        // Also submit on Enter
+        document.getElementById('otp-code').addEventListener('keydown', e => {
+            if (e.key === 'Enter') submitOtp();
+        });
+
+        function cancelOtp() {
+            _otpToken = null;
+            document.getElementById('otp-step').style.display = 'none';
+            document.getElementById('login-form').style.display = 'flex';
+            document.getElementById('otp-code').value = '';
+            hideError();
+        }
+    </script>
 </body>
 
 </html>
