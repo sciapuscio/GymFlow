@@ -177,7 +177,7 @@ const GFLive = (() => {
                     clearTimeout(GFLive._blockPauseTimer);
                     GFLive._blockPauseTimer = setTimeout(() => {
                         if (!isPlaying) spotifyFadeAndPause(2);
-                    }, 3000);
+                    }, 800);
                 }
             }
         } else if (_lastAutoPlayUri && isPlaying && !_fadingOut) {

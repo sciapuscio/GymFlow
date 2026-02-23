@@ -697,12 +697,12 @@ if (!$sala) {
         <div class="finished-subtitle">Sesión completada, ¡Gracias por venir!</div>
     </div>
 
-    <!-- WOD Summary Overlay — toggled by instructor via socket -->
     <div id="wod-overlay"
-        style="display:none;position:fixed;inset:0;z-index:300;background:rgba(8,8,14,0.97);backdrop-filter:blur(12px);flex-direction:column;align-items:center;justify-content:flex-start;padding:clamp(24px,4vh,60px) clamp(20px,4vw,80px);overflow-y:auto;gap:0">
-        <div style="width:100%;max-width:900px">
+        style="display:none;position:fixed;inset:0;z-index:300;background:rgba(8,8,14,0.97);backdrop-filter:blur(12px);flex-direction:column;align-items:center;justify-content:flex-start;padding:clamp(20px,3vh,48px) clamp(20px,4vw,80px);overflow:hidden;gap:0">
+        <div style="width:100%;max-width:1000px">
             <!-- Header -->
-            <div style="display:flex;align-items:center;gap:24px;margin-bottom:clamp(20px,3vh,44px)">
+            <div id="wod-overlay-header"
+                style="display:flex;align-items:center;gap:24px;margin-bottom:clamp(16px,2.5vh,36px)">
                 <?php if ($sala['gym_logo']): ?>
                     <img src="<?php echo BASE_URL . htmlspecialchars($sala['gym_logo']) ?>"
                         alt="<?php echo htmlspecialchars($sala['gym_name']) ?>"

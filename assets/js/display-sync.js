@@ -92,53 +92,80 @@
 
         const listEl = document.getElementById('wod-block-list');
         if (listEl) {
+            // Reset scale before measuring so DOM reflects natural size
+            listEl.style.transform = '';
+            listEl.style.transformOrigin = 'top center';
+
             listEl.innerHTML = blocks.map((b, i) => {
                 const col = typeColors[b.type] || '#888';
                 const exs = b.exercises || [];
                 const exLine = exs.length
                     ? exs.map(e => {
                         const n = e?.name || (typeof e === 'string' ? e : '');
-                        const r = e?.reps ? `${e.reps}×` : '';
-                        return r + n;
+                        // Isometric exercises have duration instead of reps
+                        const r = e?.duration ? `${e.duration}s` : (e?.reps ? `${e.reps}×` : '');
+                        return r ? `${r} ${n}` : n;
                     }).filter(Boolean).join('  ·  ')
                     : '';
                 const cfg = b.config || {};
                 const metaParts = [];
                 if (cfg.rounds) metaParts.push(`${cfg.rounds} rondas`);
-                if (cfg.sets) metaParts.push(`${cfg.sets} series × ${cfg.reps || '?'} reps`);
+                if (cfg.sets) metaParts.push(`${cfg.sets} series`);
                 if (cfg.work) metaParts.push(`${cfg.work}s / ${cfg.rest || 0}s`);
-                if (cfg.duration) metaParts.push(formatDuration(cfg.duration));
+                if (cfg.duration && !cfg.work) metaParts.push(formatDuration(cfg.duration));
                 const meta = metaParts.join(' · ');
+
                 return `<div style="
                     display:flex;align-items:center;gap:16px;
-                    padding:clamp(12px,1.8vh,20px) clamp(14px,2vw,24px);
+                    padding:clamp(10px,1.5vh,18px) clamp(12px,1.8vw,22px);
                     background:rgba(255,255,255,0.04);
                     border:1px solid rgba(255,255,255,0.08);
                     border-left:4px solid ${col};
                     border-radius:10px;
                 ">
-                    <div style="flex-shrink:0;width:clamp(24px,2.5vw,36px);height:clamp(24px,2.5vw,36px);
+                    <div style="flex-shrink:0;width:clamp(22px,2.2vw,34px);height:clamp(22px,2.2vw,34px);
                         border-radius:50%;background:${col}22;
                         display:flex;align-items:center;justify-content:center;
-                        font-family:'Bebas Neue',sans-serif;font-size:clamp(12px,1.3vw,18px);color:${col}">
+                        font-family:'Bebas Neue',sans-serif;font-size:clamp(11px,1.2vw,17px);color:${col}">
                         ${i + 1}
                     </div>
                     <div style="flex:1;min-width:0">
-                        <div style="font-size:clamp(9px,0.9vw,12px);font-weight:700;letter-spacing:.12em;
-                            text-transform:uppercase;color:${col};margin-bottom:4px">
+                        <div style="font-size:clamp(8px,0.8vw,11px);font-weight:700;letter-spacing:.12em;
+                            text-transform:uppercase;color:${col};margin-bottom:3px">
                             ${(b.type || '').toUpperCase()}
                         </div>
-                        <div style="font-size:clamp(16px,2vw,26px);font-weight:700;color:#fff;
+                        <div style="font-size:clamp(14px,1.8vw,24px);font-weight:700;color:#fff;
                             white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                             ${b.name || '—'}
                         </div>
-                        ${exLine ? `<div style="font-size:clamp(11px,1.1vw,15px);color:rgba(255,255,255,0.5);margin-top:3px;
+                        ${exLine ? `<div style="font-size:clamp(10px,1vw,14px);color:rgba(255,255,255,0.5);margin-top:2px;
                             white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${exLine}</div>` : ''}
                     </div>
-                    ${meta ? `<div style="flex-shrink:0;font-size:clamp(11px,1.1vw,14px);
+                    ${meta ? `<div style="flex-shrink:0;font-size:clamp(10px,1vw,13px);
                         color:rgba(255,255,255,0.4);font-weight:600;text-align:right">${meta}</div>` : ''}
                 </div>`;
             }).join('');
+
+            // ── Auto-scale to fit the screen ───────────────────────────────────────
+            // Available height = viewport minus the header area (title + subtitle + padding)
+            requestAnimationFrame(() => {
+                const headerEl = overlay.querySelector('#wod-overlay-header') || overlay.firstElementChild;
+                const headerH = headerEl ? headerEl.offsetHeight : 120;
+                const gap = 24;  // gap between header and list in px
+                const availH = window.innerHeight - headerH - gap * 2;
+                const naturalH = listEl.scrollHeight;
+
+                if (naturalH > availH && availH > 0) {
+                    const scale = Math.max(0.35, availH / naturalH);
+                    listEl.style.transform = `scale(${scale})`;
+                    listEl.style.transformOrigin = 'top center';
+                    // Collapse the wrapper height to avoid blank area below scaled list
+                    listEl.style.marginBottom = `${-(naturalH * (1 - scale))}px`;
+                } else {
+                    listEl.style.transform = '';
+                    listEl.style.marginBottom = '';
+                }
+            });
         }
         overlay.style.display = 'flex';
     }
@@ -611,18 +638,43 @@
 
 
     // ── Beep Engine (Web Audio API) ───────────────────────────────────────────────
-    // Audio requires user gesture (browser policy). We unlock on first click/touch.
+    // Display screen (sala.php): no instructor interaction expected.
+    // Strategy: attempt AudioContext creation immediately on load — browsers often
+    // allow this when the page is opened directly (navigation gesture counts).
+    // If suspended, retry on every lifecycle event until it resumes.
     let _audioUnlocked = false;
-    document.addEventListener('click', () => { _audioUnlocked = true; _getAudioCtx(); }, { once: true });
-    document.addEventListener('touchstart', () => { _audioUnlocked = true; _getAudioCtx(); }, { once: true });
+
+    function _tryUnlockAudio() {
+        if (_audioUnlocked) return;
+        try {
+            if (!_audioCtx) {
+                _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (_audioCtx.state === 'suspended') {
+                _audioCtx.resume().then(() => {
+                    if (_audioCtx.state === 'running') _audioUnlocked = true;
+                }).catch(() => { });
+            } else if (_audioCtx.state === 'running') {
+                _audioUnlocked = true;
+            }
+        } catch (e) { /* navegador muy restrictivo — silencioso */ }
+    }
+
+    // Intento inmediato al cargar (funciona si la página fue abierta por el usuario)
+    _tryUnlockAudio();
+
+    // Reintento en cualquier interacción del sistema (cambio de tab, foco, etc.)
+    document.addEventListener('visibilitychange', _tryUnlockAudio);
+    window.addEventListener('focus', _tryUnlockAudio);
+    // Fallback legacy: click/touch por si el gym tiene teclado/mouse en la sala
+    document.addEventListener('click', _tryUnlockAudio, { once: true });
+    document.addEventListener('touchstart', _tryUnlockAudio, { once: true });
 
     function _getAudioCtx() {
-        if (!_audioUnlocked) return null;
-        if (!_audioCtx) {
-            try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-            catch (e) { return null; }
+        if (!_audioUnlocked) {
+            _tryUnlockAudio();   // reintento lazy en cada beep
+            if (!_audioCtx || _audioCtx.state !== 'running') return null;
         }
-        if (_audioCtx.state === 'suspended') _audioCtx.resume();
         return _audioCtx;
     }
 

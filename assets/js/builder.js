@@ -118,6 +118,24 @@ const GFBuilder = (() => {
         const moreEx = (block.exercises || []).length > 3 ? `+${(block.exercises.length - 3)} más` : '';
         const selected = i === selectedIdx ? ' selected' : '';
         const icon = BLOCK_ICONS[block.type] || '▪';
+
+        // Music chip (only shown if WOD generator attached music metadata)
+        let musicChip = '';
+        if (block.music) {
+            const m = block.music;
+            const isChill = ['briefing', 'rest'].includes(block.type);
+            const chipBg = isChill
+                ? 'linear-gradient(90deg,#1e3a5f,#0ea5e9)'
+                : 'linear-gradient(90deg,#7c1f1f,#ef4444)';
+            musicChip = `
+  <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+    <span style="display:inline-flex;align-items:center;gap:4px;background:${chipBg};color:#fff;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:600">
+      ${m.icon || '🎵'} ${m.genre || ''}
+    </span>
+    <span style="font-size:10px;color:var(--gf-text-muted)"><strong>${m.artist || ''}</strong>${m.track ? ' — ' + m.track : ''}</span>
+  </div>`;
+        }
+
         return `
     <div class="canvas-block${selected}" data-idx="${i}" data-type="${block.type}"
          draggable="true" onclick="GFBuilder.selectBlock(${i})"
@@ -135,6 +153,7 @@ const GFBuilder = (() => {
         </div>
       </div>
       ${exNames.length ? `<div class="canvas-block-exercises">${exNames.map(n => `<span class="ex-pill">${n}</span>`).join('')}${moreEx ? `<span class="ex-pill">${moreEx}</span>` : ''}</div>` : ''}
+      ${musicChip}
     </div>
     <div class="drop-indicator" data-after="${i}" ondragover="GFBuilder.canvasDragOver(event)" ondrop="GFBuilder.canvasDrop(event,${i + 1})"></div>`;
     }
@@ -255,8 +274,22 @@ const GFBuilder = (() => {
             <span style="font-size:10px;color:var(--gf-text-dim)">seg de PREPARATE</span>
           </div>
         ` : ''}
+        ${block.music && !spUri ? (() => {
+                    const m = block.music;
+                    const isChill = ['briefing', 'rest'].includes(block.type);
+                    const chipBg = isChill ? 'linear-gradient(90deg,#1e3a5f,#0ea5e9)' : 'linear-gradient(90deg,#7c1f1f,#ef4444)';
+                    return `<div style="margin-bottom:10px;padding:8px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px">
+              <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:6px">✨ Sugerencia del WOD</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="display:inline-flex;align-items:center;gap:4px;background:${chipBg};color:#fff;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:600">${m.icon || '🎵'} ${m.genre || ''}</span>
+                <span style="font-size:11px;color:var(--gf-text-muted);flex:1"><strong>${m.artist || ''}</strong>${m.track ? ' — ' + m.track : ''}</span>
+                <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:10px;border:1px solid rgba(29,185,84,.4);color:#1DB954"
+                  onclick="document.getElementById('sp-block-search-${idx}').value='${(m.query || '').replace(/'/g, "\\'")}';spBlockSearch(${idx})">🔍 Buscar</button>
+              </div>
+            </div>`;
+                })() : ''}
         <div style="display:flex;gap:6px">
-          <input class="form-control" id="sp-block-search-${idx}" placeholder="Buscar canción o playlist..." style="font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter')spBlockSearch(${idx})">
+          <input class="form-control" id="sp-block-search-${idx}" placeholder="Buscar canción o playlist..." style="font-size:12px;padding:6px 10px" onkeydown="if(event.key==='Enter')spBlockSearch(${idx})" value="${block.music && !spUri ? (block.music.query || '') : ''}">
           <button class="btn btn-ghost btn-sm" style="padding:6px 8px" onclick="spBlockSearch(${idx})">🔍</button>
         </div>
         <div id="sp-block-results-${idx}" style="margin-top:6px;max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:3px"></div>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
@@ -18,9 +18,16 @@ $gym = $gym->fetch();
 // Current subscription
 $sub = getGymSubscription($gymId);
 
-// History: all audit entries from the subscription log
-// (We'll show the current subscription data + any future history table)
-// For now we show the current record and its key dates as a "timeline"
+// Renewal history
+$histStmt = db()->prepare("
+    SELECT r.*, u.name as created_by_name
+    FROM subscription_renewals r
+    LEFT JOIN users u ON u.id = r.created_by
+    WHERE r.gym_id = ?
+    ORDER BY r.created_at DESC
+");
+$histStmt->execute([$gymId]);
+$history = $histStmt->fetchAll();
 
 layout_header('Facturación — ' . $gym['name'], 'admin', $user);
 nav_section('Admin');
@@ -125,8 +132,11 @@ elseif ($daysLeft !== null && $daysLeft <= 7)
 </style>
 
 <div class="page-header">
-    <a href="<?php echo BASE_URL ?>/pages/admin/dashboard.php" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:6px;margin-right:12px">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    <a href="<?php echo BASE_URL ?>/pages/admin/dashboard.php" class="btn btn-ghost"
+        style="display:inline-flex;align-items:center;gap:6px;margin-right:12px">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
         Volver
     </a>
     <div>
@@ -220,54 +230,108 @@ elseif ($daysLeft !== null && $daysLeft <= 7)
             <?php endif; ?>
         </div>
 
-        <!-- Right: timeline / history -->
+        <!-- Right: renewal history -->
         <div class="billing-card">
-            <h2>Historial de ciclos</h2>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+                <h2 style="margin-bottom:0">Historial de ciclos</h2>
+            </div>
+
             <?php if (!$sub): ?>
                 <div style="color:var(--gf-text-muted);font-size:14px">Sin historial.</div>
+            <?php elseif (empty($history)): ?>
+                <div style="color:var(--gf-text-muted);font-size:13px;text-align:center;padding:24px 0">Sin renovaciones
+                    registradas aún.</div>
             <?php else: ?>
-                <div class="timeline-item">
-                    <div class="timeline-dot active"></div>
-                    <div style="flex:1">
-                        <div style="font-size:14px;font-weight:600">
-                            <?php echo $planLabel[$sub['plan']] ?? $sub['plan'] ?>
-                            <span style="font-size:11px;font-weight:400;color:var(--gf-text-muted);margin-left:6px">Ciclo
-                                actual</span>
-                        </div>
-                        <div style="font-size:12px;color:var(--gf-text-muted);margin-top:4px">
-                            <?php
-                            $start = $sub['current_period_start'] ? (new DateTime($sub['current_period_start']))->format('d/m/Y') : '—';
-                            $end = $sub['current_period_end'] ? (new DateTime($sub['current_period_end']))->format('d/m/Y') : '—';
-                            echo "$start → $end";
-                            ?>
-                        </div>
-                        <?php if ($daysLeft !== null): ?>
-                            <div style="font-size:11px;margin-top:4px;color:<?php echo $statusColor ?>">
-                                <?php echo $daysLeft >= 0 ? "{$daysLeft} días restantes" : 'Vencido' ?>
+                <?php
+                $eventMeta = [
+                    'activation' => ['icon' => '🟢', 'label' => 'Activación', 'color' => '#10b981'],
+                    'renewal' => ['icon' => '🔄', 'label' => 'Renovación', 'color' => '#6366f1'],
+                    'plan_change' => ['icon' => '⬆️', 'label' => 'Cambio de plan', 'color' => '#a855f7'],
+                    'expiry' => ['icon' => '🔴', 'label' => 'Vencimiento', 'color' => '#ef4444'],
+                    'suspension' => ['icon' => '⏸️', 'label' => 'Suspensión', 'color' => '#f59e0b'],
+                    'credit' => ['icon' => '🎁', 'label' => 'Crédito / bono', 'color' => '#06b6d4'],
+                ];
+                $planLabel = ['trial' => 'Trial', 'instructor' => 'Instructor', 'gimnasio' => 'Gimnasio', 'centro' => 'Centro', 'monthly' => 'Mensual', 'annual' => 'Anual'];
+                foreach ($history as $idx => $r):
+                    $meta = $eventMeta[$r['event_type']] ?? ['icon' => '▪', 'label' => $r['event_type'], 'color' => '#888'];
+                    $isFirst = $idx === 0;
+                    ?>
+                    <div class="timeline-item" style="<?php echo $isFirst ? '' : '' ?>">
+                        <!-- dot -->
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;padding-top:3px">
+                            <div
+                                style="width:10px;height:10px;border-radius:50%;background:<?php echo $meta['color'] ?>;<?php echo $isFirst ? 'box-shadow:0 0 8px ' . $meta['color'] . '88' : 'opacity:.5' ?>">
                             </div>
-                        <?php endif; ?>
-                    </div>
-                    <div
-                        style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.2);align-self:flex-start">
-                        Activo
-                    </div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-dot past"></div>
-                    <div style="flex:1">
-                        <div style="font-size:13px;color:var(--gf-text-muted)">Creación del gym</div>
-                        <div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:4px">
-                            <?php echo (new DateTime($sub['created_at']))->format('d/m/Y H:i') ?>
+                            <?php if ($idx < count($history) - 1): ?>
+                                <div style="width:1px;flex:1;background:rgba(255,255,255,.07);margin-top:4px"></div>
+                            <?php endif; ?>
+                        </div>
+                        <!-- content -->
+                        <div style="flex:1;padding-bottom:4px">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                <span style="font-size:14px;font-weight:700"><?php echo $meta['icon'] ?>
+                                    <?php echo $meta['label'] ?></span>
+                                <span
+                                    style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--gf-text-muted)"><?php echo $planLabel[$r['plan']] ?? $r['plan'] ?></span>
+                                <?php if ($r['extra_salas']): ?>
+                                    <span style="font-size:10px;color:var(--gf-text-muted)">+<?php echo $r['extra_salas'] ?>
+                                        sala<?php echo $r['extra_salas'] > 1 ? 's' : '' ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <!-- dates + amount -->
+                            <div
+                                style="font-size:12px;color:var(--gf-text-muted);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap">
+                                <?php if ($r['period_start'] && $r['period_end']): ?>
+                                    <span>📅 <?php echo (new DateTime($r['period_start']))->format('d/m/Y') ?> →
+                                        <?php echo (new DateTime($r['period_end']))->format('d/m/Y') ?></span>
+                                <?php endif; ?>
+                                <?php if ($r['amount_ars'] !== null && $r['amount_ars'] > 0): ?>
+                                    <span style="color:#10b981;font-weight:600">💰
+                                        $<?php echo number_format($r['amount_ars'], 0, ',', '.') ?> ARS</span>
+                                <?php elseif ($r['amount_ars'] === '0' || $r['amount_ars'] === 0): ?>
+                                    <span style="color:var(--gf-text-muted)">💰 Cortesía</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($r['notes']): ?>
+                                <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:4px;font-style:italic">
+                                    <?php echo htmlspecialchars($r['notes']) ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($r['invoice_path']): ?>
+                                <a href="<?php echo BASE_URL . '/' . htmlspecialchars($r['invoice_path']) ?>" target="_blank"
+                                    download
+                                    style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 10px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:6px;font-size:11px;font-weight:600;color:#818cf8;text-decoration:none">
+                                    📄 Descargar factura
+                                </a>
+                            <?php endif; ?>
+                            <div style="font-size:10px;color:rgba(255,255,255,.25);margin-top:4px">
+                                <?php echo (new DateTime($r['created_at']))->format('d/m/Y H:i') ?>
+                                <?php if ($r['created_by_name']): ?> ·
+                                    <?php echo htmlspecialchars($r['created_by_name']) ?>         <?php endif; ?>
+                                <?php if ($user['role'] === 'superadmin'): ?>
+                                    · <a href="#" onclick="deleteRenewal(<?php echo $r['id'] ?>)"
+                                        style="color:rgba(239,68,68,.5);text-decoration:none">eliminar</a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div
-                    style="margin-top:16px;padding:12px;background:rgba(255,255,255,.03);border-radius:10px;font-size:12px;color:rgba(255,255,255,.3);text-align:center">
-                    El historial completo de renovaciones estará disponible próximamente.
-                </div>
+                <?php endforeach; ?>
             <?php endif; ?>
         </div>
     </div>
 </div>
+
+<?php if ($user['role'] === 'superadmin'): ?>
+<script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
+<script>
+    async function deleteRenewal(id) {
+        if (!confirm('¿Eliminar este registro?')) return;
+        const res  = await fetch(window.GF_BASE + '/api/renewals.php?id=' + id, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.ok) { showToast('Registro eliminado', 'info'); location.reload(); }
+        else showToast('Error: ' + (data.error || ''), 'error');
+    }
+</script>
+<?php endif; ?>
 
 <?php layout_end(); ?>

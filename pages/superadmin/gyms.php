@@ -294,6 +294,9 @@ layout_footer($user);
                                     'extra_salas' => (int) ($g['extra_salas'] ?? 0),
                                     'notes' => '',
                                 ])) ?>)">Ciclo</button>
+                                <button class="btn btn-secondary btn-sm"
+                                    onclick="openPayModal(<?php echo $g['id'] ?>, '<?php echo htmlspecialchars(addslashes($g['name'])) ?>')">💳
+                                    Pago</button>
                                 <button class="btn <?php echo $g['active'] ? 'btn-danger' : 'btn-primary' ?> btn-sm"
                                     onclick="toggleGym(<?php echo $g['id'] ?>, <?php echo (int) !$g['active'] ?>)">
                                     <?php echo $g['active'] ? 'Desactivar' : 'Activar' ?>
@@ -493,13 +496,32 @@ layout_footer($user);
 
     async function saveSub() {
         if (!_subGymId) return;
+        const plan = document.getElementById('sub-plan').value;
+        const status = document.getElementById('sub-status').value;
+        const periodEnd = document.getElementById('sub-end').value;
+        const extras = parseInt(document.getElementById('sub-extra-salas').value) || 0;
+        const notes = document.getElementById('sub-notes').value;
+        const price = (PLAN_PRICES[plan] ?? 0) + extras * ADDON_PRICE;
+
         await GF.put(`${window.GF_BASE}/api/subscriptions.php?gym_id=${_subGymId}`, {
-            plan: document.getElementById('sub-plan').value,
-            status: document.getElementById('sub-status').value,
-            current_period_end: document.getElementById('sub-end').value,
-            extra_salas: parseInt(document.getElementById('sub-extra-salas').value) || 0,
-            notes: document.getElementById('sub-notes').value,
+            plan, status, current_period_end: periodEnd, extra_salas: extras, notes,
         });
+
+        // Auto-log a renewal record so it appears in billing history
+        if (status === 'active' && periodEnd) {
+            const today = new Date().toISOString().slice(0, 10);
+            const fd = new FormData();
+            fd.append('gym_id', _subGymId);
+            fd.append('event_type', 'renewal');
+            fd.append('plan', plan);
+            fd.append('period_start', today);
+            fd.append('period_end', periodEnd);
+            fd.append('amount_ars', price);
+            fd.append('extra_salas', extras);
+            fd.append('notes', notes || 'Registrado desde panel Superadmin');
+            await fetch(`${window.GF_BASE}/api/renewals.php`, { method: 'POST', body: fd });
+        }
+
         document.getElementById('sub-modal').classList.remove('open');
         location.reload();
     }
@@ -510,6 +532,171 @@ layout_footer($user);
 
     // Init price preview on load
     updatePricePreview();
+</script>
+
+<!-- ── Registrar pago modal ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="pay-modal">
+    <div class="modal" style="max-width:500px">
+        <div class="modal-header">
+            <h3 class="modal-title">Registrar pago — <span id="pay-gym-name"></span></h3>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form id="pay-form" onsubmit="submitPayment(event)" enctype="multipart/form-data"
+            style="display:flex;flex-direction:column;gap:14px">
+            <input type="hidden" id="pay-gym-id" name="gym_id" value="">
+
+            <div class="param-row">
+                <div class="form-group">
+                    <label class="form-label">Tipo de evento</label>
+                    <select class="form-control" name="event_type" id="pay-event-type">
+                        <option value="renewal">🔄 Renovación</option>
+                        <option value="activation">🟢 Activación</option>
+                        <option value="plan_change">⬆️ Cambio de plan</option>
+                        <option value="credit">🎁 Crédito / bono</option>
+                        <option value="expiry">🔴 Vencimiento</option>
+                        <option value="suspension">⏸️ Suspensión</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Plan</label>
+                    <select class="form-control" name="plan" id="pay-plan">
+                        <option value="instructor">Instructor</option>
+                        <option value="gimnasio">Gimnasio</option>
+                        <option value="centro">Centro</option>
+                        <option value="trial">Trial</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="param-row">
+                <div class="form-group">
+                    <label class="form-label">Inicio del ciclo</label>
+                    <input type="date" class="form-control" name="period_start" id="pay-start">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fin del ciclo</label>
+                    <input type="date" class="form-control" name="period_end" id="pay-end">
+                </div>
+            </div>
+            <div style="display:flex;gap:8px">
+                <button type="button" class="btn btn-secondary btn-sm" style="flex:1" onclick="payQuickDate(30)">+ 30
+                    días</button>
+                <button type="button" class="btn btn-secondary btn-sm" style="flex:1" onclick="payQuickDate(90)">+ 3
+                    meses</button>
+                <button type="button" class="btn btn-secondary btn-sm" style="flex:1" onclick="payQuickDate(365)">+ 1
+                    año</button>
+            </div>
+
+            <div class="param-row">
+                <div class="form-group">
+                    <label class="form-label">Monto cobrado (ARS)</label>
+                    <input type="number" class="form-control" name="amount_ars" id="pay-amount" min="0"
+                        placeholder="29000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Salas extra add-on</label>
+                    <input type="number" class="form-control" name="extra_salas" min="0" max="20" value="0">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Notas internas</label>
+                <textarea class="form-control" name="notes" rows="2"
+                    placeholder="Pagado por transferencia el 15/03..."></textarea>
+            </div>
+
+            <!-- Invoice upload -->
+            <div class="form-group">
+                <label class="form-label">📄 Factura / comprobante <span
+                        style="font-weight:400;color:var(--gf-text-muted)">(PDF, JPG, PNG — máx. 10 MB)</span></label>
+                <label id="pay-invoice-drop"
+                    style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed rgba(255,255,255,.12);border-radius:10px;padding:20px;cursor:pointer;transition:.2s;text-align:center"
+                    onclick="document.getElementById('pay-invoice-file').click()">
+                    <span style="font-size:24px">📎</span>
+                    <span id="pay-invoice-label" style="font-size:12px;color:var(--gf-text-muted)">Hacé click o arrastrá
+                        el archivo aquí</span>
+                    <input type="file" id="pay-invoice-file" name="invoice" accept=".pdf,.jpg,.jpeg,.png,.webp"
+                        style="display:none" onchange="onPayFileSelect(this)">
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%" id="pay-submit-btn">Guardar
+                registro</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let _payGymId = null;
+
+    function openPayModal(gymId, gymName) {
+        _payGymId = gymId;
+        document.getElementById('pay-gym-id').value = gymId;
+        document.getElementById('pay-gym-name').textContent = gymName;
+        // Pre-fill plan from current row
+        document.getElementById('pay-form').reset();
+        document.getElementById('pay-gym-id').value = gymId;
+        // Dates: start = today, end = today + 30d
+        const today = new Date(); const end = new Date();
+        end.setDate(end.getDate() + 30);
+        const fmt = d => d.toISOString().slice(0, 10);
+        document.getElementById('pay-start').value = fmt(today);
+        document.getElementById('pay-end').value = fmt(end);
+        document.getElementById('pay-invoice-label').textContent = 'Hacé click o arrastrá el archivo aquí';
+        document.getElementById('pay-modal').classList.add('open');
+    }
+
+    function payQuickDate(days) {
+        const cur = document.getElementById('pay-end').value;
+        const base = cur ? new Date(cur) : new Date();
+        base.setDate(base.getDate() + days);
+        document.getElementById('pay-end').value = base.toISOString().slice(0, 10);
+    }
+
+    function onPayFileSelect(input) {
+        const f = input.files[0];
+        document.getElementById('pay-invoice-label').textContent = f ? f.name : 'Hacé click o arrastrá el archivo aquí';
+    }
+
+    // Drag & drop
+    const payDrop = document.getElementById('pay-invoice-drop');
+    payDrop.addEventListener('dragover', e => { e.preventDefault(); payDrop.style.borderColor = 'rgba(99,102,241,.5)'; });
+    payDrop.addEventListener('dragleave', () => { payDrop.style.borderColor = 'rgba(255,255,255,.12)'; });
+    payDrop.addEventListener('drop', e => {
+        e.preventDefault(); payDrop.style.borderColor = 'rgba(255,255,255,.12)';
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const dt = new DataTransfer(); dt.items.add(file);
+            document.getElementById('pay-invoice-file').files = dt.files;
+            onPayFileSelect(document.getElementById('pay-invoice-file'));
+        }
+    });
+
+    async function submitPayment(e) {
+        e.preventDefault();
+        const btn = document.getElementById('pay-submit-btn');
+        btn.disabled = true; btn.textContent = 'Guardando...';
+        try {
+            const fd = new FormData(document.getElementById('pay-form'));
+            const res = await fetch(window.GF_BASE + '/api/renewals.php', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (data.ok) {
+                showToast('✅ Pago registrado con éxito', 'success');
+                document.getElementById('pay-modal').classList.remove('open');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                showToast('Error: ' + (data.error || 'desconocido'), 'error');
+            }
+        } catch (err) {
+            showToast('Error de conexión', 'error');
+        } finally {
+            btn.disabled = false; btn.textContent = 'Guardar registro';
+        }
+    }
 </script>
 
 <?php layout_end(); ?>

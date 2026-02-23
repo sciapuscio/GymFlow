@@ -1,0 +1,30 @@
+<service>
+	<id>gymflowsyncserver.exe</id>
+	<name>GymFlow Sync Server</name>
+	<description>Socket.IO sync server for GymFlow real-time workout sessions.</description>
+	<executable>C:\Program Files\nodejs\node.exe</executable>
+	<argument>C:\xampp\htdocs\Training\sync-server\node_modules\node-windows\lib\wrapper.js</argument>
+	<argument>--file</argument>
+	<argument>C:\xampp\htdocs\Training\sync-server\server.js</argument>
+	<argument>--scriptoptions=</argument>
+	<argument>--log</argument>
+	<argument>GymFlow Sync Server wrapper</argument>
+	<argument>--grow</argument>
+	<argument>0.5</argument>
+	<argument>--wait</argument>
+	<argument>2</argument>
+	<argument>--maxrestarts</argument>
+	<argument>10</argument>
+	<argument>--abortonerror</argument>
+	<argument>n</argument>
+	<argument>--stopparentfirst</argument>
+	<argument>undefined</argument>
+	<logmode>rotate</logmode>
+	<stoptimeout>30sec</stoptimeout>
+	<serviceaccount>
+		<domain>DESKTOP-CLHNSOT</domain>
+		<user>LocalSystem</user>
+		<password></password>
+	</serviceaccount>
+	<workingdirectory>C:\xampp\htdocs\Training\sync-server</workingdirectory>
+</service>
