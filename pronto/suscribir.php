@@ -17,7 +17,7 @@ $existentes = file_exists($archivo) ? file($archivo, FILE_IGNORE_NEW_LINES | FIL
 $existentes = array_map('trim', $existentes);
 
 if (in_array($email, $existentes)) {
-    echo json_encode(['ok' => true, 'msg' => 'Ya estabas anotado']);
+    echo json_encode(['ok' => false, 'msg' => 'duplicate']);
     exit;
 }
 

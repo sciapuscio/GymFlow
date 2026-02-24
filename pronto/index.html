@@ -813,6 +813,17 @@
                 if (data.ok) {
                     form.style.display = 'none';
                     success.classList.add('show');
+                } else if (data.msg === 'duplicate') {
+                    // Email ya registrado — mostrar mensaje específico
+                    input.style.setProperty('color', '#e5ff3d');
+                    input.placeholder = '¡Ya estás anotado con ese mail!';
+                    input.value = '';
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    setTimeout(() => {
+                        input.placeholder = 'tu@email.com';
+                        input.style.removeProperty('color');
+                    }, 3000);
                 } else {
                     input.style.setProperty('color', '#ff5f5f');
                     input.focus();
