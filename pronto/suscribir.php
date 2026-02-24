@@ -14,7 +14,11 @@ $archivo = __DIR__ . '/leads.txt';
 
 // Leer emails existentes para evitar duplicados
 $existentes = file_exists($archivo) ? file($archivo, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) : [];
-$existentes = array_map('trim', $existentes);
+// Extraer solo el email de cada línea (formato: "Y-m-d H:i:s | email")
+$existentes = array_map(function ($linea) {
+    $partes = explode(' | ', $linea);
+    return strtolower(trim(end($partes)));
+}, $existentes);
 
 if (in_array($email, $existentes)) {
     echo json_encode(['ok' => false, 'msg' => 'duplicate']);
