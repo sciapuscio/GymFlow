@@ -32,9 +32,9 @@ $gymnList = db()->query(
 
 layout_header('Gimnasios — SuperAdmin', 'superadmin', $user);
 nav_section('Super Admin');
-nav_item(BASE_URL . '/pages/superadmin/dashboard.php', 'Dashboard', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', 'superadmin', 'superadmin');
-nav_item(BASE_URL . '/pages/superadmin/gyms.php', 'Gimnasios', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg>', 'gyms', 'superadmin');
-nav_item(BASE_URL . '/pages/superadmin/users.php', 'Usuarios', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>', 'users', 'superadmin');
+nav_item(BASE_URL . '/pages/superadmin/dashboard.php', 'Dashboard', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', 'superadmin', 'gyms');
+nav_item(BASE_URL . '/pages/superadmin/gyms.php', 'Gimnasios', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg>', 'gyms', 'gyms');
+nav_item(BASE_URL . '/pages/superadmin/users.php', 'Usuarios', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>', 'users', 'gyms');
 layout_footer($user);
 ?>
 
@@ -180,6 +180,66 @@ layout_footer($user);
     }
 </style>
 
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+<style>
+    .dt-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .dt-toolbar .form-control {
+        height: 36px;
+        font-size: 13px;
+        min-width: 150px;
+        flex: 1;
+        max-width: 220px;
+    }
+
+    .dt-toolbar .dt-search {
+        flex: 2;
+        max-width: 300px;
+    }
+
+    .dt-count {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--gf-text-muted);
+        white-space: nowrap;
+        align-self: center;
+    }
+
+    #gymsTable_wrapper .dataTables_filter,
+    #gymsTable_wrapper .dataTables_length,
+    #gymsTable_wrapper .dataTables_info {
+        display: none;
+    }
+
+    #gymsTable_wrapper .dataTables_paginate {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    #gymsTable_wrapper .dataTables_paginate .paginate_button {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--gf-text-muted) !important;
+    }
+
+    #gymsTable_wrapper .dataTables_paginate .paginate_button.current,
+    #gymsTable_wrapper .dataTables_paginate .paginate_button:hover {
+        background: var(--gf-accent) !important;
+        color: #000 !important;
+        border: none !important;
+    }
+</style>
+
 <div class="page-header">
     <h1 style="font-size:20px;font-weight:700">Gimnasios</h1>
     <button class="btn btn-primary ml-auto" onclick="openNewGymModal()">+ Nuevo Gimnasio</button>
@@ -187,8 +247,27 @@ layout_footer($user);
 
 <div class="page-body">
     <div class="card">
+        <div class="dt-toolbar">
+            <input type="text" id="dt-search" class="form-control dt-search" placeholder="🔍  Buscar por nombre...">
+            <select id="dt-plan" class="form-control">
+                <option value="">Todos los planes</option>
+                <option value="trial">Trial</option>
+                <option value="instructor">Instructor</option>
+                <option value="gimnasio">Gimnasio</option>
+                <option value="centro">Centro</option>
+            </select>
+            <select id="dt-status" class="form-control">
+                <option value="">Todos los estados</option>
+                <option value="active">Activo</option>
+                <option value="expiring">Por vencer</option>
+                <option value="expired">Vencido</option>
+                <option value="suspended">Suspendido</option>
+                <option value="no_sub">Sin suscripción</option>
+            </select>
+            <span class="dt-count" id="dt-count"></span>
+        </div>
         <div class="table-wrap">
-            <table>
+            <table id="gymsTable">
                 <thead>
                     <tr>
                         <th>Nombre</th>
@@ -226,7 +305,7 @@ layout_footer($user);
                             'no_sub' => 'Sin suscripción',
                         ];
                         ?>
-                        <tr>
+                        <tr data-plan="<?php echo $plan ?>" data-status="<?php echo $sc ?>">
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px">
                                     <div
@@ -532,6 +611,49 @@ layout_footer($user);
 
     // Init price preview on load
     updatePricePreview();
+</script>
+
+<!-- jQuery + DataTables -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script>
+    const gymTable = $('#gymsTable').DataTable({
+        pageLength: 25,
+        order: [[0, 'asc']],
+        language: { paginate: { previous: '‹', next: '›' } },
+        columnDefs: [{ orderable: false, targets: 6 }]
+    });
+
+    // Custom filters via data attributes on <tr>
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        if (settings.nTable.id !== 'gymsTable') return true;
+        const row = gymTable.row(dataIndex).node();
+        const planFilter = document.getElementById('dt-plan').value;
+        const statusFilter = document.getElementById('dt-status').value;
+        if (planFilter && $(row).data('plan') !== planFilter) return false;
+        if (statusFilter && $(row).data('status') !== statusFilter) return false;
+        return true;
+    });
+
+    function updateGymCount() {
+        const info = gymTable.page.info();
+        const el = document.getElementById('dt-count');
+        el.textContent = info.recordsDisplay === info.recordsTotal
+            ? `${info.recordsTotal} gimnasios`
+            : `${info.recordsDisplay} de ${info.recordsTotal} gimnasios`;
+    }
+    gymTable.on('draw', updateGymCount);
+    updateGymCount();
+
+    document.getElementById('dt-search').addEventListener('input', function () {
+        gymTable.column(0).search(this.value).draw();
+    });
+    document.getElementById('dt-plan').addEventListener('change', function () {
+        gymTable.draw();
+    });
+    document.getElementById('dt-status').addEventListener('change', function () {
+        gymTable.draw();
+    });
 </script>
 
 <!-- ── Registrar pago modal ────────────────────────────────────────────────── -->
