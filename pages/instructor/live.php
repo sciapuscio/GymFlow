@@ -1079,7 +1079,7 @@ layout_footer($user);
         off: () => { }, disconnect: () => { }
     });
 </script>
-<script src="http://localhost:3001/socket.io/socket.io.js"
+<script src="<?php echo SOCKET_URL ?>/socket.io/socket.io.js"
     onerror="if(typeof io==='undefined') window.io = window._gfSocketStub"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script src="<?php echo BASE_URL ?>/assets/js/exercise-poses.js"></script>
@@ -1089,7 +1089,7 @@ layout_footer($user);
     const SESSION_DATA = <?php echo json_encode(['id' => $id, 'blocks' => $blocks, 'status' => $session['status'], 'sala_id' => (int) $session['sala_id'], 'current_block_index' => (int) $session['current_block_index'], 'current_block_elapsed' => (int) $session['current_block_elapsed']], JSON_HEX_TAG | JSON_HEX_AMP) ?>;
     const SALAS = <?php echo json_encode($salas, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
     const SPOTIFY_CONNECTED = <?php echo $spotifyConnected ? 'true' : 'false' ?>;
-    window.GF_SOCKET_URL = 'http://localhost:3001';
+    window.GF_SOCKET_URL = '<?php echo SOCKET_URL ?>';
 
     document.addEventListener('DOMContentLoaded', () => {
         GFLive.init(SESSION_DATA);

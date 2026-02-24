@@ -274,7 +274,7 @@ layout_footer($user);
     </div>
 </div>
 
-<script src="http://localhost:3001/socket.io/socket.io.js"></script>
+<script src="<?php echo SOCKET_URL ?>/socket.io/socket.io.js"></script>
 <script>
     (function () {
         const console_ = document.getElementById('gf-console');
@@ -350,7 +350,7 @@ layout_footer($user);
         }
 
         // ── Socket connection ───────────────────────────────────────────────────
-        const sock = io('http://localhost:3001', { transports: ['websocket', 'polling'] });
+        const sock = io('<?php echo SOCKET_URL ?>', { transports: ['websocket', 'polling'] });
 
         sock.on('connect', () => {
             dot.classList.add('live');
