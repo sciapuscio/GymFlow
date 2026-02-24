@@ -832,9 +832,11 @@
                     btn.style.opacity = '';
                 }
             } catch {
-                // Fallback: mostrar éxito igual (no perder el lead por error de red)
-                form.style.display = 'none';
-                success.classList.add('show');
+                btn.disabled = false;
+                btn.style.opacity = '';
+                input.style.setProperty('color', '#ff5f5f');
+                input.focus();
+                setTimeout(() => input.style.removeProperty('color'), 1500);
             }
         });
 

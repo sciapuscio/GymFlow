@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-$email = trim($_POST['email'] ?? '');
+$email = strtolower(trim($_POST['email'] ?? ''));
 
 // Validación básica
 if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
