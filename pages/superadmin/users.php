@@ -155,7 +155,11 @@ layout_footer($user);
                                     <?php echo $u['active'] ? 'Activo' : 'Inactivo' ?>
                                 </span>
                             </td>
-                            <td>
+                            <td style="display:flex;gap:6px">
+                                <button class="btn btn-secondary btn-sm"
+                                    onclick="openEditModal(<?php echo htmlspecialchars(json_encode(['id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role'], 'active' => (bool)$u['active'], 'gym_id' => $u['gym_id']])) ?>)">
+                                    Editar
+                                </button>
                                 <button class="btn btn-danger btn-sm"
                                     onclick="deleteUser(<?php echo $u['id'] ?>)">Eliminar</button>
                             </td>
@@ -201,6 +205,46 @@ layout_footer($user);
                 </select>
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Usuario</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal editar usuario -->
+<div class="modal-overlay" id="edit-user-modal">
+    <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+            <h3 class="modal-title">Editar Usuario</h3>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <form onsubmit="updateUser(event)">
+            <input type="hidden" id="eu-id">
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <div id="eu-email" style="font-size:13px;color:var(--gf-text-muted);padding:8px 0"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Nombre</label>
+                <input class="form-control" id="eu-name" required>
+            </div>
+            <div class="form-group"><label class="form-label">Nueva contraseña <span style="font-weight:400;color:var(--gf-text-muted)">(dejar en blanco para no cambiar)</span></label>
+                <input type="password" class="form-control" id="eu-pass" minlength="8" placeholder="••••••••">
+            </div>
+            <div class="form-group"><label class="form-label">Rol</label>
+                <select class="form-control" id="eu-role">
+                    <option value="instructor">Instructor</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group"><label class="form-label">Estado</label>
+                <select class="form-control" id="eu-active">
+                    <option value="1">Activo</option>
+                    <option value="0">Inactivo</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Guardar cambios</button>
         </form>
     </div>
 </div>
@@ -270,6 +314,31 @@ layout_footer($user);
     async function deleteUser(id) {
         if (!confirm('¿Eliminar usuario?')) return;
         await GF.delete(`${window.GF_BASE}/api/users.php?id=${id}`);
+        location.reload();
+    }
+
+    function openEditModal(user) {
+        document.getElementById('eu-id').value = user.id;
+        document.getElementById('eu-name').value = user.name;
+        document.getElementById('eu-email').textContent = user.email;
+        document.getElementById('eu-role').value = user.role;
+        document.getElementById('eu-active').value = user.active ? '1' : '0';
+        document.getElementById('eu-pass').value = '';
+        document.getElementById('edit-user-modal').classList.add('open');
+    }
+
+    async function updateUser(e) {
+        e.preventDefault();
+        const id = document.getElementById('eu-id').value;
+        const data = {
+            name: document.getElementById('eu-name').value,
+            role: document.getElementById('eu-role').value,
+            active: parseInt(document.getElementById('eu-active').value),
+        };
+        const pass = document.getElementById('eu-pass').value;
+        if (pass) data.password = pass;
+        await GF.put(`${window.GF_BASE}/api/users.php?id=${id}`, data);
+        showToast('Usuario actualizado', 'success');
         location.reload();
     }
 
