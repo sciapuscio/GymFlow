@@ -14,6 +14,11 @@ function layout_header(string $title, string $activeNav = '', ?array $user = nul
         <title>
             <?php echo htmlspecialchars($title) ?> — GymFlow
         </title>
+        <link rel="icon" type="image/x-icon" href="<?php echo $base ?>/assets/favicon.ico">
+        <link rel="icon" type="image/svg+xml" href="<?php echo $base ?>/assets/favicon.svg">
+        <link rel="icon" type="image/png" sizes="32x32" href="<?php echo $base ?>/assets/favicon-32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="<?php echo $base ?>/assets/favicon-16.png">
+        <meta name="theme-color" content="#e5ff3d">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link
             href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap"
