@@ -34,6 +34,17 @@ $sc = db()->prepare("SELECT COUNT(*) FROM gym_sessions WHERE gym_id = ?");
 $sc->execute([$gymId]);
 $sessionCount = (int) $sc->fetchColumn();
 
+// ── CRM quick stats ─────────────────────────────────────────────────────────
+$crmQ = db()->prepare("
+    SELECT
+        (SELECT COUNT(*) FROM members WHERE gym_id = ? AND active = 1) AS total_members,
+        (SELECT COUNT(*) FROM member_memberships WHERE gym_id = ? AND end_date >= CURDATE()) AS active_memberships,
+        (SELECT COUNT(*) FROM member_memberships WHERE gym_id = ? AND payment_status IN ('pending','overdue') AND end_date >= CURDATE()) AS pending_payments,
+        (SELECT COUNT(*) FROM member_memberships WHERE gym_id = ? AND end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)) AS expiring_week
+");
+$crmQ->execute([$gymId, $gymId, $gymId, $gymId]);
+$crmStats = $crmQ->fetch();
+
 $sub = getGymSubscription($gymId);
 $planInfo = $sub ? getGymPlanInfo($gymId) : null;
 
@@ -221,6 +232,53 @@ layout_footer($user);
             </div>
         </div>
     <?php endif; ?>
+
+    <!-- CRM Quick Summary -->
+    <?php if ($crmStats['total_members'] > 0 || true): ?>
+        <div class="card mb-6" style="padding:16px 20px">
+            <div class="flex items-center justify-between mb-3">
+                <h2 style="font-size:15px;font-weight:700">👥 Alumnos & CRM</h2>
+                <a href="<?php echo BASE_URL ?>/pages/admin/members.php" class="btn btn-secondary btn-sm">Ver todos →</a>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+                <a href="<?php echo BASE_URL ?>/pages/admin/members.php" style="text-decoration:none">
+                    <div style="background:var(--gf-surface-2);border-radius:10px;padding:12px;border:1px solid var(--gf-border);transition:border-color .2s"
+                        onmouseover="this.style.borderColor='var(--gf-accent)'"
+                        onmouseout="this.style.borderColor='var(--gf-border)'">
+                        <div style="font-size:22px;font-weight:800"><?php echo (int) $crmStats['total_members'] ?></div>
+                        <div style="font-size:11px;color:var(--gf-text-muted)">Alumnos activos</div>
+                    </div>
+                </a>
+                <a href="<?php echo BASE_URL ?>/pages/admin/members.php?status=active" style="text-decoration:none">
+                    <div style="background:var(--gf-surface-2);border-radius:10px;padding:12px;border:1px solid var(--gf-border);transition:border-color .2s"
+                        onmouseover="this.style.borderColor='#10b981'"
+                        onmouseout="this.style.borderColor='var(--gf-border)'">
+                        <div style="font-size:22px;font-weight:800;color:#10b981">
+                            <?php echo (int) $crmStats['active_memberships'] ?></div>
+                        <div style="font-size:11px;color:var(--gf-text-muted)">Membresías vigentes</div>
+                    </div>
+                </a>
+                <a href="<?php echo BASE_URL ?>/pages/admin/members.php?status=pending" style="text-decoration:none">
+                    <div
+                        style="background:var(--gf-surface-2);border-radius:10px;padding:12px;border:1px solid <?php echo $crmStats['pending_payments'] > 0 ? 'rgba(245,158,11,.4)' : 'var(--gf-border)' ?>;transition:border-color .2s">
+                        <div
+                            style="font-size:22px;font-weight:800;color:<?php echo $crmStats['pending_payments'] > 0 ? '#f59e0b' : 'var(--gf-text)' ?>">
+                            <?php echo (int) $crmStats['pending_payments'] ?></div>
+                        <div style="font-size:11px;color:var(--gf-text-muted)">Pagos pendientes</div>
+                    </div>
+                </a>
+                <a href="<?php echo BASE_URL ?>/pages/admin/members.php?status=expired" style="text-decoration:none">
+                    <div
+                        style="background:var(--gf-surface-2);border-radius:10px;padding:12px;border:1px solid <?php echo $crmStats['expiring_week'] > 0 ? 'rgba(239,68,68,.35)' : 'var(--gf-border)' ?>;transition:border-color .2s">
+                        <div
+                            style="font-size:22px;font-weight:800;color:<?php echo $crmStats['expiring_week'] > 0 ? '#ef4444' : 'var(--gf-text)' ?>">
+                            <?php echo (int) $crmStats['expiring_week'] ?></div>
+                        <div style="font-size:11px;color:var(--gf-text-muted)">Vencen esta semana</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    <?php endif ?>
 
     <div class="grid grid-2">
 
