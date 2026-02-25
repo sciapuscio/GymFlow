@@ -421,8 +421,19 @@ layout_footer($user);
         <form onsubmit="createUser(event)">
             <div class="form-group"><label class="form-label">Nombre</label><input class="form-control" id="u-name"
                     required placeholder="María García"></div>
-            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control"
-                    id="u-email" required></div>
+            <div class="form-group">
+              <label class="form-label">Nombre de usuario</label>
+              <div style="display:flex;align-items:center;background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;overflow:hidden">
+                <input class="form-control" id="u-username" required
+                       placeholder="diego"
+                       style="border:none;background:transparent;border-radius:0;flex:1"
+                       oninput="updateLoginPreview()">
+                <span id="u-slug-suffix"
+                      style="padding:0 12px;font-size:13px;color:var(--gf-accent);white-space:nowrap;font-weight:600"
+                      >@<?php echo htmlspecialchars($gym['slug'] ?? 'gym') ?></span>
+              </div>
+              <div style="font-size:11px;color:var(--gf-text-dim);margin-top:4px">Login: <strong id="u-login-preview">diego@<?php echo htmlspecialchars($gym['slug'] ?? 'gym') ?></strong></div>
+            </div>
             <div class="form-group"><label class="form-label">Contraseña</label><input type="password"
                     class="form-control" id="u-pass" required minlength="8"></div>
             <div class="form-group"><label class="form-label">Rol</label>
@@ -549,9 +560,18 @@ layout_footer($user);
         location.reload();
     }
 
+    function updateLoginPreview() {
+        const slug = document.getElementById('u-slug-suffix').textContent.trim(); // e.g. '@viva'
+        const username = document.getElementById('u-username').value.trim().toLowerCase().replace(/\s+/g, '.');
+        document.getElementById('u-login-preview').textContent = (username || 'usuario') + slug;
+    }
+
     async function createUser(e) {
         e.preventDefault();
-        const data = { name: document.getElementById('u-name').value, email: document.getElementById('u-email').value, password: document.getElementById('u-pass').value, role: document.getElementById('u-role').value, gym_id: GYM_ID };
+        const username = document.getElementById('u-username').value.trim().toLowerCase().replace(/\s+/g, '.');
+        const slug = '<?php echo addslashes($gym["slug"] ?? "gym") ?>';
+        const pseudoEmail = username + '@' + slug;
+        const data = { name: document.getElementById('u-name').value, email: pseudoEmail, password: document.getElementById('u-pass').value, role: document.getElementById('u-role').value, gym_id: GYM_ID };
         const res = await GF.post(window.GF_BASE + '/api/users.php', data);
         if (res && res.code === 'INSTRUCTOR_LIMIT') {
             showToast(`Límite de instructores alcanzado. Contactá a GymFlow para mejorar tu plan.`, 'error');

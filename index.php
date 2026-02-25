@@ -228,8 +228,9 @@ if ($user) {
         <!-- ── Step 1: email + password ──────────────────────────── -->
         <form id="login-form" style="display:flex;flex-direction:column;gap:0">
             <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" id="f-email" class="form-control" placeholder="tu@gimnasio.com" required autofocus>
+                <label class="form-label">Usuario</label>
+                <input type="text" id="f-email" class="form-control" placeholder="diego@viva" required autofocus
+                    autocomplete="username">
             </div>
             <div class="form-group">
                 <label class="form-label">Contraseña</label>
