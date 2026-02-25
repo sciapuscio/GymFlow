@@ -50,7 +50,7 @@ layout_footer($user);
             <?php endforeach; ?>
         </select>
         <?php if ($gymSlug): ?>
-            <a class="btn btn-secondary"
+            <a class="btn btn-secondary" id="cartelera-btn"
                 href="<?= BASE_URL ?>/pages/display/agenda.php?gym=<?= htmlspecialchars($gymSlug) ?>" target="_blank"
                 style="display:inline-flex;align-items:center;gap:7px;text-decoration:none">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -295,6 +295,17 @@ layout_footer($user);
         document.querySelectorAll('.schedule-slot').forEach(el => {
             el.style.display = (!salaId || el.dataset.sala == salaId) ? '' : 'none';
         });
+        // Sync cartelera URL with active sala filter
+        const btn = document.getElementById('cartelera-btn');
+        if (btn) {
+            const url = new URL(btn.href);
+            if (salaId) {
+                url.searchParams.set('sala', salaId);
+            } else {
+                url.searchParams.delete('sala');
+            }
+            btn.href = url.toString();
+        }
     }
 
     document.querySelectorAll('.modal-overlay').forEach(m => {

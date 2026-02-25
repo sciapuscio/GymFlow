@@ -20,16 +20,28 @@ if (!$gym) {
     exit('<p style="color:#fff;padding:40px;font-family:sans-serif">Gimnasio no encontrado</p>');
 }
 
+// Filtro opcional por sala
+$salaId = isset($_GET['sala']) ? (int) $_GET['sala'] : 0;
+$salaName = '';
+
 // Cargar slots iniciales
-$stmtSlots = db()->prepare(
-    "SELECT ss.*, ss.label AS class_name,
+$sql = "SELECT ss.*, ss.label AS class_name,
             s.name AS sala_name, s.accent_color AS sala_accent, s.bg_color AS sala_bg
      FROM   schedule_slots ss
      LEFT JOIN salas s ON ss.sala_id = s.id
-     WHERE  ss.gym_id = ?
-     ORDER  BY ss.day_of_week, ss.start_time"
-);
-$stmtSlots->execute([$gym['id']]);
+     WHERE  ss.gym_id = ?";
+$params = [$gym['id']];
+if ($salaId) {
+    $sql .= " AND ss.sala_id = ?";
+    $params[] = $salaId;
+    // Get sala name for header
+    $stmtSalaName = db()->prepare("SELECT name FROM salas WHERE id = ? AND gym_id = ?");
+    $stmtSalaName->execute([$salaId, $gym['id']]);
+    $salaName = $stmtSalaName->fetchColumn() ?: '';
+}
+$sql .= " ORDER BY ss.day_of_week, ss.start_time";
+$stmtSlots = db()->prepare($sql);
+$stmtSlots->execute($params);
 $slots = $stmtSlots->fetchAll();
 
 // Pre-agrupar por día
@@ -38,10 +50,11 @@ foreach ($slots as $s) {
     $byDay[(int) $s['day_of_week']][] = $s;
 }
 
-$accent = htmlspecialchars($gym['primary_color'] ?? '#00f5d4');
+$accent  = htmlspecialchars($gym['primary_color'] ?? '#00f5d4');
 $accent2 = htmlspecialchars($gym['secondary_color'] ?? '#ff6b35');
 $gymName = htmlspecialchars($gym['name']);
-$gymId = (int) $gym['id'];
+$gymId   = (int) $gym['id'];
+$pageTitle = $salaName ? 'Sala: ' . htmlspecialchars($salaName) : 'Programación Semanal';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -65,8 +78,12 @@ $gymId = (int) $gym['id'];
         }
 
         :root {
-            --accent: <?= $accent ?>;
-            --accent2: <?= $accent2 ?>;
+            --accent:
+                <?= $accent ?>
+            ;
+            --accent2:
+                <?= $accent2 ?>
+            ;
             --bg: #07070f;
             --card: rgba(255, 255, 255, .04);
             --border: rgba(255, 255, 255, .07);
@@ -409,7 +426,7 @@ $gymId = (int) $gym['id'];
                 <div id="gym-name">
                     <?= $gymName ?>
                 </div>
-                <div id="agenda-label">Programación Semanal</div>
+                <div id="agenda-label"><?= htmlspecialchars($pageTitle) ?></div>
             </div>
         </div>
 
@@ -494,8 +511,9 @@ $gymId = (int) $gym['id'];
     <!-- Socket.IO -->
     <script src="<?= SOCKET_URL ?>/socket.io/socket.io.js"></script>
     <script>
-        const GYM_ID = <?= $gymId ?>;
-        const TODAY = <?= $phpDay ?>; // 0=Lun..6=Dom
+        const GYM_ID  = <?= $gymId ?>;
+        const SALA_ID  = <?= $salaId ?>; // 0 = todas las salas
+        const TODAY   = <?= $phpDay ?>; // 0=Lun..6=Dom
 
         // ── Clock ──────────────────────────────────────────────────────────────────
         (function clockTick() {
@@ -543,6 +561,9 @@ $gymId = (int) $gym['id'];
         function fmt(t) { return t ? t.slice(0, 5) : ''; }
 
         function renderSlots(slots) {
+            // Apply sala filter if active
+            if (SALA_ID) slots = slots.filter(s => parseInt(s.sala_id) === SALA_ID);
+
             // Group by day
             const byDay = Array.from({ length: 7 }, () => []);
             slots.forEach(s => byDay[parseInt(s.day_of_week)].push(s));
