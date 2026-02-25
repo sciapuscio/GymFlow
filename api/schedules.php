@@ -71,6 +71,40 @@ if ($method === 'POST') {
     jsonResponse(['id' => $newId, 'success' => true], 201);
 }
 
+// ── PUT — editar slot ────────────────────────────────────────────────────────
+if ($method === 'PUT' && $id) {
+    $user = requireAuth('instructor', 'admin', 'superadmin');
+    $gymId = (int) $user['gym_id'];
+    $data = getBody();
+
+    // Verificar propiedad
+    $stmtOwn = db()->prepare("SELECT id FROM schedule_slots WHERE id = ? AND gym_id = ?");
+    $stmtOwn->execute([$id, $gymId]);
+    if (!$stmtOwn->fetch())
+        jsonError('Slot no encontrado o sin permisos', 403);
+
+    $label = trim($data['class_name'] ?? $data['label'] ?? '');
+
+    db()->prepare(
+        "UPDATE schedule_slots
+         SET day_of_week=?, start_time=?, end_time=?, sala_id=?, label=?
+         WHERE id=? AND gym_id=?"
+    )->execute([
+                (int) ($data['day_of_week'] ?? 0),
+                $data['start_time'] ?? '',
+                $data['end_time'] ?? '',
+                (int) ($data['sala_id'] ?? 0),
+                $label ?: null,
+                $id,
+                $gymId,
+            ]);
+
+    // Notify agenda displays BEFORE exit
+    @file_get_contents('http://localhost:3001/internal/schedule-updated?gym_id=' . $gymId);
+
+    jsonResponse(['success' => true]);
+}
+
 // ── DELETE — eliminar slot ───────────────────────────────────────────────────
 if ($method === 'DELETE' && $id) {
     $user = requireAuth('instructor', 'admin', 'superadmin');

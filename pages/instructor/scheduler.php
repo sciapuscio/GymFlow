@@ -65,6 +65,60 @@ layout_footer($user);
     </div>
 </div>
 
+<style>
+    .schedule-slot {
+        position: relative;
+    }
+
+    .slot-actions {
+        display: none;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        gap: 4px;
+        z-index: 2;
+    }
+
+    .schedule-slot:hover .slot-actions {
+        display: flex;
+    }
+
+    .slot-btn {
+        width: 26px;
+        height: 26px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s, transform .1s;
+        padding: 0;
+    }
+
+    .slot-btn:hover {
+        transform: scale(1.12);
+    }
+
+    .slot-btn-edit {
+        background: rgba(0, 245, 212, .15);
+        color: var(--gf-accent);
+    }
+
+    .slot-btn-edit:hover {
+        background: rgba(0, 245, 212, .3);
+    }
+
+    .slot-btn-del {
+        background: rgba(255, 80, 80, .12);
+        color: #ff6b6b;
+    }
+
+    .slot-btn-del:hover {
+        background: rgba(255, 80, 80, .28);
+    }
+</style>
+
 <div class="page-body">
     <!-- Weekly grid -->
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px;min-height:500px">
@@ -77,8 +131,25 @@ layout_footer($user);
                 <div style="display:flex;flex-direction:column;gap:6px" id="day-<?php echo $dayIdx ?>">
                     <?php foreach ($slotsByDay[$dayIdx] as $slot): ?>
                         <div class="schedule-slot" data-sala="<?php echo $slot['sala_id'] ?>"
-                            style="padding:8px 10px;background:var(--gf-accent-dim);border:1px solid rgba(0,245,212,.2);border-radius:8px;cursor:pointer"
-                            onclick="viewSlot(<?php echo $slot['id'] ?>)">
+                            style="padding:8px 10px;background:var(--gf-accent-dim);border:1px solid rgba(0,245,212,.2);border-radius:8px">
+
+                            <!-- Action buttons (visible on hover) -->
+                            <div class="slot-actions">
+                                <button class="slot-btn slot-btn-edit" title="Editar"
+                                    onclick="editSlot(<?= $slot['id'] ?>,<?= $slot['day_of_week'] ?>,'<?= addslashes(substr($slot['start_time'], 0, 5)) ?>','<?= addslashes(substr($slot['end_time'], 0, 5)) ?>',<?= (int) $slot['sala_id'] ?>,'<?= addslashes($slot['class_name'] ?? $slot['session_name'] ?? '') ?>')">
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+                                <button class="slot-btn slot-btn-del" title="Eliminar" onclick="deleteSlot(<?= $slot['id'] ?>)">
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+
                             <div style="font-size:11px;color:var(--gf-accent);font-weight:700">
                                 <?php echo substr($slot['start_time'], 0, 5) ?>
                             </div>
@@ -102,17 +173,19 @@ layout_footer($user);
     </div>
 </div>
 
-<!-- Add Slot Modal -->
+<!-- Add / Edit Slot Modal -->
 <div class="modal-overlay" id="slot-modal">
     <div class="modal" style="max-width:420px">
         <div class="modal-header">
-            <h3 class="modal-title">Agregar al Horario</h3>
-            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')"><svg
-                    width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <h3 class="modal-title" id="slot-modal-title">Agregar al Horario</h3>
+            <button class="modal-close" onclick="closeSlotModal()">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg></button>
+                </svg>
+            </button>
         </div>
-        <form onsubmit="createSlot(event)">
+        <form onsubmit="saveSlot(event)">
+            <input type="hidden" id="slot-editing-id" value="">
             <div class="form-group">
                 <label class="form-label">Día</label>
                 <select class="form-control" id="slot-day">
@@ -141,26 +214,49 @@ layout_footer($user);
             </div>
             <div class="form-group"><label class="form-label">Nombre de la clase</label><input class="form-control"
                     id="slot-name" placeholder="CrossFit, HIIT, Yoga..." required></div>
-            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Agregar</button>
+            <button type="submit" class="btn btn-primary" id="slot-submit-btn"
+                style="width:100%;margin-top:8px">Agregar</button>
         </form>
     </div>
 </div>
 
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script>
+    const BASE = window.GF_BASE;
+
+    function closeSlotModal() {
+        document.getElementById('slot-modal').classList.remove('open');
+        document.getElementById('slot-editing-id').value = '';
+        document.getElementById('slot-modal-title').textContent = 'Agregar al Horario';
+        document.getElementById('slot-submit-btn').textContent = 'Agregar';
+    }
+
     function openAddSlot(dayIdx) {
+        document.getElementById('slot-editing-id').value = '';
+        document.getElementById('slot-modal-title').textContent = 'Agregar al Horario';
+        document.getElementById('slot-submit-btn').textContent = 'Agregar';
         document.getElementById('slot-day').value = dayIdx;
+        document.getElementById('slot-start').value = '08:00';
+        document.getElementById('slot-end').value = '09:00';
+        document.getElementById('slot-name').value = '';
         document.getElementById('slot-modal').classList.add('open');
     }
 
-    function filterBySala(salaId) {
-        document.querySelectorAll('.schedule-slot').forEach(el => {
-            el.style.display = (!salaId || el.dataset.sala == salaId) ? '' : 'none';
-        });
+    function editSlot(id, day, start, end, salaId, name) {
+        document.getElementById('slot-editing-id').value = id;
+        document.getElementById('slot-modal-title').textContent = 'Editar Clase';
+        document.getElementById('slot-submit-btn').textContent = 'Guardar cambios';
+        document.getElementById('slot-day').value = day;
+        document.getElementById('slot-start').value = start;
+        document.getElementById('slot-end').value = end;
+        document.getElementById('slot-sala').value = salaId;
+        document.getElementById('slot-name').value = name;
+        document.getElementById('slot-modal').classList.add('open');
     }
 
-    async function createSlot(e) {
+    async function saveSlot(e) {
         e.preventDefault();
+        const editId = document.getElementById('slot-editing-id').value;
         const data = {
             day_of_week: +document.getElementById('slot-day').value,
             start_time: document.getElementById('slot-start').value,
@@ -169,17 +265,40 @@ layout_footer($user);
             class_name: document.getElementById('slot-name').value,
         };
         try {
-            await GF.post(window.GF_BASE + '/api/schedules.php', data);
-            showToast('Clase agregada al horario', 'success');
+            if (editId) {
+                await GF.put(BASE + '/api/schedules.php?id=' + editId, data);
+                showToast('Clase actualizada', 'success');
+            } else {
+                await GF.post(BASE + '/api/schedules.php', data);
+                showToast('Clase agregada al horario', 'success');
+            }
             location.reload();
         } catch (err) {
-            console.error('createSlot error:', err);
+            console.error('saveSlot error:', err);
             showToast('Error al guardar: ' + (err?.message || 'revisa la consola'), 'error');
         }
     }
 
+    async function deleteSlot(id) {
+        if (!confirm('¿Eliminar esta clase del horario?')) return;
+        try {
+            await GF.delete(BASE + '/api/schedules.php?id=' + id);
+            showToast('Clase eliminada', 'success');
+            location.reload();
+        } catch (err) {
+            console.error('deleteSlot error:', err);
+            showToast('Error al eliminar: ' + (err?.message || 'revisa la consola'), 'error');
+        }
+    }
+
+    function filterBySala(salaId) {
+        document.querySelectorAll('.schedule-slot').forEach(el => {
+            el.style.display = (!salaId || el.dataset.sala == salaId) ? '' : 'none';
+        });
+    }
+
     document.querySelectorAll('.modal-overlay').forEach(m => {
-        m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+        m.addEventListener('click', e => { if (e.target === m) closeSlotModal(); });
     });
 </script>
 
