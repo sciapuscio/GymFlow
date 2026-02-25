@@ -11,7 +11,7 @@ $stmtSalas = db()->prepare("SELECT id, name FROM salas WHERE gym_id = ? AND acti
 $stmtSalas->execute([$gymId]);
 $salas = $stmtSalas->fetchAll();
 
-$stmtSlots = db()->prepare("SELECT ss.*, gs.name as session_name, gs.id as session_id, s.name as sala_name FROM schedule_slots ss JOIN salas s ON ss.sala_id = s.id LEFT JOIN gym_sessions gs ON ss.session_id = gs.id WHERE s.gym_id = ? ORDER BY ss.day_of_week, ss.start_time");
+$stmtSlots = db()->prepare("SELECT ss.*, ss.label AS class_name, gs.name as session_name, gs.id as session_id, s.name as sala_name FROM schedule_slots ss JOIN salas s ON ss.sala_id = s.id LEFT JOIN gym_sessions gs ON ss.session_id = gs.id WHERE s.gym_id = ? ORDER BY ss.day_of_week, ss.start_time");
 $stmtSlots->execute([$gymId]);
 $slots = $stmtSlots->fetchAll();
 
@@ -152,9 +152,14 @@ layout_footer($user);
             sala_id: +document.getElementById('slot-sala').value,
             class_name: document.getElementById('slot-name').value,
         };
-        await GF.post(window.GF_BASE + '/api/sessions.php?action=schedule', data);
-        showToast('Agregado al horario', 'success');
-        location.reload();
+        try {
+            await GF.post(window.GF_BASE + '/api/schedules.php', data);
+            showToast('Clase agregada al horario', 'success');
+            location.reload();
+        } catch (err) {
+            console.error('createSlot error:', err);
+            showToast('Error al guardar: ' + (err?.message || 'revisa la consola'), 'error');
+        }
     }
 
     document.querySelectorAll('.modal-overlay').forEach(m => {
