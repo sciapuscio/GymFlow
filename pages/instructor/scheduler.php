@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
 
-$user = requireAuth('instructor', 'admin', 'superadmin');
+$user = requireAuth('instructor', 'admin', 'superadmin', 'staff');
 $gymId = (int) $user['gym_id'];
 
 $stmtSalas = db()->prepare("SELECT id, name FROM salas WHERE gym_id = ? AND active = 1");
