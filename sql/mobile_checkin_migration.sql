@@ -8,7 +8,7 @@ USE gymflow;
 -- Es estático y se puede regenerar desde el admin.
 
 ALTER TABLE gyms
-    ADD COLUMN IF NOT EXISTS qr_token CHAR(36) UNIQUE DEFAULT NULL COMMENT 'UUID imprimible para check-in por QR';
+    ADD COLUMN qr_token CHAR(36) UNIQUE DEFAULT NULL COMMENT 'UUID imprimible para check-in por QR';
 
 -- Asigna UUID a los gyms que no tienen token aún
 UPDATE gyms SET qr_token = UUID() WHERE qr_token IS NULL;
@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS member_auth_tokens (
 -- No todos los members necesitan credenciales (pueden ser solo registros del admin).
 
 ALTER TABLE members
-    ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) DEFAULT NULL COMMENT 'NULL = no tiene acceso a la app',
-    ADD COLUMN IF NOT EXISTS qr_token      CHAR(36) UNIQUE DEFAULT NULL COMMENT 'QR personal del alumno (alternativa al QR del gym)';
+    ADD COLUMN password_hash VARCHAR(255) DEFAULT NULL COMMENT 'NULL = no tiene acceso a la app',
+    ADD COLUMN qr_token      CHAR(36) UNIQUE DEFAULT NULL COMMENT 'QR personal del alumno (alternativa al QR del gym)';
 
 -- Asigna QR personal a alumnos actuales
 UPDATE members SET qr_token = UUID() WHERE qr_token IS NULL;
@@ -77,5 +77,5 @@ CREATE TABLE IF NOT EXISTS member_reservations (
 -- y cuántos minutos antes es el limite para cancelar sin penalidad.
 
 ALTER TABLE gyms
-    ADD COLUMN IF NOT EXISTS checkin_window_minutes   SMALLINT DEFAULT 30  COMMENT 'minutos antes de la clase en que el QR está activo',
-    ADD COLUMN IF NOT EXISTS cancel_cutoff_minutes    SMALLINT DEFAULT 120 COMMENT 'minutos antes de la clase límite para cancelar sin ausencia';
+    ADD COLUMN checkin_window_minutes   SMALLINT DEFAULT 30  COMMENT 'minutos antes de la clase en que el QR está activo',
+    ADD COLUMN cancel_cutoff_minutes    SMALLINT DEFAULT 120 COMMENT 'minutos antes de la clase límite para cancelar sin ausencia';
