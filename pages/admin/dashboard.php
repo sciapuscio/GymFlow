@@ -25,7 +25,7 @@ $salas = db()->prepare("SELECT s.*, (SELECT COUNT(*) FROM gym_sessions gs WHERE 
 $salas->execute([$gymId]);
 $salas = $salas->fetchAll();
 
-$users = db()->prepare("SELECT * FROM users WHERE gym_id = ? AND role != 'superadmin' ORDER BY role, name");
+$users = db()->prepare("SELECT * FROM users WHERE gym_id = ? AND role != 'superadmin' AND active = 1 ORDER BY role, name");
 $users->execute([$gymId]);
 $users = $users->fetchAll();
 
