@@ -7,8 +7,17 @@ require_once __DIR__ . '/../../includes/layout.php';
 $user = requireAuth('instructor', 'admin', 'superadmin');
 $gymId = (int) $user['gym_id'];
 
-$stmt = db()->prepare("SELECT * FROM exercises WHERE gym_id IS NULL OR gym_id = ? ORDER BY muscle_group, name");
-$stmt->execute([$gymId]);
+$stmt = db()->prepare(
+    "SELECT e.*,
+            COALESCE(gep.ai_enabled, 1) AS ai_enabled
+     FROM   exercises e
+     LEFT   JOIN gym_exercise_prefs gep
+                 ON gep.exercise_id = e.id AND gep.gym_id = ?
+     WHERE  (e.is_global = 1 OR e.gym_id = ?)
+       AND  e.active = 1
+     ORDER  BY e.muscle_group, e.name"
+);
+$stmt->execute([$gymId, $gymId]);
 $exercises = $stmt->fetchAll();
 
 $byMuscle = [];
@@ -38,6 +47,9 @@ layout_footer($user);
             <input type="text" class="form-control" id="lib-search" placeholder="Buscar ejercicio..."
                 oninput="searchLib(this.value)" style="padding-left:36px">
         </div>
+        <button id="ai-filter-btn" class="btn btn-secondary" onclick="toggleAiFilter()" title="Filtrar por estado IA">
+            🤖 Todos
+        </button>
         <button class="btn btn-primary" onclick="document.getElementById('add-ex-modal').classList.add('open')">+
             Ejercicio</button>
     </div>
@@ -64,8 +76,9 @@ layout_footer($user);
             $muscleColors = ['chest' => '#ef4444', 'back' => '#3b82f6', 'shoulders' => '#8b5cf6', 'arms' => '#ec4899', 'core' => '#f59e0b', 'legs' => '#10b981', 'glutes' => '#f97316', 'full_body' => '#00f5d4', 'cardio' => '#06b6d4'];
             $col = $muscleColors[$ex['muscle_group']] ?? '#888';
             ?>
-            <div class="exercise-card" data-muscle="<?php echo $ex['muscle_group'] ?>"
-                data-name="<?php echo strtolower($ex['name']) ?>">
+            <div class="exercise-card <?php echo $ex['ai_enabled'] ? '' : 'ai-excluded' ?>"
+                data-muscle="<?php echo $ex['muscle_group'] ?>" data-name="<?php echo strtolower($ex['name']) ?>"
+                data-ai="<?php echo (int) $ex['ai_enabled'] ?>">
                 <div style="display:flex;align-items:start;justify-content:space-between;margin-bottom:12px">
                     <div style="flex:1;min-width:0">
                         <div style="font-weight:700;font-size:15px;margin-bottom:4px">
@@ -107,10 +120,17 @@ layout_footer($user);
                     </div>
                 <?php endif; ?>
 
-                <div style="margin-top:12px;display:flex;justify-content:flex-end">
+                <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+                    <button class="ai-toggle <?php echo $ex['ai_enabled'] ? 'ai-on' : 'ai-off' ?>"
+                        data-id="<?php echo $ex['id'] ?>" data-ai="<?php echo (int) $ex['ai_enabled'] ?>"
+                        onclick="toggleAI(this)"
+                        title="<?php echo $ex['ai_enabled'] ? 'IA puede usar este ejercicio (click para excluir)' : 'Excluido de la IA (click para incluir)' ?>">
+                        <?php echo $ex['ai_enabled'] ? '🤖 IA activo' : '🚫 IA excluido' ?>
+                    </button>
                     <button class="btn btn-ghost btn-sm"
-                        onclick="addToBuilder(<?php echo $ex['id'] ?>, '<?php echo htmlspecialchars(addslashes($ex['name'])) ?>')">+
-                        Builder</button>
+                        onclick="addToBuilder(<?php echo $ex['id'] ?>, '<?php echo htmlspecialchars(addslashes($ex['name'])) ?>')">
+                        + Builder
+                    </button>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -176,19 +196,62 @@ layout_footer($user);
         box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
     }
 
-    .exercise-card[style*="display:none"] {
-        display: none !important;
+    .exercise-card.ai-excluded {
+        opacity: .55;
+        border-color: rgba(255, 255, 255, .06);
+    }
+
+    .ai-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: none;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .2s;
+        letter-spacing: .02em;
+    }
+
+    .ai-on {
+        background: rgba(0, 245, 212, .12);
+        color: #00f5d4;
+    }
+
+    .ai-on:hover {
+        background: rgba(0, 245, 212, .22);
+    }
+
+    .ai-off {
+        background: rgba(255, 255, 255, .06);
+        color: rgba(255, 255, 255, .35);
+    }
+
+    .ai-off:hover {
+        background: rgba(255, 100, 100, .15);
+        color: #ff6b6b;
     }
 </style>
 
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script>
     let currentMuscle = 'all';
+    let aiFilter = 'all'; // 'all' | 'on' | 'off'
 
     function filterLib(btn, muscle) {
         document.querySelectorAll('.muscle-chip').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentMuscle = muscle;
+        filterCards();
+    }
+
+    function toggleAiFilter() {
+        const btn = document.getElementById('ai-filter-btn');
+        if (aiFilter === 'all') { aiFilter = 'on'; btn.textContent = '🤖 Solo activos'; btn.classList.add('active'); }
+        else if (aiFilter === 'on') { aiFilter = 'off'; btn.textContent = '🚫 Solo excluidos'; }
+        else { aiFilter = 'all'; btn.textContent = '🤖 Todos'; btn.classList.remove('active'); }
         filterCards();
     }
 
@@ -198,8 +261,29 @@ layout_footer($user);
         document.querySelectorAll('.exercise-card').forEach(card => {
             const matchMuscle = currentMuscle === 'all' || card.dataset.muscle === currentMuscle;
             const matchName = !q || card.dataset.name.includes(q.toLowerCase());
-            card.style.display = (matchMuscle && matchName) ? '' : 'none';
+            const matchAi = aiFilter === 'all' ||
+                (aiFilter === 'on' && card.dataset.ai === '1') ||
+                (aiFilter === 'off' && card.dataset.ai === '0');
+            card.style.display = (matchMuscle && matchName && matchAi) ? '' : 'none';
         });
+    }
+
+    async function toggleAI(btn) {
+        const exId = +btn.dataset.id;
+        const newAi = btn.dataset.ai === '1' ? 0 : 1;
+        try {
+            await GF.put(window.GF_BASE + '/api/exercises.php?pref=1', { exercise_id: exId, ai_enabled: newAi });
+            btn.dataset.ai = newAi;
+            btn.className = newAi ? 'ai-toggle ai-on' : 'ai-toggle ai-off';
+            btn.textContent = newAi ? '🤖 IA activo' : '🚫 IA excluido';
+            btn.title = newAi ? 'La IA puede usar este ejercicio (click para excluir)' : 'Excluido de la IA (click para incluir)';
+            const card = btn.closest('.exercise-card');
+            card.dataset.ai = newAi;
+            card.classList.toggle('ai-excluded', !newAi);
+            showToast(newAi ? 'Ejercicio incluido en WODs de IA' : 'Ejercicio excluido de WODs de IA', newAi ? 'success' : 'info');
+        } catch (err) {
+            showToast('Error al guardar preferencia', 'error');
+        }
     }
 
     async function createExercise(e) {

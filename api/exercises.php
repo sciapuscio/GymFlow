@@ -9,7 +9,27 @@ header('Content-Type: application/json; charset=utf-8');
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
-// GET all exercises
+// ── PUT ?pref=1 — toggle ai_enabled for this gym ─────────────────────────────
+if ($method === 'PUT' && isset($_GET['pref'])) {
+    $user = requireAuth();
+    $gymId = (int) $user['gym_id'];
+    $data = getBody();
+    $exId = (int) ($data['exercise_id'] ?? 0);
+    $aiOn = isset($data['ai_enabled']) ? (int) (bool) $data['ai_enabled'] : 1;
+
+    if (!$exId)
+        jsonError('exercise_id required', 400);
+
+    db()->prepare(
+        "INSERT INTO gym_exercise_prefs (gym_id, exercise_id, ai_enabled)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE ai_enabled = VALUES(ai_enabled)"
+    )->execute([$gymId, $exId, $aiOn]);
+
+    jsonResponse(['success' => true, 'ai_enabled' => $aiOn]);
+}
+
+// ── GET all exercises ─────────────────────────────────────────────────────────
 if ($method === 'GET' && !$id) {
     $user = requireAuth();
     $gymId = (int) ($user['gym_id'] ?? 0);
@@ -18,7 +38,7 @@ if ($method === 'GET' && !$id) {
     $search = $_GET['q'] ?? null;
 
     $where = ["(e.is_global = 1 OR e.gym_id = ?)"];
-    $params = [$gymId];
+    $params = [$gymId, $gymId]; // second for the JOIN
 
     if ($muscle) {
         $where[] = "e.muscle_group = ?";
@@ -34,27 +54,48 @@ if ($method === 'GET' && !$id) {
         $params[] = "%$search%";
     }
 
-    $stmt = db()->prepare("SELECT e.*, u.name as created_by_name FROM exercises e LEFT JOIN users u ON e.created_by = u.id WHERE " . implode(' AND ', $where) . " AND e.active = 1 ORDER BY e.name");
+    $sql = "SELECT e.*,
+                   u.name AS created_by_name,
+                   COALESCE(gep.ai_enabled, 1) AS ai_enabled
+            FROM   exercises e
+            LEFT   JOIN users u ON e.created_by = u.id
+            LEFT   JOIN gym_exercise_prefs gep
+                        ON gep.exercise_id = e.id AND gep.gym_id = ?
+            WHERE  " . implode(' AND ', $where) . "
+              AND  e.active = 1
+            ORDER  BY e.name";
+
+    $stmt = db()->prepare($sql);
     $stmt->execute($params);
     jsonResponse($stmt->fetchAll());
 }
 
-// GET single
+// ── GET single ────────────────────────────────────────────────────────────────
 if ($method === 'GET' && $id) {
     $user = requireAuth();
     $stmt = db()->prepare("SELECT * FROM exercises WHERE id = ?");
     $stmt->execute([$id]);
-    jsonResponse($stmt->fetch() ?: [], $stmt->fetch() ? 200 : 404);
+    $row = $stmt->fetch();
+    jsonResponse($row ?: [], $row ? 200 : 404);
 }
 
-// Random intelligent generation
+// ── POST ?random — AI WOD generation (respects ai_enabled pref) ──────────────
 if ($method === 'POST' && isset($_GET['random'])) {
     $user = requireAuth();
     $data = getBody();
     $gymId = (int) $user['gym_id'];
-    $stmt = db()->prepare("SELECT * FROM exercises WHERE (is_global = 1 OR gym_id = ?) AND active = 1");
-    $stmt->execute([$gymId]);
+
+    $stmt = db()->prepare(
+        "SELECT e.* FROM exercises e
+         LEFT JOIN gym_exercise_prefs gep
+                   ON gep.exercise_id = e.id AND gep.gym_id = ?
+         WHERE (e.is_global = 1 OR e.gym_id = ?)
+           AND e.active = 1
+           AND COALESCE(gep.ai_enabled, 1) = 1"
+    );
+    $stmt->execute([$gymId, $gymId]);
     $exercises = $stmt->fetchAll();
+
     $result = randomIntelligent($exercises, [
         'level' => $data['level'] ?? 'all',
         'equipment' => $data['equipment'] ?? [],
@@ -64,18 +105,21 @@ if ($method === 'POST' && isset($_GET['random'])) {
     jsonResponse($result);
 }
 
-// POST — create exercise
+// ── POST — create exercise (private to this gym) ──────────────────────────────
 if ($method === 'POST') {
     $user = requireAuth();
     $data = getBody();
     if (empty($data['name']))
         jsonError('Name required');
 
-    $gymId = $user['role'] === 'superadmin' ? (isset($data['gym_id']) ? (int) $data['gym_id'] : null) : (int) $user['gym_id'];
+    $gymId = $user['role'] === 'superadmin'
+        ? (isset($data['gym_id']) ? (int) $data['gym_id'] : null)
+        : (int) $user['gym_id'];
     $isGlobal = ($user['role'] === 'superadmin' && ($data['is_global'] ?? false)) ? 1 : 0;
 
     $stmt = db()->prepare(
-        "INSERT INTO exercises (gym_id, created_by, name, name_es, muscle_group, equipment, level, tags_json, duration_rec, description, is_global) 
+        "INSERT INTO exercises
+             (gym_id, created_by, name, name_es, muscle_group, equipment, level, tags_json, duration_rec, description, is_global)
          VALUES (?,?,?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
@@ -94,7 +138,7 @@ if ($method === 'POST') {
     jsonResponse(['id' => db()->lastInsertId()], 201);
 }
 
-// PUT — update
+// ── PUT — update exercise fields ──────────────────────────────────────────────
 if ($method === 'PUT' && $id) {
     $user = requireAuth();
     $data = getBody();
@@ -113,7 +157,7 @@ if ($method === 'PUT' && $id) {
     jsonResponse(['success' => true]);
 }
 
-// DELETE
+// ── DELETE ────────────────────────────────────────────────────────────────────
 if ($method === 'DELETE' && $id) {
     $user = requireAuth();
     db()->prepare("UPDATE exercises SET active = 0 WHERE id = ?")->execute([$id]);
