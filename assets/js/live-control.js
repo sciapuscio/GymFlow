@@ -412,20 +412,27 @@ const GFLive = (() => {
 
     async function setSala(salaId) {
         // set_sala is still a PHP operation (not real-time)
+        const salaIdVal = (salaId && salaId != '0') ? parseInt(salaId) : null;
         try {
-            await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=set_sala`, { sala_id: parseInt(salaId) });
-            session.sala_id = parseInt(salaId);
+            await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=set_sala`, { sala_id: salaIdVal });
+            session.sala_id = salaIdVal;
             // Reconnect socket with new sala
             if (socket?.connected) {
-                socket.emit('join:session', { session_id: session.id, sala_id: parseInt(salaId) });
+                socket.emit('join:session', { session_id: session.id, sala_id: salaIdVal });
             }
-            const salaName = document.getElementById('live-sala-select')?.selectedOptions[0]?.text || '';
-            showToast(`Sala asignada: ${salaName}`, 'success');
-            const salas = window.SALAS || [];
-            const sala = salas.find(s => s.id == salaId);
-            if (sala) {
+            if (!salaIdVal) {
+                showToast('Sala desacoplada', 'info');
                 const displayLink = document.querySelector('a[href*="/display/"]');
-                if (displayLink) { displayLink.href = `${window.GF_BASE}/pages/display/sala.php?code=${sala.display_code}`; displayLink.style.display = ''; }
+                if (displayLink) displayLink.style.display = 'none';
+            } else {
+                const salaName = document.getElementById('live-sala-select')?.selectedOptions[0]?.text || '';
+                showToast(`Sala asignada: ${salaName}`, 'success');
+                const salas = window.SALAS || [];
+                const sala = salas.find(s => s.id == salaId);
+                if (sala) {
+                    const displayLink = document.querySelector('a[href*="/display/"]');
+                    if (displayLink) { displayLink.href = `${window.GF_BASE}/pages/display/sala.php?code=${sala.display_code}`; displayLink.style.display = ''; }
+                }
             }
         } catch (e) { showToast('Error al asignar sala', 'error'); }
     }

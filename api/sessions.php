@@ -157,9 +157,17 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             $idx = $targetIdx;
             break;
         case 'set_sala':
-            $salaId = (int) ($data['sala_id'] ?? 0);
-            db()->prepare("UPDATE gym_sessions SET sala_id=? WHERE id=?")->execute([$salaId, $id]);
-            db()->prepare("UPDATE salas SET current_session_id=? WHERE id=?")->execute([$id, $salaId]);
+            $newSalaId = !empty($data['sala_id']) ? (int) $data['sala_id'] : null;
+            $oldSalaId = (int) $session['sala_id'];
+            // Limpiar sala anterior si se está desacoplando
+            if ($oldSalaId && $oldSalaId !== $newSalaId) {
+                db()->prepare("UPDATE salas SET current_session_id=NULL WHERE id=? AND current_session_id=?")
+                    ->execute([$oldSalaId, $id]);
+            }
+            db()->prepare("UPDATE gym_sessions SET sala_id=? WHERE id=?")->execute([$newSalaId, $id]);
+            if ($newSalaId) {
+                db()->prepare("UPDATE salas SET current_session_id=? WHERE id=?")->execute([$id, $newSalaId]);
+            }
             break;
         case 'update_elapsed':
             // Legacy fallback: only update base elapsed when NOT playing
