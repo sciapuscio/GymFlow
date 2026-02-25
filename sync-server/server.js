@@ -62,6 +62,28 @@ const sessionStates = new Map();
 const timers = new Map();
 // clockTimers: Map<salaId, intervalId>  (standalone clock ticker)
 const clockTimers = new Map();
+// graceTimers: Map<salaId, timeoutId>  (instructor disconnect grace period)
+const graceTimers = new Map();
+
+const INSTRUCTOR_GRACE_MS = 30_000; // 30 s before auto-detach
+
+// Helper: detach a sala (clear state + notify display + update DB)
+async function _autoDetachSala(salaId, sessionId, reason) {
+    console.log(`[AutoDetach] Sala ${salaId} — ${reason}`);
+    stopTimer(salaId);
+    _stopClockTimer(salaId);
+    sessionStates.delete(salaId);
+    graceTimers.delete(salaId);
+    io.to(`sala:${salaId}`).emit('session:detach');
+    mon('auto-detach', `🔌 Sala ${salaId} auto-desacoplada (${reason})`, { salaId, sessionId });
+    // Update DB: set sala_id = NULL on the session
+    try {
+        await pool.execute('UPDATE gym_sessions SET sala_id = NULL WHERE id = ? AND sala_id = ?', [sessionId, salaId]);
+        await pool.execute('UPDATE salas SET current_session_id = NULL WHERE id = ?', [salaId]);
+    } catch (e) {
+        console.error('[AutoDetach] DB error:', e.message);
+    }
+}
 
 function _startClockTimer(salaId) {
     _stopClockTimer(salaId);
@@ -445,6 +467,13 @@ io.on('connection', (socket) => {
             socket.data.role = 'instructor';
             socket.data.sessionId = session_id;
 
+            // Cancel any pending auto-detach grace timer for this sala
+            if (graceTimers.has(sala_id)) {
+                clearTimeout(graceTimers.get(sala_id));
+                graceTimers.delete(sala_id);
+                console.log(`[AutoDetach] Grace timer cancelled — instructor reconnected to sala ${sala_id}`);
+            }
+
             // Fetch instructor + gym + sala name for monitor logs
             try {
                 const [info] = await pool.execute(
@@ -769,7 +798,7 @@ io.on('connection', (socket) => {
         console.log(`[Socket] Sala ${sala_id} clock_timer_cfg → mode=${ct.mode} dur=${ct.duration} prep=${ct.prep}`);
     });
 
-    // ── Disconnect ──────────────────────────────────────────────────────────
+    // ── Disconnect ─────────────────────────────────────────────────────────────────
     socket.on('disconnect', () => {
         const role = socket.data.role || '?';
         const desc = socket.data.userName
@@ -777,6 +806,23 @@ io.on('connection', (socket) => {
             : `${socket.id} (${role})`;
         console.log(`[Socket] Disconnected: ${socket.id} (${role})`);
         if (role !== 'monitor') mon('disconnect', `🔚 ${desc}`, { id: socket.id, role, user: socket.data.userName, gym: socket.data.gymName });
+
+        // ── Auto-detach: if instructor disconnects, start grace period ──────────────
+        if (role === 'instructor' && socket.data.salaId && socket.data.sessionId) {
+            const salaId = socket.data.salaId;
+            const sessionId = socket.data.sessionId;
+
+            // Only if no other instructor socket is still connected to this sala
+            const othersInSala = [...io.sockets.sockets.values()].some(
+                s => s.id !== socket.id && s.data.salaId === salaId && s.data.role === 'instructor'
+            );
+
+            if (!othersInSala && !graceTimers.has(salaId)) {
+                mon('grace', `⏳ Instructor desconectado — sala ${salaId} desacopla en ${INSTRUCTOR_GRACE_MS / 1000}s si no reconecta`, { salaId, sessionId });
+                const tid = setTimeout(() => _autoDetachSala(salaId, sessionId, 'instructor timeout'), INSTRUCTOR_GRACE_MS);
+                graceTimers.set(salaId, tid);
+            }
+        }
     });
 });
 
