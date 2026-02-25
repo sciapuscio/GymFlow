@@ -41,7 +41,10 @@ $checkinUrl = rtrim(BASE_URL, '/') . '/api/checkin.php?gym_qr_token=' . urlencod
 layout_header('QR del Gym — ' . $gym['name'], 'admin', $user);
 nav_section('Admin');
 nav_item(BASE_URL . '/pages/admin/dashboard.php', 'Dashboard', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', 'dashboard', 'gym-qr');
-nav_item(BASE_URL . '/pages/instructor/dashboard.php', 'Instructor', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>', 'instructor', 'gym-qr');
+if ($user['role'] === 'staff')
+    nav_item(BASE_URL . '/pages/instructor/scheduler.php', 'Agenda', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>', 'scheduler', 'gym-qr');
+else
+    nav_item(BASE_URL . '/pages/instructor/dashboard.php', 'Instructor', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>', 'instructor', 'gym-qr');
 nav_section('CRM');
 nav_item(BASE_URL . '/pages/admin/members.php', 'Alumnos', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>', 'members', 'gym-qr');
 nav_item(BASE_URL . '/pages/admin/membership-plans.php', 'Planes', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>', 'plans', 'gym-qr');
@@ -88,7 +91,7 @@ layout_footer($user);
             <div id="qr-container"
                 style="display:inline-block;padding:16px;background:#fff;border-radius:12px;margin-bottom:16px">
                 <img id="qr-img"
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=<?php echo urlencode($checkinUrl) ?>"
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=<?php echo urlencode($checkinUrl) ?>"
                     alt="QR Check-in <?php echo htmlspecialchars($gym['name']) ?>" width="240" height="240"
                     style="display:block">
             </div>
@@ -164,43 +167,84 @@ layout_footer($user);
         /* Hide everything except the QR card */
         .sidebar,
         .page-header,
-        .card:not(#print-only),
-        .app-layout > *:not(.main-content) {
+        .card:not(#print-only) {
             display: none !important;
         }
 
-        html, body, .app-layout, .main-content {
+        /* Reset layout for print */
+        html,
+        body {
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
             color: #000 !important;
+            width: 100% !important;
         }
 
-        .main-content { margin-left: 0 !important; padding: 0 !important; }
-        .page-body { padding: 0 !important; display: block !important; }
+        .app-layout {
+            display: block !important;
+        }
 
-        /* QR card fills the page, centered */
+        .sidebar {
+            display: none !important;
+        }
+
+        .main-content {
+            margin-left: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        .page-body {
+            padding: 0 !important;
+            display: block !important;
+            width: 100% !important;
+        }
+
+        /* The grid wrapper — collapse to block so QR takes full width */
+        .page-body>div {
+            display: block !important;
+            width: 100% !important;
+        }
+
+        /* QR card: centered, full page */
         #print-only {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
-            min-height: 90vh !important;
+            width: 100% !important;
+            min-height: 92vh !important;
             border: none !important;
             background: #fff !important;
             box-shadow: none !important;
-            padding: 32px !important;
+            padding: 40px 0 !important;
+        }
+
+        /* Scale QR image up for print */
+        #qr-img {
+            width: 320px !important;
+            height: 320px !important;
+        }
+
+        #qr-container {
+            border: 3px solid #000 !important;
+            background: #fff !important;
+            padding: 16px !important;
+            border-radius: 8px !important;
         }
 
         /* Gym name */
         #print-only div[style*="font-family"] {
             color: #111 !important;
-            font-size: 28px !important;
+            font-size: 32px !important;
+            margin-top: 12px !important;
         }
 
         /* Legend */
         #print-only div[style*="font-size:12px"] {
-            color: #555 !important;
+            color: #444 !important;
+            font-size: 14px !important;
         }
 
         /* URL box */
@@ -208,14 +252,13 @@ layout_footer($user);
             background: #f5f5f5 !important;
             color: #333 !important;
             border: 1px solid #ccc !important;
+            max-width: 360px !important;
+            margin-top: 8px !important;
         }
 
-        #qr-container {
-            border: 3px solid #000 !important;
-            background: #fff !important;
-            padding: 12px !important;
+        hr {
+            border-color: #ddd !important;
+            width: 80% !important;
         }
-
-        hr { border-color: #ddd !important; }
     }
 </style>
