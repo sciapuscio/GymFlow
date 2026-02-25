@@ -30,3 +30,16 @@ define('SOCKET_URL', 'http://localhost:3000');
 
 // ── Timezone (opcional, default: America/Argentina/Buenos_Aires) ─────────────
 // define('TIMEZONE', 'America/Argentina/Buenos_Aires');
+
+// ── Seguridad: OTP HMAC Key (OBLIGATORIA en producción) ──────────────────────
+// Generá una clave aleatoria con: php -r "echo bin2hex(random_bytes(32));"
+// define('OTP_HMAC_KEY', 'pega-aqui-tu-clave-aleatoria-de-64-chars-hex');
+
+// ── CORS: dominios permitidos (opcional, tiene defaults en app.php) ───────────
+// Solo necesario si agregás más dominios o usás un entorno diferente.
+// define('ALLOWED_ORIGINS', [
+//     'https://sistema.gymflow.com.ar',
+//     'https://training.access.ly',
+//     'http://localhost',
+// ]);
+

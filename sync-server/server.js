@@ -20,10 +20,37 @@ const DB = {
 };
 
 // ─── Setup ─────────────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+    'https://sistema.gymflow.com.ar',
+    'https://training.access.ly',
+    'http://localhost',
+    'http://localhost:3000',
+    'http://127.0.0.1',
+    ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
+];
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
+const io = new Server(server, {
+    cors: {
+        origin: (origin, cb) => {
+            // Allow no-origin (same-host curl/PHP) and whitelisted origins
+            if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+            cb(new Error('Socket CORS: origin not allowed — ' + origin));
+        },
+        methods: ['GET', 'POST'],
+        credentials: true,
+    }
+});
 app.use(express.json());
+
+// ─── Security: /internal/* only reachable from loopback ──────────────────────
+app.use('/internal', (req, res, next) => {
+    const ip = req.socket.remoteAddress;
+    if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return next();
+    console.warn(`[Security] Blocked /internal request from ${ip}`);
+    return res.status(403).json({ ok: false, error: 'Forbidden' });
+});
 
 // ─── DB Pool ───────────────────────────────────────────────────────────────
 const pool = mysql.createPool({ ...DB, waitForConnections: true, connectionLimit: 10 });

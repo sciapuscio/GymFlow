@@ -64,9 +64,22 @@ function computeTemplateTotal(array $blocks): int
 
 function handleCors(): void
 {
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    $allowed = defined('ALLOWED_ORIGINS')
+        ? ALLOWED_ORIGINS
+        : ['http://localhost', 'http://127.0.0.1'];
+
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+    // Always allow same-origin (no Origin header) and loopback
+    if ($origin === '' || in_array($origin, $allowed, true)) {
+        if ($origin !== '') {
+            header('Access-Control-Allow-Origin: ' . $origin);
+        }
+        header('Access-Control-Allow-Credentials: true');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
+    }
+
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(204);
         exit;
