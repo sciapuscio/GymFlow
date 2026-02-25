@@ -423,12 +423,11 @@ layout_footer($user);
                     required placeholder="María García"></div>
             <div class="form-group">
                 <label class="form-label">Nombre de usuario</label>
-                <div style="display:flex;align-items:stretch;border:1px solid var(--gf-border);border-radius:8px">
-                    <input class="form-control" id="u-username" required placeholder="diego"
-                        style="border:none;background:transparent;border-radius:8px 0 0 8px;flex:1;min-width:0"
+                <div style="display:flex;align-items:center;gap:10px">
+                    <input class="form-control" id="u-username" required placeholder="diego" style="flex:1"
                         oninput="updateLoginPreview()">
                     <span id="u-slug-suffix"
-                        style="padding:0 12px;font-size:13px;color:var(--gf-accent);white-space:nowrap;font-weight:600;background:var(--gf-surface-2);border-left:1px solid var(--gf-border);border-radius:0 8px 8px 0;display:flex;align-items:center">@<?php echo htmlspecialchars($gym['slug'] ?? 'gym') ?></span>
+                        style="font-size:14px;color:var(--gf-accent);font-weight:700;white-space:nowrap;flex-shrink:0">@<?php echo htmlspecialchars($gym['slug'] ?? 'gym') ?></span>
                 </div>
                 <div style="font-size:11px;color:var(--gf-text-dim);margin-top:4px">Login: <strong
                         id="u-login-preview">diego@<?php echo htmlspecialchars($gym['slug'] ?? 'gym') ?></strong></div>
