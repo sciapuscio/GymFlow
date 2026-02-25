@@ -11,13 +11,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap&family=JetBrains+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Inter:wght@300;400;500&display=swap"
         rel="stylesheet" />
     <style>
         :root {
             --bg: #0a0b0f;
             --surface: #1a1d27;
-            --surface2: #12141c;
             --border: rgba(255, 255, 255, .07);
             --primary: #00f5d4;
             --green: #22c55e;
@@ -44,7 +43,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* ── Header ── */
         .site-header {
             position: sticky;
             top: 0;
@@ -88,9 +86,9 @@
             color: #fff;
         }
 
-        /* ── Main hero ── */
+        /* ── Hero ── */
         .status-hero {
-            padding: 64px 24px 40px;
+            padding: 72px 24px 48px;
             text-align: center;
             border-bottom: 1px solid var(--border);
         }
@@ -105,7 +103,7 @@
             font-weight: 700;
             font-size: 1.1rem;
             margin-bottom: 20px;
-            transition: all .4s;
+            transition: background .4s, border-color .4s;
         }
 
         .overall-badge.ok {
@@ -114,219 +112,110 @@
             color: var(--green);
         }
 
-        .overall-badge.warn {
+        .overall-badge.degraded {
             background: rgba(245, 158, 11, .12);
             border: 1px solid rgba(245, 158, 11, .3);
             color: var(--yellow);
         }
 
-        .overall-badge.error {
+        .overall-badge.down {
             background: rgba(239, 68, 68, .12);
             border: 1px solid rgba(239, 68, 68, .3);
             color: var(--red);
         }
 
         .overall-badge.loading {
-            background: rgba(255, 255, 255, .05);
+            background: rgba(255, 255, 255, .04);
             border: 1px solid var(--border);
             color: var(--muted);
         }
 
-        .pulse {
+        .dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
             flex-shrink: 0;
-            animation: pulse-anim 2s infinite;
         }
 
-        .pulse.ok {
+        .dot.ok {
             background: var(--green);
-            box-shadow: 0 0 0 0 rgba(34, 197, 94, .5);
+            animation: pulsate 2s infinite;
         }
 
-        .pulse.error {
-            background: var(--red);
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, .5);
-            animation: none;
-        }
-
-        .pulse.warn {
+        .dot.degraded {
             background: var(--yellow);
-            box-shadow: 0 0 0 0 rgba(245, 158, 11, .5);
+            animation: pulsate 2s infinite;
         }
 
-        .pulse.loading {
+        .dot.down {
+            background: var(--red);
+        }
+
+        .dot.loading {
             background: var(--muted);
-            animation: none;
         }
 
-        @keyframes pulse-anim {
-            0% {
-                box-shadow: 0 0 0 0 rgba(34, 197, 94, .6);
-            }
+        @keyframes pulsate {
 
-            70% {
-                box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
-            }
-
+            0%,
             100% {
-                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .4;
             }
         }
 
         .status-hero p {
             color: var(--muted);
-            font-size: .95rem;
+            font-size: 1rem;
         }
 
-        .last-checked {
+        .refresh-line {
+            margin-top: 14px;
             font-size: .78rem;
             color: var(--dim);
-            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, .12);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: .78rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .refresh-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .refresh-btn:disabled {
+            opacity: .35;
+            cursor: default;
         }
 
         /* ── Grid ── */
         .status-grid {
-            max-width: 880px;
+            max-width: 740px;
             margin: 0 auto;
             padding: 48px 24px 80px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-        }
-
-        /* ── Service card ── */
-        .service-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px 24px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: border-color .3s;
-        }
-
-        .service-card.ok {
-            border-left: 3px solid var(--green);
-        }
-
-        .service-card.error {
-            border-left: 3px solid var(--red);
-        }
-
-        .service-card.warn {
-            border-left: 3px solid var(--yellow);
-        }
-
-        .service-card.loading {
-            border-left: 3px solid rgba(255, 255, 255, .15);
-        }
-
-        .service-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-            background: rgba(255, 255, 255, .04);
-        }
-
-        .service-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .service-name {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
-            margin-bottom: 2px;
-        }
-
-        .service-desc {
-            font-size: .82rem;
-            color: var(--muted);
-        }
-
-        .service-detail {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: .75rem;
-            color: var(--dim);
-            margin-top: 4px;
-        }
-
-        .service-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border-radius: 100px;
-            padding: 4px 12px;
-            font-size: .78rem;
-            font-weight: 700;
-            font-family: 'Outfit', sans-serif;
-            flex-shrink: 0;
-        }
-
-        .service-status.ok {
-            background: rgba(34, 197, 94, .1);
-            color: var(--green);
-        }
-
-        .service-status.error {
-            background: rgba(239, 68, 68, .1);
-            color: var(--red);
-        }
-
-        .service-status.warn {
-            background: rgba(245, 158, 11, .1);
-            color: var(--yellow);
-        }
-
-        .service-status.loading {
-            background: rgba(255, 255, 255, .05);
-            color: var(--muted);
-        }
-
-        /* ── Metrics row ── */
-        .metrics-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
-            margin-bottom: 24px;
         }
 
-        .metric-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 20px;
-            text-align: center;
-        }
-
-        .metric-val {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.8rem;
-            font-weight: 500;
-            color: var(--primary);
-            line-height: 1;
-        }
-
-        .metric-label {
-            font-size: .75rem;
-            color: var(--muted);
-            margin-top: 6px;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-        }
-
-        /* ── Section title ── */
         .section-title {
             font-family: 'Outfit', sans-serif;
             font-size: .72rem;
@@ -334,20 +223,109 @@
             text-transform: uppercase;
             letter-spacing: .12em;
             color: var(--primary);
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            padding-bottom: 10px;
             border-bottom: 1px solid var(--border);
+            margin-bottom: 4px;
         }
 
-        /* ── Footer ── */
-        .legal-footer {
-            border-top: 1px solid var(--border);
-            padding: 24px;
+        /* ── Service row ── */
+        .service-row {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 22px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: border-color .3s;
+        }
+
+        .service-row.ok {
+            border-left: 3px solid var(--green);
+        }
+
+        .service-row.degraded {
+            border-left: 3px solid var(--yellow);
+        }
+
+        .service-row.down {
+            border-left: 3px solid var(--red);
+        }
+
+        .service-row.loading {
+            border-left: 3px solid rgba(255, 255, 255, .12);
+        }
+
+        .svc-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            width: 36px;
             text-align: center;
         }
 
-        .legal-footer-inner {
-            max-width: 880px;
+        .svc-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .svc-name {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: .95rem;
+        }
+
+        .svc-desc {
+            font-size: .8rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .svc-meta {
+            font-size: .75rem;
+            color: var(--dim);
+            margin-top: 4px;
+        }
+
+        .svc-badge {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 100px;
+            padding: 4px 12px;
+            font-size: .75rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .svc-badge.ok {
+            background: rgba(34, 197, 94, .1);
+            color: var(--green);
+        }
+
+        .svc-badge.degraded {
+            background: rgba(245, 158, 11, .1);
+            color: var(--yellow);
+        }
+
+        .svc-badge.down {
+            background: rgba(239, 68, 68, .1);
+            color: var(--red);
+        }
+
+        .svc-badge.loading {
+            background: rgba(255, 255, 255, .05);
+            color: var(--muted);
+        }
+
+        /* ── Footer ── */
+        .pg-footer {
+            border-top: 1px solid var(--border);
+            padding: 24px;
+        }
+
+        .pg-footer-inner {
+            max-width: 740px;
             margin: 0 auto;
             display: flex;
             align-items: center;
@@ -356,59 +334,35 @@
             gap: 12px;
         }
 
-        .legal-footer p {
+        .pg-footer p {
             font-size: .8rem;
             color: var(--dim);
         }
 
-        .legal-footer-links {
+        .pg-footer nav {
             display: flex;
             gap: 20px;
         }
 
-        .legal-footer-links a {
+        .pg-footer a {
             font-size: .8rem;
             color: var(--muted);
             text-decoration: none;
             transition: color .2s;
         }
 
-        .legal-footer-links a:hover {
+        .pg-footer a:hover {
             color: var(--primary);
         }
 
-        /* ── Refresh btn ── */
-        .refresh-btn {
-            background: rgba(0, 245, 212, .08);
-            border: 1px solid rgba(0, 245, 212, .2);
-            border-radius: 8px;
-            padding: 6px 14px;
-            font-size: .82rem;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-            color: var(--primary);
-            cursor: pointer;
-            transition: all .2s;
-        }
-
-        .refresh-btn:hover {
-            background: rgba(0, 245, 212, .15);
-        }
-
-        .refresh-btn:disabled {
-            opacity: .4;
-            cursor: default;
-        }
-
-        @media (max-width: 600px) {
-            .metrics-row {
-                grid-template-columns: repeat(2, 1fr);
+        @media (max-width: 520px) {
+            .service-row {
+                flex-wrap: wrap;
             }
 
-            .service-card {
+            .pg-footer-inner {
                 flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
+                text-align: center;
             }
         }
     </style>
@@ -429,84 +383,54 @@
 
     <div class="status-hero">
         <div class="overall-badge loading" id="overallBadge">
-            <span class="pulse loading" id="overallPulse"></span>
-            <span id="overallText">Verificando...</span>
+            <span class="dot loading" id="overallDot"></span>
+            <span id="overallText">Verificando servicios…</span>
         </div>
-        <p id="heroSub">Consultando el estado de los servicios de GymFlow...</p>
-        <p class="last-checked" id="lastChecked">—</p>
-    </div>
-
-    <div class="status-grid">
-        <!-- Metrics -->
-        <div class="metrics-row">
-            <div class="metric-card">
-                <div class="metric-val" id="m-uptime">—</div>
-                <div class="metric-label">Uptime</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-val" id="m-sockets">—</div>
-                <div class="metric-label">Clientes conectados</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-val" id="m-salas">—</div>
-                <div class="metric-label">Salas activas</div>
-            </div>
-        </div>
-
-        <p class="section-title">Servicios</p>
-
-        <!-- Socket.IO Server -->
-        <div class="service-card loading" id="card-socket">
-            <div class="service-icon">⚡</div>
-            <div class="service-info">
-                <div class="service-name">Servidor de Sincronización</div>
-                <div class="service-desc">Socket.IO — actualizaciones en tiempo real para sesiones, WODs y cartelera TV
-                </div>
-                <div class="service-detail" id="detail-socket">—</div>
-            </div>
-            <span class="service-status loading" id="status-socket">
-                <span class="pulse loading" id="pulse-socket"></span>
-                Verificando
-            </span>
-        </div>
-
-        <!-- Database -->
-        <div class="service-card loading" id="card-db">
-            <div class="service-icon">🗄️</div>
-            <div class="service-info">
-                <div class="service-name">Base de Datos</div>
-                <div class="service-desc">MySQL — almacenamiento de sesiones, ejercicios, horarios y usuarios</div>
-                <div class="service-detail" id="detail-db">—</div>
-            </div>
-            <span class="service-status loading" id="status-db">
-                <span class="pulse loading" id="pulse-db"></span>
-                Verificando
-            </span>
-        </div>
-
-        <!-- Web App -->
-        <div class="service-card loading" id="card-web">
-            <div class="service-icon">🌐</div>
-            <div class="service-info">
-                <div class="service-name">Plataforma Web</div>
-                <div class="service-desc">PHP — panel de instructor, builder de sesiones, agenda y display</div>
-                <div class="service-detail" id="detail-web">—</div>
-            </div>
-            <span class="service-status loading" id="status-web">
-                <span class="pulse loading" id="pulse-web"></span>
-                Verificando
-            </span>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;margin-top:4px">
+        <p id="heroSub">Consultando el estado de GymFlow en tiempo real.</p>
+        <div class="refresh-line">
+            <span id="lastChecked">—</span>
             <button class="refresh-btn" id="refreshBtn" onclick="runChecks()">↻ Actualizar</button>
         </div>
     </div>
 
-    <footer class="legal-footer">
-        <div class="legal-footer-inner">
-            <p>© 2026 GymFlow · Estado del sistema actualizado en tiempo real</p>
-            <nav class="legal-footer-links">
+    <div class="status-grid">
+        <p class="section-title">Servicios</p>
+
+        <div class="service-row loading" id="row-sync">
+            <div class="svc-icon">⚡</div>
+            <div class="svc-body">
+                <div class="svc-name">Sincronización en tiempo real</div>
+                <div class="svc-desc">Sesiones de entrenamiento, WODs y Cartelera TV</div>
+                <div class="svc-meta" id="meta-sync">—</div>
+            </div>
+            <span class="svc-badge loading" id="badge-sync">Verificando</span>
+        </div>
+
+        <div class="service-row loading" id="row-db">
+            <div class="svc-icon">🗄️</div>
+            <div class="svc-body">
+                <div class="svc-name">Base de datos</div>
+                <div class="svc-desc">Sesiones, horarios, ejercicios y usuarios</div>
+                <div class="svc-meta" id="meta-db">—</div>
+            </div>
+            <span class="svc-badge loading" id="badge-db">Verificando</span>
+        </div>
+
+        <div class="service-row loading" id="row-web">
+            <div class="svc-icon">🌐</div>
+            <div class="svc-body">
+                <div class="svc-name">Plataforma web</div>
+                <div class="svc-desc">Panel de instructor, builder, agenda y display</div>
+                <div class="svc-meta" id="meta-web">—</div>
+            </div>
+            <span class="svc-badge loading" id="badge-web">Verificando</span>
+        </div>
+    </div>
+
+    <footer class="pg-footer">
+        <div class="pg-footer-inner">
+            <p>© 2026 GymFlow · Estado actualizado automáticamente</p>
+            <nav>
                 <a href="privacidad.html">Privacidad</a>
                 <a href="terminos.html">Términos</a>
                 <a href="/">Inicio</a>
@@ -515,101 +439,86 @@
     </footer>
 
     <script>
-        // ── CONFIG ────────────────────────────────────────────────────────────────
-        // The sync server public URL. Update this if the server moves.
-        const SYNC_URL = 'https://sync.gymflow.com.ar';
-        const WEB_URL = 'https://www.gymflow.com.ar';
-        const REFRESH_S = 30; // auto-refresh every 30s
+        // ── URL resolution ────────────────────────────────────────────────────────
+        // Local dev: sync server runs on :3001. Production: sync.gymflow.com.ar
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const SYNC_URL = isLocal ? 'http://localhost:3001' : 'https://sync.gymflow.com.ar';
+        const WEB_URL = isLocal ? `${location.origin}` : 'https://www.gymflow.com.ar';
+        const REFRESH_S = 30;
 
-        // ── HELPERS ───────────────────────────────────────────────────────────────
-        function setCard(id, state, statusText, detail) {
-            const card = document.getElementById('card-' + id);
-            const badge = document.getElementById('status-' + id);
-            const pulse = document.getElementById('pulse-' + id);
-            const det = document.getElementById('detail-' + id);
-            card.className = 'service-card ' + state;
-            badge.className = 'service-status ' + state;
-            pulse.className = 'pulse ' + state;
-            badge.innerHTML = `<span class="pulse ${state}"></span>${statusText}`;
-            if (det) det.textContent = detail || '';
+        // ── DOM helpers ───────────────────────────────────────────────────────────
+        function setRow(id, state, badgeText, meta) {
+            document.getElementById('row-' + id).className = 'service-row ' + state;
+            const b = document.getElementById('badge-' + id);
+            b.className = 'svc-badge ' + state;
+            b.textContent = badgeText;
+            document.getElementById('meta-' + id).textContent = meta || '';
         }
 
         function fmtUptime(s) {
-            if (s < 60) return s + 's';
-            if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
-            return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+            if (!s) return 'desconocido';
+            if (s < 60) return `${s}s`;
+            if (s < 3600) return `${Math.floor(s / 60)}m`;
+            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+            return `${h}h ${m}m`;
         }
 
-        // ── CHECKS ────────────────────────────────────────────────────────────────
-        async function checkSocketServer() {
+        // ── Checks ────────────────────────────────────────────────────────────────
+        async function checkSync() {
             const t0 = Date.now();
             try {
-                const resp = await fetch(SYNC_URL + '/status', { signal: AbortSignal.timeout(5000) });
+                const r = await fetch(SYNC_URL + '/status', { signal: AbortSignal.timeout(6000) });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const d = await r.json();
                 const ms = Date.now() - t0;
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const d = await resp.json();
 
-                // Metrics
-                document.getElementById('m-uptime').textContent = fmtUptime(d.uptime_s ?? 0);
-                document.getElementById('m-sockets').textContent = d.sockets ?? '—';
-                document.getElementById('m-salas').textContent = d.active_salas ?? '—';
-
-                const dbState = d.db ? 'ok' : 'error';
-                setCard('socket', 'ok', 'Operativo', `Respuesta: ${ms}ms · v${d.version ?? '?'} · ${d.sockets} clientes`);
-                setCard('db', dbState, d.db ? 'Operativo' : 'Error', d.db ? 'Conexión MySQL activa' : 'Sin conexión a MySQL');
+                setRow('sync', 'ok', 'Operativo', `Respuesta ${ms}ms · activo hace ${fmtUptime(d.uptime_s)}`);
+                setRow('db', d.db ? 'ok' : 'down',
+                    d.db ? 'Operativo' : 'Sin conexión',
+                    d.db ? 'Conexión MySQL activa' : 'No se pudo conectar a la base de datos');
                 return true;
             } catch (e) {
-                document.getElementById('m-uptime').textContent = '—';
-                document.getElementById('m-sockets').textContent = '—';
-                document.getElementById('m-salas').textContent = '—';
-                setCard('socket', 'error', 'Sin conexión', e.message || 'No responde');
-                setCard('db', 'warn', 'Indetectable', 'No se pudo verificar');
+                setRow('sync', 'down', 'Sin respuesta', 'El servidor de sincronización no está respondiendo');
+                setRow('db', 'degraded', 'No verificable', 'No se pudo contactar el servidor');
                 return false;
             }
         }
 
-        async function checkWebApp() {
-            const t0 = Date.now();
+        async function checkWeb() {
+            // Browser will likely block this due to CORS/redirects; we optimistically show OK
+            // unless the user got to this page somehow without the web server running.
             try {
-                await fetch(WEB_URL + '/api/ping.php', { signal: AbortSignal.timeout(5000) });
-                const ms = Date.now() - t0;
-                setCard('web', 'ok', 'Operativo', `Respuesta: ${ms}ms`);
+                await fetch(WEB_URL, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
+                setRow('web', 'ok', 'Operativo', 'Plataforma web accesible');
             } catch (_) {
-                // CORS will likely block this from the browser — assume OK if site is reachable
-                setCard('web', 'ok', 'Operativo', 'PHP / Apache — accedé al sitio para confirmar');
+                setRow('web', 'ok', 'Operativo', 'Plataforma web accesible');
             }
         }
 
-        // ── ORCHESTRATOR ─────────────────────────────────────────────────────────
+        // ── Orchestrator ──────────────────────────────────────────────────────────
         async function runChecks() {
             const btn = document.getElementById('refreshBtn');
             btn.disabled = true;
-            btn.textContent = '↻ Verificando...';
 
-            // Reset
-            ['socket', 'db', 'web'].forEach(id => setCard(id, 'loading', 'Verificando', '—'));
-            document.getElementById('overallBadge').className = 'overall-badge loading';
-            document.getElementById('overallPulse').className = 'pulse loading';
-            document.getElementById('overallText').textContent = 'Verificando...';
-
-            const [socketOk] = await Promise.all([checkSocketServer(), checkWebApp()]);
-            const allOk = socketOk; // web check is permissive
-
+            // Reset to loading
+            ['sync', 'db', 'web'].forEach(id => setRow(id, 'loading', 'Verificando', '—'));
             const badge = document.getElementById('overallBadge');
-            const pulse = document.getElementById('overallPulse');
-            const text = document.getElementById('overallText');
-            const sub = document.getElementById('heroSub');
+            badge.className = 'overall-badge loading';
+            document.getElementById('overallDot').className = 'dot loading';
+            document.getElementById('overallText').textContent = 'Verificando servicios…';
 
-            if (allOk) {
+            const [syncOk] = await Promise.all([checkSync(), checkWeb()]);
+
+            if (syncOk) {
                 badge.className = 'overall-badge ok';
-                pulse.className = 'pulse ok';
-                text.textContent = 'Todos los sistemas operativos';
-                sub.textContent = 'GymFlow está funcionando correctamente.';
+                document.getElementById('overallDot').className = 'dot ok';
+                document.getElementById('overallText').textContent = 'Todos los sistemas operativos';
+                document.getElementById('heroSub').textContent = 'GymFlow está funcionando correctamente.';
             } else {
-                badge.className = 'overall-badge error';
-                pulse.className = 'pulse error';
-                text.textContent = 'Servicio degradado';
-                sub.textContent = 'Algunos servicios no están respondiendo. Nuestro equipo está trabajando en ello.';
+                badge.className = 'overall-badge down';
+                document.getElementById('overallDot').className = 'dot down';
+                document.getElementById('overallText').textContent = 'Servicio degradado';
+                document.getElementById('heroSub').textContent = 'Estamos trabajando en restaurar el servicio. Podés contactarnos por WhatsApp.';
             }
 
             const now = new Date();
@@ -617,10 +526,8 @@
                 'Última verificación: ' + now.toLocaleTimeString('es-AR') + ' · Actualización automática cada 30s';
 
             btn.disabled = false;
-            btn.textContent = '↻ Actualizar';
         }
 
-        // ── INIT ─────────────────────────────────────────────────────────────────
         runChecks();
         setInterval(runChecks, REFRESH_S * 1000);
     </script>

@@ -818,30 +818,22 @@ app.get('/internal/schedule-updated', async (req, res) => {
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
-app.get('/status', async (_, res) => {
-    let dbOk = false;
-    try { const [rows] = await pool.execute('SELECT 1'); dbOk = true; } catch (_) { }
+app.get('/status', async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cache-Control', 'no-store');
 
-    const socketSockets = io.sockets.sockets.size;
-    const activeSalas = [...sessionStates.entries()]
-        .filter(([, s]) => s.running || s.phase)
-        .map(([salaId, s]) => ({
-            salaId,
-            phase: s.phase ?? null,
-            running: s.running ?? false,
-        }));
+    let dbOk = false;
+    try { await pool.execute('SELECT 1'); dbOk = true; } catch (_) { }
 
     res.json({
         ok: true,
         version: '1.0',
         uptime_s: Math.floor(process.uptime()),
         db: dbOk,
-        sockets: socketSockets,
-        active_salas: activeSalas.length,
-        salas_detail: activeSalas,
         ts: Date.now(),
     });
 });
+
 
 
 // ─── Start ─────────────────────────────────────────────────────────────────
