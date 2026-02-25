@@ -46,6 +46,17 @@ if ($method === 'POST') {
         jsonError('Sala no encontrada o sin permisos', 403);
     }
 
+    // Verificar solapamiento en la misma sala y día
+    $stmtOv = db()->prepare(
+        "SELECT id FROM schedule_slots
+         WHERE sala_id = ? AND day_of_week = ?
+           AND start_time < ? AND end_time > ?"
+    );
+    $stmtOv->execute([(int) $data['sala_id'], (int) $data['day_of_week'], $data['end_time'], $data['start_time']]);
+    if ($stmtOv->fetch()) {
+        jsonError('Conflicto de horario: ya existe una clase en esa sala en ese horario', 409);
+    }
+
     // Aceptar class_name o label indistintamente
     $label = trim($data['class_name'] ?? $data['label'] ?? '');
 
@@ -82,6 +93,20 @@ if ($method === 'PUT' && $id) {
     $stmtOwn->execute([$id, $gymId]);
     if (!$stmtOwn->fetch())
         jsonError('Slot no encontrado o sin permisos', 403);
+
+    // Verificar solapamiento (excluir el propio slot en edición)
+    $stmtOv2 = db()->prepare(
+        "SELECT id FROM schedule_slots
+         WHERE sala_id = ? AND day_of_week = ?
+           AND start_time < ? AND end_time > ?
+           AND id != ?"
+    );
+    $ovSalaId = (int) ($data['sala_id'] ?? 0);
+    $ovDow = (int) ($data['day_of_week'] ?? 0);
+    $stmtOv2->execute([$ovSalaId, $ovDow, $data['end_time'] ?? '', $data['start_time'] ?? '', $id]);
+    if ($stmtOv2->fetch()) {
+        jsonError('Conflicto de horario: ya existe una clase en esa sala en ese horario', 409);
+    }
 
     $label = trim($data['class_name'] ?? $data['label'] ?? '');
 
