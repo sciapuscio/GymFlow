@@ -35,10 +35,9 @@ $expiringSoon = (int) $stExpiring->fetchColumn();
 $today = strtolower(date('D')); // mon, tue ...
 $dow = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6][substr(strtolower(date('D')), 0, 3)] ?? 1;
 $stSched = db()->prepare("
-    SELECT ss.*, s.name AS sala_name, t.name AS template_name
+    SELECT ss.*, s.name AS sala_name
     FROM schedule_slots ss
     LEFT JOIN salas s ON s.id = ss.sala_id
-    LEFT JOIN templates t ON t.id = ss.template_id
     WHERE ss.gym_id = ? AND ss.day_of_week = ?
     ORDER BY ss.start_time
 ");
