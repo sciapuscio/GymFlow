@@ -13,6 +13,10 @@ $sessionCount = (int) db()->query("SELECT COUNT(*) FROM gym_sessions")->fetchCol
 $salaCount = (int) db()->query("SELECT COUNT(*) FROM salas")->fetchColumn();
 $gymList = db()->query("SELECT g.*, COUNT(DISTINCT u.id) as user_count, COUNT(DISTINCT s.id) as sala_count FROM gyms g LEFT JOIN users u ON u.gym_id = g.id AND u.role != 'superadmin' LEFT JOIN salas s ON s.gym_id = g.id GROUP BY g.id ORDER BY g.name")->fetchAll();
 
+// Support: count open + in_progress tickets
+$openTickets = (int) db()->query("SELECT COUNT(*) FROM support_tickets WHERE status IN ('open','in_progress')")->fetchColumn();
+$urgentTickets = (int) db()->query("SELECT COUNT(*) FROM support_tickets WHERE status = 'open' AND priority = 'high'")->fetchColumn();
+
 layout_header('Super Admin', 'superadmin', $user);
 nav_section('Super Admin');
 nav_item(BASE_URL . '/pages/superadmin/dashboard.php', 'Dashboard', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', 'superadmin', 'superadmin');
@@ -20,6 +24,13 @@ nav_item(BASE_URL . '/pages/superadmin/gyms.php', 'Gimnasios', '<svg width="18" 
 nav_item(BASE_URL . '/pages/superadmin/users.php', 'Usuarios', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>', 'users', 'superadmin');
 nav_item(BASE_URL . '/pages/superadmin/stickman-queue.php', 'Stickman Queue', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>', 'stickman', 'superadmin');
 nav_item(BASE_URL . '/pages/superadmin/console.php', 'Consola', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>', 'console', 'superadmin');
+nav_item(
+    BASE_URL . '/pages/superadmin/support.php',
+    $openTickets ? 'Soporte <span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;vertical-align:middle;margin-left:4px">' . $openTickets . '</span>' : 'Soporte',
+    '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>',
+    'support',
+    'superadmin'
+);
 layout_footer($user);
 ?>
 
@@ -34,6 +45,23 @@ layout_footer($user);
 </div>
 
 <div class="page-body">
+    <?php if ($openTickets): ?>
+        <a href="<?php echo BASE_URL ?>/pages/superadmin/support.php"
+            style="display:block;text-decoration:none;margin-bottom:20px">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;
+            background:<?php echo $urgentTickets ? 'rgba(239,68,68,.08)' : 'rgba(245,158,11,.07)' ?>;
+            border:1px solid <?php echo $urgentTickets ? 'rgba(239,68,68,.35)' : 'rgba(245,158,11,.35)' ?>;
+            border-radius:10px;cursor:pointer">
+                <span style="font-size:26px"><?php echo $urgentTickets ? '🔴' : '🟡' ?></span>
+                <div>
+                    <div style="font-weight:700;font-size:14px;color:<?php echo $urgentTickets ? '#ef4444' : '#f59e0b' ?>">
+                        <?php echo $urgentTickets ? "$urgentTickets caso" . ($urgentTickets != 1 ? 's' : '') . " urgente" . ($urgentTickets != 1 ? 's' : '') . " sin atender" : "$openTickets caso" . ($openTickets != 1 ? 's' : '') . " abierto" . ($openTickets != 1 ? 's' : '') . " de soporte" ?>
+                    </div>
+                    <div style="font-size:12px;color:var(--gf-text-muted)">Click para ver los casos → Soporte</div>
+                </div>
+            </div>
+        </a>
+    <?php endif ?>
     <div class="grid grid-4 mb-6">
         <div class="stat-card">
             <div class="stat-icon"><svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
