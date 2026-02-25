@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
 
-$user = requireAuth('admin', 'superadmin');
+$user = requireAuth('admin', 'superadmin', 'staff');
 $gymId = (int) $user['gym_id'];
 $memberId = (int) ($_GET['id'] ?? 0);
 if (!$memberId) {

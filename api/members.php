@@ -14,7 +14,7 @@ require_once __DIR__ . '/../includes/helpers.php';
 handleCors();
 header('Content-Type: application/json; charset=utf-8');
 
-$user = requireAuth('admin', 'superadmin');
+$user = requireAuth('admin', 'superadmin', 'staff');
 $gymId = (int) $user['gym_id'];
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? (int) $_GET['id'] : null;

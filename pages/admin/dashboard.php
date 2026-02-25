@@ -258,7 +258,8 @@ layout_footer($user);
                         onmouseover="this.style.borderColor='#10b981'"
                         onmouseout="this.style.borderColor='var(--gf-border)'">
                         <div style="font-size:22px;font-weight:800;color:#10b981">
-                            <?php echo (int) $crmStats['active_memberships'] ?></div>
+                            <?php echo (int) $crmStats['active_memberships'] ?>
+                        </div>
                         <div style="font-size:11px;color:var(--gf-text-muted)">Membresías vigentes</div>
                     </div>
                 </a>
@@ -267,7 +268,8 @@ layout_footer($user);
                         style="background:var(--gf-surface-2);border-radius:10px;padding:12px;border:1px solid <?php echo $crmStats['pending_payments'] > 0 ? 'rgba(245,158,11,.4)' : 'var(--gf-border)' ?>;transition:border-color .2s">
                         <div
                             style="font-size:22px;font-weight:800;color:<?php echo $crmStats['pending_payments'] > 0 ? '#f59e0b' : 'var(--gf-text)' ?>">
-                            <?php echo (int) $crmStats['pending_payments'] ?></div>
+                            <?php echo (int) $crmStats['pending_payments'] ?>
+                        </div>
                         <div style="font-size:11px;color:var(--gf-text-muted)">Pagos pendientes</div>
                     </div>
                 </a>
@@ -276,7 +278,8 @@ layout_footer($user);
                         style="background:var(--gf-surface-2);border-radius:10px;padding:12px;border:1px solid <?php echo $crmStats['expiring_week'] > 0 ? 'rgba(239,68,68,.35)' : 'var(--gf-border)' ?>;transition:border-color .2s">
                         <div
                             style="font-size:22px;font-weight:800;color:<?php echo $crmStats['expiring_week'] > 0 ? '#ef4444' : 'var(--gf-text)' ?>">
-                            <?php echo (int) $crmStats['expiring_week'] ?></div>
+                            <?php echo (int) $crmStats['expiring_week'] ?>
+                        </div>
                         <div style="font-size:11px;color:var(--gf-text-muted)">Vencen esta semana</div>
                     </div>
                 </a>
@@ -424,8 +427,9 @@ layout_footer($user);
                     class="form-control" id="u-pass" required minlength="8"></div>
             <div class="form-group"><label class="form-label">Rol</label>
                 <select class="form-control" id="u-role">
-                    <option value="instructor">Instructor</option>
-                    <option value="admin">Admin</option>
+                    <option value="instructor">Instructor — dicta clases</option>
+                    <option value="staff">Administrativo — agenda + CRM</option>
+                    <option value="admin">Admin — acceso completo</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Usuario</button>

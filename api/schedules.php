@@ -11,7 +11,7 @@ $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
 // ── GET — listar slots del gym ───────────────────────────────────────────────
 if ($method === 'GET') {
-    $user = requireAuth('instructor', 'admin', 'superadmin');
+    $user = requireAuth('instructor', 'admin', 'superadmin', 'staff');
     $gymId = (int) $user['gym_id'];
 
     $stmt = db()->prepare(
@@ -27,7 +27,7 @@ if ($method === 'GET') {
 
 // ── POST — crear slot ────────────────────────────────────────────────────────
 if ($method === 'POST') {
-    $user = requireAuth('instructor', 'admin', 'superadmin');
+    $user = requireAuth('instructor', 'admin', 'superadmin', 'staff');
     $gymId = (int) $user['gym_id'];
     $data = getBody();
 
@@ -73,7 +73,7 @@ if ($method === 'POST') {
 
 // ── PUT — editar slot ────────────────────────────────────────────────────────
 if ($method === 'PUT' && $id) {
-    $user = requireAuth('instructor', 'admin', 'superadmin');
+    $user = requireAuth('instructor', 'admin', 'superadmin', 'staff');
     $gymId = (int) $user['gym_id'];
     $data = getBody();
 
@@ -107,7 +107,7 @@ if ($method === 'PUT' && $id) {
 
 // ── DELETE — eliminar slot ───────────────────────────────────────────────────
 if ($method === 'DELETE' && $id) {
-    $user = requireAuth('instructor', 'admin', 'superadmin');
+    $user = requireAuth('instructor', 'admin', 'superadmin', 'staff');
     $gymId = (int) $user['gym_id'];
 
     db()->prepare("DELETE FROM schedule_slots WHERE id = ? AND gym_id = ?")

@@ -30,6 +30,12 @@ if ($method === 'POST') {
         jsonError('Email and password required');
     $targetGymId = $user['role'] === 'superadmin' ? ($data['gym_id'] ?? null) : $user['gym_id'];
     $newRole = $data['role'] ?? 'instructor';
+    // Admins can assign instructor or staff roles; superadmin can assign any role
+    $allowedRoles = $user['role'] === 'superadmin'
+        ? ['superadmin', 'admin', 'instructor', 'staff']
+        : ['instructor', 'staff'];
+    if (!in_array($newRole, $allowedRoles))
+        $newRole = 'instructor';
 
     // ── Plan limit check for instructor creation (skipped for superadmin) ───
     if ($user['role'] !== 'superadmin' && $newRole === 'instructor' && $targetGymId) {

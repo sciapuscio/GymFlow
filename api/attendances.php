@@ -100,7 +100,7 @@ if ($method === 'POST') {
 
 if ($method === 'DELETE' && $id) {
     // Only admin can delete attendance records
-    requireAuth('admin', 'superadmin');
+    requireAuth('admin', 'superadmin', 'staff');
     db()->prepare("DELETE FROM member_attendances WHERE id = ? AND gym_id = ?")->execute([$id, $gymId]);
     jsonResponse(['success' => true]);
 }

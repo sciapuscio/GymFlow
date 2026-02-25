@@ -8,6 +8,7 @@ if ($user) {
     $dest = match ($user['role']) {
         'superadmin' => BASE_URL . '/pages/superadmin/dashboard.php',
         'admin' => BASE_URL . '/pages/admin/dashboard.php',
+        'staff' => BASE_URL . '/pages/admin/staff-dashboard.php',
         default => BASE_URL . '/pages/instructor/dashboard.php',
     };
     header("Location: $dest");
@@ -265,9 +266,12 @@ if ($user) {
         }
         function hideError() { document.getElementById('login-error').style.display = 'none'; }
 
-        // Redirect after successful login
         function redirect(role) {
-            const map = { superadmin: '/pages/superadmin/dashboard.php', admin: '/pages/admin/dashboard.php' };
+            const map = {
+                superadmin: '/pages/superadmin/dashboard.php',
+                admin: '/pages/admin/dashboard.php',
+                staff: '/pages/admin/staff-dashboard.php',
+            };
             location.href = BASE + (map[role] || '/pages/instructor/dashboard.php');
         }
 
