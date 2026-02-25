@@ -1141,6 +1141,54 @@
   </footer>
 
   <script src="js/main.js"></script>
+
+  <!-- ── Lightbox modal ──────────────────────────────────────────────────── -->
+  <div class="gf-lightbox" id="gfLightbox" role="dialog" aria-modal="true" aria-label="Vista ampliada">
+    <img class="gf-lightbox-img" id="gfLightboxImg" src="" alt="">
+    <button class="gf-lightbox-close" id="gfLightboxClose" aria-label="Cerrar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    (function () {
+      var lb = document.getElementById('gfLightbox');
+      var img = document.getElementById('gfLightboxImg');
+      var btn = document.getElementById('gfLightboxClose');
+
+      function open(src, alt) {
+        img.src = src;
+        img.alt = alt || '';
+        lb.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      function close() {
+        lb.classList.remove('active');
+        document.body.style.overflow = '';
+        setTimeout(function () { img.src = ''; }, 400);
+      }
+
+      lb.addEventListener('click', function (e) { if (e.target === lb) close(); });
+      btn.addEventListener('click', close);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+      // Auto-attach to every screenshot image in the page
+      var sel = [
+        '.screenshot-frame img',
+        '.solution-visual img',
+        '.feature-screenshot img',
+        '.device-screen img'
+      ].join(',');
+
+      document.querySelectorAll(sel).forEach(function (el) {
+        el.addEventListener('click', function () { open(this.src, this.alt); });
+      });
+    })();
+  </script>
 </body>
 
 </html>

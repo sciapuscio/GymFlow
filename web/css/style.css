@@ -2092,3 +2092,148 @@ ul {
         gap: 32px;
     }
 }
+
+/* ============================================================
+   SCREENSHOT HOVER POLISH
+   ============================================================ */
+.screenshot-frame img,
+.solution-visual img,
+.feature-screenshot img,
+.device-screen img {
+    cursor: zoom-in;
+    transition: transform 0.4s ease, opacity 0.3s ease;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.screenshot-frame {
+    transition: box-shadow 0.35s ease, transform 0.35s ease, border-color 0.35s ease;
+    cursor: zoom-in;
+}
+
+.screenshot-frame:hover {
+    border-color: rgba(229, 255, 61, 0.28);
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(229, 255, 61, 0.18), 0 0 48px rgba(229, 255, 61, 0.07);
+    transform: translateY(-6px);
+}
+
+.screenshot-frame:hover img {
+    transform: scale(1.015);
+}
+
+.solution-visual {
+    position: relative;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(229, 255, 61, 0.10);
+    transition: box-shadow 0.35s ease, transform 0.35s ease;
+    cursor: zoom-in;
+    aspect-ratio: 16/10;
+}
+
+.solution-visual:hover {
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(229, 255, 61, 0.28), 0 0 56px rgba(229, 255, 61, 0.08);
+    transform: scale(1.01);
+}
+
+.solution-visual:hover img {
+    transform: scale(1.02);
+}
+
+/* ============================================================
+   LIGHTBOX MODAL
+   ============================================================ */
+.gf-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+    transition: background 0.3s ease, backdrop-filter 0.3s ease, opacity 0.3s ease;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.gf-lightbox.active {
+    background: rgba(4, 4, 10, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: all;
+    opacity: 1;
+}
+
+.gf-lightbox-img {
+    max-width: 90vw;
+    max-height: 86vh;
+    border-radius: 12px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.07);
+    transform: scale(0.82);
+    transition: transform 0.4s cubic-bezier(0.34, 1.36, 0.64, 1);
+    object-fit: contain;
+    display: block;
+}
+
+.gf-lightbox.active .gf-lightbox-img {
+    transform: scale(1);
+}
+
+.gf-lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.9);
+    transition: opacity 0.3s ease 0.12s, transform 0.3s ease 0.12s, background 0.2s ease, color 0.2s ease;
+    backdrop-filter: blur(4px);
+}
+
+.gf-lightbox.active .gf-lightbox-close {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.gf-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+}
+
+.gf-lightbox-hint {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(229, 255, 61, 0.12);
+    border: 1px solid rgba(229, 255, 61, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(229, 255, 61, 0.7);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.screenshot-frame:hover .gf-lightbox-hint,
+.solution-visual:hover .gf-lightbox-hint {
+    opacity: 1;
+}
