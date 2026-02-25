@@ -946,7 +946,81 @@ app.get('/status', async (req, res) => {
     });
 });
 
+// ─── Support / Helpdesk Real-Time ─────────────────────────────────────────
+//
+// Rooms:
+//   ticket:{id}      — both parties for a specific ticket thread
+//   support:admins   — all connected superadmin windows (for badge / list updates)
+//
+// Events client → server:
+//   support:join           { ticket_id, role }
+//   support:message        { ticket_id, user_id, role, name, message, is_internal }
+//   support:typing         { ticket_id, name }
+//   support:status_change  { ticket_id, status, user_id, role }
+//
+// Events server → client:
+//   support:new_message       full message object
+//   support:typing            { name }
+//   support:status_changed    { ticket_id, status }
+//   support:new_ticket_message { ticket_id }  → support:admins room only
 
+io.on('connection', (socket) => {
+
+    socket.on('support:join', ({ ticket_id, role } = {}) => {
+        if (!ticket_id) return;
+        socket.join(`ticket:${ticket_id}`);
+        if (role === 'superadmin') socket.join('support:admins');
+        console.log(`[Support] ${socket.id} joined ticket:${ticket_id} as ${role}`);
+    });
+
+    socket.on('support:message', async ({ ticket_id, user_id, role, name, message, is_internal } = {}) => {
+        if (!ticket_id || !user_id || !message) return;
+        const internal = role === 'superadmin' ? (is_internal ? 1 : 0) : 0;
+        try {
+            const [result] = await pool.execute(
+                'INSERT INTO support_messages (ticket_id, user_id, message, is_internal) VALUES (?,?,?,?)',
+                [ticket_id, user_id, message, internal]
+            );
+            if (role === 'superadmin') {
+                await pool.execute(
+                    "UPDATE support_tickets SET status='in_progress' WHERE id=? AND status='open'",
+                    [ticket_id]
+                );
+            }
+            const payload = {
+                id: result.insertId, ticket_id, user_id,
+                author_name: name || 'Usuario', author_role: role,
+                message, is_internal: internal,
+                created_at: new Date().toISOString(),
+            };
+            io.to(`ticket:${ticket_id}`).emit('support:new_message', payload);
+            io.to('support:admins').emit('support:new_ticket_message', { ticket_id });
+            mon('support', `💬 Ticket #${ticket_id} — ${name}: ${message.slice(0, 60)}`, { ticket_id, user_id, role });
+        } catch (e) {
+            console.error('[Support] message error:', e.message);
+        }
+    });
+
+    socket.on('support:typing', ({ ticket_id, name } = {}) => {
+        if (!ticket_id) return;
+        socket.to(`ticket:${ticket_id}`).emit('support:typing', { name });
+    });
+
+    socket.on('support:status_change', async ({ ticket_id, status, user_id, role } = {}) => {
+        const allowed = role === 'superadmin'
+            ? ['open', 'in_progress', 'resolved', 'closed']
+            : ['closed'];
+        if (!allowed.includes(status)) return;
+        try {
+            await pool.execute('UPDATE support_tickets SET status=? WHERE id=?', [status, ticket_id]);
+            io.to(`ticket:${ticket_id}`).emit('support:status_changed', { ticket_id, status });
+            io.to('support:admins').emit('support:new_ticket_message', { ticket_id });
+            mon('support', `🏷 Ticket #${ticket_id} → ${status}`, { ticket_id, user_id, role });
+        } catch (e) {
+            console.error('[Support] status_change error:', e.message);
+        }
+    });
+});
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 server.listen(PORT, () => {

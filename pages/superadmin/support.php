@@ -104,3 +104,30 @@ layout_footer($user);
 
     loadTickets();
 </script>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    (function () {
+        const SOCKET_URL = '<?php echo SOCKET_URL ?>';
+        const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+
+        socket.on('connect', () => {
+            // Join the superadmin notification room
+            socket.emit('support:join', { ticket_id: 0, role: 'superadmin' });
+        });
+
+        // When any ticket gets a new message: reload the list and flash the row
+        socket.on('support:new_ticket_message', ({ ticket_id }) => {
+            loadTickets().then(() => {
+                // Flash the updated ticket row
+                const link = document.querySelector(`a[href*="id=${ticket_id}"]`);
+                if (!link) return;
+                const card = link.querySelector('.card');
+                if (!card) return;
+                card.style.transition = 'background .2s';
+                card.style.background = 'rgba(0,245,212,.12)';
+                setTimeout(() => card.style.background = '', 1500);
+            });
+        });
+    })();
+</script>
