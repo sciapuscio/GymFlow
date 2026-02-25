@@ -78,7 +78,7 @@ layout_footer($user);
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
 
         <!-- QR Preview card -->
-        <div class="card" style="text-align:center">
+        <div class="card" id="print-only" style="text-align:center">
             <div
                 style="font-size:13px;font-weight:700;color:var(--gf-text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px">
                 QR del Gym
@@ -161,41 +161,61 @@ layout_footer($user);
 <style>
     @media print {
 
+        /* Hide everything except the QR card */
         .sidebar,
         .page-header,
-        .card:not(#print-only) {
+        .card:not(#print-only),
+        .app-layout > *:not(.main-content) {
             display: none !important;
         }
 
-        .main-content {
-            margin-left: 0 !important;
-        }
-
-        .page-body {
+        html, body, .app-layout, .main-content {
+            margin: 0 !important;
             padding: 0 !important;
-        }
-
-        body {
             background: #fff !important;
             color: #000 !important;
         }
 
+        .main-content { margin-left: 0 !important; padding: 0 !important; }
+        .page-body { padding: 0 !important; display: block !important; }
+
+        /* QR card fills the page, centered */
+        #print-only {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-height: 90vh !important;
+            border: none !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            padding: 32px !important;
+        }
+
+        /* Gym name */
+        #print-only div[style*="font-family"] {
+            color: #111 !important;
+            font-size: 28px !important;
+        }
+
+        /* Legend */
+        #print-only div[style*="font-size:12px"] {
+            color: #555 !important;
+        }
+
+        /* URL box */
+        #print-only div[style*="word-break"] {
+            background: #f5f5f5 !important;
+            color: #333 !important;
+            border: 1px solid #ccc !important;
+        }
+
         #qr-container {
             border: 3px solid #000 !important;
-        }
-
-        .card {
             background: #fff !important;
-            border: 1px solid #ddd !important;
+            padding: 12px !important;
         }
 
-        /* Show only the QR card when printing */
-        .page-body>div {
-            grid-template-columns: 1fr !important;
-        }
-
-        .page-body>div>div:last-child {
-            display: none !important;
-        }
+        hr { border-color: #ddd !important; }
     }
 </style>
