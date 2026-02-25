@@ -4,6 +4,9 @@
     let localElapsed = 0;  // filled by server ticks — no local ticker needed
     let stickWidget = null;  // StickmanWidget instance
     let _previewBlock = null; // set by session:block_change while paused
+    let _hasSession = false;  // true once first session:state arrives
+    let _pollerTimer = null;  // presence poll interval handle
+    let _finishedTimer = null; // auto-return-to-waiting timer after finished
 
     // Sub-second interpolation for the clock panel only.
     // The server sends ticks at ~1Hz. We animate the clock at 60fps by
@@ -19,6 +22,7 @@
 
     function init() {
         connectSocket();
+        startPresencePoller();
         // Init stickman widget (deferred so scripts load first)
         setTimeout(() => {
             const el = document.getElementById('stickman-container');
@@ -35,6 +39,44 @@
         };
         document.addEventListener('click', _unlockAudio, { once: true });
         document.addEventListener('touchstart', _unlockAudio, { once: true });
+    }
+
+    // ── Waiting screen management ─────────────────────────────────────────────
+    function _hideWaitingScreen() {
+        const ws = document.getElementById('waiting-screen');
+        if (ws) ws.style.display = 'none';
+    }
+    function _showWaitingScreen() {
+        const ws = document.getElementById('waiting-screen');
+        if (ws) ws.style.display = 'flex';
+        // Also ensure idle/live/finished screens are hidden
+        const ids = ['idle-screen', 'live-screen', 'finished-screen'];
+        ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        const po = document.getElementById('paused-overlay');
+        if (po) po.classList.remove('visible');
+        document.body.className = 'state-idle'; // reset body classes
+    }
+
+    // ── Presence poller (fallback when socket misses coupling event) ──────────
+    // Polls GET /api/salas.php?code=X every 20s while no session received.
+    // When a session is attached, reloads the page so socket joins the right room.
+    function startPresencePoller() {
+        if (!window.DISPLAY_CODE && typeof DISPLAY_CODE === 'undefined') return;
+        const code = typeof DISPLAY_CODE !== 'undefined' ? DISPLAY_CODE : window.DISPLAY_CODE;
+        if (!code) return;
+
+        _pollerTimer = setInterval(async () => {
+            if (_hasSession) { clearInterval(_pollerTimer); return; }
+            try {
+                const r = await fetch(`${BASE}/api/salas.php?code=${encodeURIComponent(code)}`, { credentials: 'include' });
+                if (!r.ok) return;
+                const d = await r.json();
+                if (d?.current_session_id) {
+                    clearInterval(_pollerTimer);
+                    location.reload();
+                }
+            } catch (e) { /* silently ignore network errors */ }
+        }, 20000);
     }
 
     // ── Socket.IO Connection ─────────────────────────────────────────────────
@@ -198,6 +240,15 @@
     }
 
     function applyState(state) {
+        // First state received — hide waiting screen, stop poller
+        if (!_hasSession) {
+            _hasSession = true;
+            clearInterval(_pollerTimer);
+            _hideWaitingScreen();
+        }
+        // Cancel any pending return-to-waiting timer on new state
+        if (_finishedTimer) { clearTimeout(_finishedTimer); _finishedTimer = null; }
+
         const prev = currentState;
         currentState = state;
 
@@ -245,6 +296,12 @@
             if (pausedOverlay) pausedOverlay.classList.remove('visible');
             _applyClockMode(false); // close clock when session ends
             stopTicker();
+            // After 45 s, return to waiting-for-session screen
+            _finishedTimer = setTimeout(() => {
+                _hasSession = false;
+                _showWaitingScreen();
+                startPresencePoller();
+            }, 45000);
             return;
         }
 

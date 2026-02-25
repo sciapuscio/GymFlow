@@ -469,8 +469,61 @@ if (!$sala) {
         <div class="ring"></div>
     </div>
 
-    <!-- IDLE SCREEN -->
-    <div class="idle-screen" id="idle-screen">
+    <!-- WAITING SCREEN (sin sesión acoplada) -->
+    <div id="waiting-screen" style="
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        gap:clamp(20px,4vh,48px);position:fixed;inset:0;z-index:5;
+        background:radial-gradient(ellipse at 50% 60%,rgba(0,245,212,0.06) 0%,transparent 70%),#080813;
+    ">
+        <?php if ($sala['gym_logo']): ?>
+            <img src="<?php echo BASE_URL . htmlspecialchars($sala['gym_logo']) ?>"
+                alt="<?php echo htmlspecialchars($sala['gym_name']) ?>"
+                style="max-height:clamp(50px,9vh,110px);max-width:220px;object-fit:contain;opacity:.7"
+                onerror="this.style.display='none'">
+        <?php else: ?>
+            <div style="width:clamp(60px,10vh,100px);height:clamp(60px,10vh,100px);border-radius:50%;
+                background:color-mix(in srgb,var(--d-accent,#00f5d4) 15%,transparent);
+                border:2px solid color-mix(in srgb,var(--d-accent,#00f5d4) 40%,transparent);
+                display:flex;align-items:center;justify-content:center;
+                font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,4vw,44px);
+                color:var(--d-accent,#00f5d4);opacity:.75">
+                <?php echo htmlspecialchars(strtoupper(substr($sala['gym_name'], 0, 2))) ?>
+            </div>
+        <?php endif; ?>
+
+        <div style="text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,7vw,96px);
+                letter-spacing:.12em;color:#fff;line-height:1;margin-bottom:.2em">
+                <?php echo htmlspecialchars($sala['name']) ?>
+            </div>
+            <div style="font-size:clamp(13px,1.8vw,22px);font-weight:600;letter-spacing:.2em;
+                color:rgba(255,255,255,0.3);text-transform:uppercase">
+                Sala libre
+            </div>
+        </div>
+
+        <!-- Pulsing dot -->
+        <div style="display:flex;align-items:center;gap:12px;margin-top:clamp(8px,2vh,24px)">
+            <span id="waiting-dot" style="
+                display:inline-block;width:10px;height:10px;border-radius:50%;
+                background:var(--d-accent,#00f5d4);
+                animation:waitPulse 2s ease-in-out infinite;
+            "></span>
+            <span style="font-size:clamp(12px,1.4vw,18px);color:rgba(255,255,255,0.25);
+                letter-spacing:.18em;text-transform:uppercase;font-weight:600">
+                Esperando clase
+            </span>
+        </div>
+    </div>
+    <style>
+        @keyframes waitPulse {
+            0%,100%{opacity:1;transform:scale(1)}
+            50%{opacity:.25;transform:scale(.6)}
+        }
+    </style>
+
+    <!-- IDLE SCREEN (sesión cargada, no iniciada) -->
+    <div class="idle-screen" id="idle-screen" style="display:none">
         <?php if ($sala['gym_logo']): ?>
             <img src="<?php echo BASE_URL . htmlspecialchars($sala['gym_logo']) ?>"
                 alt="<?php echo htmlspecialchars($sala['gym_name']) ?>" class="idle-gym-logo"
@@ -782,6 +835,7 @@ if (!$sala) {
     <script>
         const SALA_ID = <?php echo (int) $sala['id'] ?>;
         const BASE = '<?php echo BASE_URL ?>';
+        const DISPLAY_CODE = '<?php echo htmlspecialchars($sala['display_code']) ?>';
         const GYM_ACCENT = '<?php echo htmlspecialchars($sala['primary_color'] ?? '#00f5d4') ?>';
         const GYM_ACCENT2 = '<?php echo htmlspecialchars($sala['secondary_color'] ?? '#ff6b35') ?>';
         window.GF_SOCKET_URL = '<?php echo SOCKET_URL ?>';

@@ -10,6 +10,21 @@ header('Content-Type: application/json; charset=utf-8');
 $method = $_SERVER['REQUEST_METHOD'];
 $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 
+// GET by display code (public — for Display screen & presence poller)
+// Must be checked BEFORE the authenticated endpoints below.
+if ($method === 'GET' && isset($_GET['code'])) {
+    $stmt = db()->prepare(
+        "SELECT s.*, g.primary_color, g.secondary_color, g.font_family, g.font_display,
+                g.logo_path as gym_logo, g.name as gym_name, g.slug as gym_slug
+         FROM salas s JOIN gyms g ON s.gym_id = g.id WHERE s.display_code = ?"
+    );
+    $stmt->execute([$_GET['code']]);
+    $sala = $stmt->fetch();
+    if (!$sala)
+        jsonError('Sala not found', 404);
+    jsonResponse($sala);
+}
+
 // GET all salas (optionally ?gym_id=N)
 if ($method === 'GET' && !$id) {
     $user = requireAuth();
@@ -37,20 +52,6 @@ if ($method === 'GET' && $id) {
         jsonError('Sala not found', 404);
     if ($user['role'] !== 'superadmin')
         requireGymAccess($user, $sala['gym_id']);
-    jsonResponse($sala);
-}
-
-// GET by display code (public — for Display screen)
-if ($method === 'GET' && isset($_GET['code'])) {
-    $stmt = db()->prepare(
-        "SELECT s.*, g.primary_color, g.secondary_color, g.font_family, g.font_display, 
-                g.logo_path as gym_logo, g.name as gym_name, g.slug as gym_slug
-         FROM salas s JOIN gyms g ON s.gym_id = g.id WHERE s.display_code = ?"
-    );
-    $stmt->execute([$_GET['code']]);
-    $sala = $stmt->fetch();
-    if (!$sala)
-        jsonError('Sala not found', 404);
     jsonResponse($sala);
 }
 
