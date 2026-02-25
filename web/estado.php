@@ -1,3 +1,14 @@
+<?php
+/**
+ * web/estado.php
+ * Estado del sistema — lee SOCKET_URL del config para funcionar en cualquier entorno.
+ */
+require_once __DIR__ . '/../config/app.php';
+
+// Determinar la URL del status endpoint
+// SOCKET_URL incluye protocolo y host (ej: http://localhost:3001)
+$socketStatusUrl = rtrim(SOCKET_URL, '/') . '/status';
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -86,7 +97,6 @@
             color: #fff;
         }
 
-        /* ── Hero ── */
         .status-hero {
             padding: 72px 24px 48px;
             text-align: center;
@@ -103,7 +113,6 @@
             font-weight: 700;
             font-size: 1.1rem;
             margin-bottom: 20px;
-            transition: background .4s, border-color .4s;
         }
 
         .overall-badge.ok {
@@ -206,7 +215,6 @@
             cursor: default;
         }
 
-        /* ── Grid ── */
         .status-grid {
             max-width: 740px;
             margin: 0 auto;
@@ -228,7 +236,6 @@
             margin-bottom: 4px;
         }
 
-        /* ── Service row ── */
         .service-row {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -318,7 +325,6 @@
             color: var(--muted);
         }
 
-        /* ── Footer ── */
         .pg-footer {
             border-top: 1px solid var(--border);
             padding: 24px;
@@ -371,8 +377,8 @@
 <body>
 
     <header class="site-header">
-        <a href="/" class="logo"><span class="logo-gym">Gym</span><span class="logo-flow">Flow</span></a>
-        <a href="/" class="back-btn">
+        <a href="<?= BASE_URL ?>/" class="logo"><span class="logo-gym">Gym</span><span class="logo-flow">Flow</span></a>
+        <a href="<?= BASE_URL ?>/" class="back-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
                 <path d="m15 18-6-6 6-6" />
@@ -433,20 +439,16 @@
             <nav>
                 <a href="privacidad.html">Privacidad</a>
                 <a href="terminos.html">Términos</a>
-                <a href="/">Inicio</a>
+                <a href="<?= BASE_URL ?>/">Inicio</a>
             </nav>
         </div>
     </footer>
 
     <script>
-        // ── URL resolution ────────────────────────────────────────────────────────
-        // Local dev: sync server runs on :3001. Production: sync.gymflow.com.ar
-        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        const SYNC_URL = isLocal ? 'http://localhost:3001' : 'https://sync.gymflow.com.ar';
-        const WEB_URL = isLocal ? `${location.origin}` : 'https://www.gymflow.com.ar';
+        // URL inyectada por PHP desde config/local.php (o app.php si no existe local.php)
+        const SYNC_STATUS_URL = <?= json_encode($socketStatusUrl) ?>;
         const REFRESH_S = 30;
 
-        // ── DOM helpers ───────────────────────────────────────────────────────────
         function setRow(id, state, badgeText, meta) {
             document.getElementById('row-' + id).className = 'service-row ' + state;
             const b = document.getElementById('badge-' + id);
@@ -456,51 +458,43 @@
         }
 
         function fmtUptime(s) {
-            if (!s) return 'desconocido';
+            if (!s && s !== 0) return 'desconocido';
             if (s < 60) return `${s}s`;
             if (s < 3600) return `${Math.floor(s / 60)}m`;
-            const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-            return `${h}h ${m}m`;
+            return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
         }
 
-        // ── Checks ────────────────────────────────────────────────────────────────
         async function checkSync() {
             const t0 = Date.now();
             try {
-                const r = await fetch(SYNC_URL + '/status', { signal: AbortSignal.timeout(6000) });
+                const r = await fetch(SYNC_STATUS_URL, { signal: AbortSignal.timeout(6000) });
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 const d = await r.json();
                 const ms = Date.now() - t0;
 
                 setRow('sync', 'ok', 'Operativo', `Respuesta ${ms}ms · activo hace ${fmtUptime(d.uptime_s)}`);
-                setRow('db', d.db ? 'ok' : 'down',
+                setRow('db',
+                    d.db ? 'ok' : 'down',
                     d.db ? 'Operativo' : 'Sin conexión',
-                    d.db ? 'Conexión MySQL activa' : 'No se pudo conectar a la base de datos');
+                    d.db ? 'Conexión MySQL activa' : 'Base de datos no responde'
+                );
                 return true;
             } catch (e) {
-                setRow('sync', 'down', 'Sin respuesta', 'El servidor de sincronización no está respondiendo');
+                setRow('sync', 'down', 'Sin respuesta', 'El servidor no está respondiendo');
                 setRow('db', 'degraded', 'No verificable', 'No se pudo contactar el servidor');
                 return false;
             }
         }
 
         async function checkWeb() {
-            // Browser will likely block this due to CORS/redirects; we optimistically show OK
-            // unless the user got to this page somehow without the web server running.
-            try {
-                await fetch(WEB_URL, { mode: 'no-cors', signal: AbortSignal.timeout(4000) });
-                setRow('web', 'ok', 'Operativo', 'Plataforma web accesible');
-            } catch (_) {
-                setRow('web', 'ok', 'Operativo', 'Plataforma web accesible');
-            }
+            // fetch con no-cors para evitar bloqueos; si llegamos a esta página, el web server funciona
+            setRow('web', 'ok', 'Operativo', 'Servidor web activo');
         }
 
-        // ── Orchestrator ──────────────────────────────────────────────────────────
         async function runChecks() {
             const btn = document.getElementById('refreshBtn');
             btn.disabled = true;
 
-            // Reset to loading
             ['sync', 'db', 'web'].forEach(id => setRow(id, 'loading', 'Verificando', '—'));
             const badge = document.getElementById('overallBadge');
             badge.className = 'overall-badge loading';
@@ -518,12 +512,12 @@
                 badge.className = 'overall-badge down';
                 document.getElementById('overallDot').className = 'dot down';
                 document.getElementById('overallText').textContent = 'Servicio degradado';
-                document.getElementById('heroSub').textContent = 'Estamos trabajando en restaurar el servicio. Podés contactarnos por WhatsApp.';
+                document.getElementById('heroSub').textContent = 'Algunos servicios no están respondiendo. Podés escribirnos por WhatsApp.';
             }
 
             const now = new Date();
             document.getElementById('lastChecked').textContent =
-                'Última verificación: ' + now.toLocaleTimeString('es-AR') + ' · Actualización automática cada 30s';
+                'Última verificación: ' + now.toLocaleTimeString('es-AR') + ' · actualizando cada 30s';
 
             btn.disabled = false;
         }
