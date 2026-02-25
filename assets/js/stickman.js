@@ -734,32 +734,52 @@
         else if (eq === 'jump_rope') {
             var lw12 = px('lw'); var rw12 = px('rw');
             var la3 = px('la'); var ra3 = px('ra');
-            var ropeColor = 'rgba(220,180,100,0.80)';
-            // Handles (small rects at wrists)
+            var head12 = px('head');
+            var ropeCol = 'rgba(220,180,100,0.88)';
+
+            // Handles (small rects at wrists) — always visible
             var hLen = Math.max(4, H * 0.04);
-            ctx.fillStyle = ropeColor;
+            ctx.fillStyle = ropeCol;
             ctx.beginPath();
             ctx.roundRect(lw12[0] - lw, lw12[1] - hLen / 2, lw * 2, hLen, 2);
             ctx.fill();
             ctx.beginPath();
             ctx.roundRect(rw12[0] - lw, rw12[1] - hLen / 2, lw * 2, hLen, 2);
             ctx.fill();
-            // Rope curve beneath feet — clean sine arc that clears below foot level
-            var footY = Math.max(la3[1], ra3[1]) + H * 0.03;
-            var footMidX = (la3[0] + ra3[0]) / 2;
-            var phase = (elapsed % 800) / 800;
-            var ropeAmp = H * 0.09 * Math.abs(Math.sin(phase * Math.PI));
+
+            // ── Full 360° rotation ──────────────────────────────────────────
+            // theta goes 0 → 2π every cycle (≈ 650 ms ≈ 92 jumps/min)
+            var cycleMs = 650;
+            var theta = (elapsed % cycleMs) / cycleMs * Math.PI * 2;
+
+            // Vertical extent of the rotation circle:
+            //   top  = slightly above stickman head
+            //   bot  = slightly below feet
+            var bodyTop = head12[1] - H * 0.08;
+            var bodyBot = Math.max(la3[1], ra3[1]) + H * 0.06;
+            var centerY = (bodyTop + bodyBot) / 2;
+            var radius = (bodyBot - bodyTop) / 2;
+
+            // Arc midpoint orbits in the vertical plane
+            var midX = (lw12[0] + rw12[0]) / 2;
+            var arcMidY = centerY + radius * Math.cos(theta);
+
+            // depth: +1 = fully in front of stickman, -1 = fully behind
+            var depth = Math.sin(theta);
+
+            // Opacity & weight decrease when rope is behind the body
+            var ropAlpha = depth >= 0 ? 0.88 : 0.18;
+            var ropLW = lw * (depth >= 0 ? 0.78 : 0.40);
+
             ctx.beginPath();
-            ctx.moveTo(lw12[0], lw12[1] + hLen / 2);
-            ctx.bezierCurveTo(
-                footMidX - W * 0.18, footY + ropeAmp,
-                footMidX + W * 0.18, footY + ropeAmp,
-                rw12[0], rw12[1] + hLen / 2
-            );
-            ctx.strokeStyle = ropeColor;
-            ctx.lineWidth = lw * 0.7;
+            ctx.moveTo(lw12[0], lw12[1]);
+            ctx.quadraticCurveTo(midX, arcMidY, rw12[0], rw12[1]);
+            if (depth < 0) { ctx.setLineDash([4, 6]); }
+            ctx.strokeStyle = 'rgba(220,180,100,' + ropAlpha + ')';
+            ctx.lineWidth = ropLW;
             ctx.lineCap = 'round';
             ctx.stroke();
+            ctx.setLineDash([]);
         }
 
         // ── DIP BAR (paralelas) ────────────────────────────────────────────────
