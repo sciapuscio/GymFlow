@@ -466,6 +466,16 @@ io.on('connection', (socket) => {
         console.log(`[Socket] System join: ${socket.id} as ${socket.data.role}`);
     });
 
+    // ── Join as AGENDA DISPLAY ───────────────────────────────────────────────
+    socket.on('join:agenda', ({ gym_id }) => {
+        if (!gym_id) return;
+        socket.join(`agenda:${gym_id}`);
+        socket.data.role = 'agenda';
+        socket.data.gymId = gym_id;
+        console.log(`[Socket] Agenda display joined gym ${gym_id}`);
+        mon('display', `Cartelera conectada · gym ${gym_id}`, { gym_id, socketId: socket.id });
+    });
+
     // ── Control: PLAY ───────────────────────────────────────────────────────
     socket.on('control:play', async ({ prep_remaining = 0 } = {}) => {
         const sala_id = socket.data.salaId;
@@ -779,6 +789,31 @@ app.post('/internal/broadcast', (req, res) => {
     console.log(`[Broadcast] Sent to ${count} sockets: "${message.slice(0, 60)}"`);
     mon('broadcast', `📢 BROADCAST [${type}]: "${message.slice(0, 80)}" → ${count} receptores`, { type, message, count });
     res.json({ ok: true, recipients: count });
+});
+
+// ─── HTTP: Schedule Updated ─────────────────────────────────────────────────
+// Called by PHP api/schedules.php after a slot is created or deleted.
+// Emits fresh schedule data to all agenda display screens for this gym.
+app.get('/internal/schedule-updated', async (req, res) => {
+    const gym_id = parseInt(req.query.gym_id);
+    if (!gym_id) return res.json({ ok: false, error: 'Missing gym_id' });
+    try {
+        const [slots] = await pool.execute(
+            `SELECT ss.*, ss.label AS class_name, s.name AS sala_name,
+                    s.accent_color, s.bg_color
+             FROM   schedule_slots ss
+             LEFT JOIN salas s ON ss.sala_id = s.id
+             WHERE  ss.gym_id = ?
+             ORDER  BY ss.day_of_week, ss.start_time`,
+            [gym_id]
+        );
+        io.to(`agenda:${gym_id}`).emit('schedule:updated', { gym_id, slots, ts: Date.now() });
+        console.log(`[Agenda] schedule:updated → gym ${gym_id} (${slots.length} slots)`);
+        res.json({ ok: true, slots: slots.length });
+    } catch (e) {
+        console.error('[Agenda] schedule-updated error:', e.message);
+        res.json({ ok: false, error: e.message });
+    }
 });
 
 app.get('/health', (_, res) => res.json({ ok: true, sessions: sessionStates.size }));

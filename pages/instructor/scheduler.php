@@ -11,6 +11,11 @@ $stmtSalas = db()->prepare("SELECT id, name FROM salas WHERE gym_id = ? AND acti
 $stmtSalas->execute([$gymId]);
 $salas = $stmtSalas->fetchAll();
 
+// Slug del gym para la cartelera
+$gymSlug = db()->prepare("SELECT slug FROM gyms WHERE id = ?");
+$gymSlug->execute([$gymId]);
+$gymSlug = $gymSlug->fetchColumn() ?: '';
+
 $stmtSlots = db()->prepare("SELECT ss.*, ss.label AS class_name, gs.name as session_name, gs.id as session_id, s.name as sala_name FROM schedule_slots ss JOIN salas s ON ss.sala_id = s.id LEFT JOIN gym_sessions gs ON ss.session_id = gs.id WHERE s.gym_id = ? ORDER BY ss.day_of_week, ss.start_time");
 $stmtSlots->execute([$gymId]);
 $slots = $stmtSlots->fetchAll();
@@ -44,6 +49,17 @@ layout_footer($user);
                 </option>
             <?php endforeach; ?>
         </select>
+        <?php if ($gymSlug): ?>
+            <a class="btn btn-secondary"
+                href="<?= BASE_URL ?>/pages/display/agenda.php?gym=<?= htmlspecialchars($gymSlug) ?>" target="_blank"
+                style="display:inline-flex;align-items:center;gap:7px;text-decoration:none">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Cartelera
+            </a>
+        <?php endif; ?>
         <button class="btn btn-primary" onclick="document.getElementById('slot-modal').classList.add('open')">+
             Agregar</button>
     </div>

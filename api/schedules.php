@@ -63,7 +63,12 @@ if ($method === 'POST') {
                 $label ?: null,
             ]);
 
-    jsonResponse(['id' => (int) db()->lastInsertId(), 'success' => true], 201);
+    $newId = (int) db()->lastInsertId();
+
+    // Notify agenda displays BEFORE exit
+    @file_get_contents('http://localhost:3001/internal/schedule-updated?gym_id=' . $gymId);
+
+    jsonResponse(['id' => $newId, 'success' => true], 201);
 }
 
 // ── DELETE — eliminar slot ───────────────────────────────────────────────────
@@ -73,6 +78,9 @@ if ($method === 'DELETE' && $id) {
 
     db()->prepare("DELETE FROM schedule_slots WHERE id = ? AND gym_id = ?")
         ->execute([$id, $gymId]);
+
+    // Notify agenda displays BEFORE exit
+    @file_get_contents('http://localhost:3001/internal/schedule-updated?gym_id=' . $gymId);
 
     jsonResponse(['success' => true]);
 }
