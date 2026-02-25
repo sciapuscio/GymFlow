@@ -517,8 +517,17 @@ if (!$sala) {
     </div>
     <style>
         @keyframes waitPulse {
-            0%,100%{opacity:1;transform:scale(1)}
-            50%{opacity:.25;transform:scale(.6)}
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+
+            50% {
+                opacity: .25;
+                transform: scale(.6)
+            }
         }
     </style>
 
@@ -539,6 +548,9 @@ if (!$sala) {
 
         <div>
             <div id="idle-class-label" class="idle-class-label"></div>
+            <div id="idle-instructor-name" style="display:none;margin-top:10px;font-size:clamp(13px,1.6vw,20px);font-weight:600;
+                        color:rgba(255,255,255,0.45);letter-spacing:.12em;text-transform:uppercase;text-align:center">
+            </div>
             <div class="idle-sala-name">
                 <?php echo htmlspecialchars($sala['name']) ?>
             </div>
@@ -636,6 +648,11 @@ if (!$sala) {
                         <?php echo htmlspecialchars($sala['name']) ?>
                     </div>
                     <div class="display-session-name" id="display-session-name"></div>
+                    <div id="display-instructor-name"
+                         style="display:none;font-size:clamp(10px,1.1vw,14px);font-weight:600;
+                                letter-spacing:.1em;color:rgba(255,255,255,0.35);
+                                text-transform:uppercase;margin-top:2px">
+                    </div>
                 </div>
             </div>
             <div class="display-total-progress">

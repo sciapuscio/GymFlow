@@ -163,6 +163,12 @@ if ($method === 'POST' && isset($_GET['action']) && $id) {
             if ($oldSalaId && $oldSalaId !== $newSalaId) {
                 db()->prepare("UPDATE salas SET current_session_id=NULL WHERE id=? AND current_session_id=?")
                     ->execute([$oldSalaId, $id]);
+                // Notificar al sync-server para que limpie estado en memoria y avise al display
+                @file_get_contents(
+                    'http://localhost:3001/internal/detach-sala?sala_id=' . $oldSalaId,
+                    false,
+                    stream_context_create(['http' => ['timeout' => 2, 'ignore_errors' => true]])
+                );
             }
             db()->prepare("UPDATE gym_sessions SET sala_id=? WHERE id=?")->execute([$newSalaId, $id]);
             if ($newSalaId) {

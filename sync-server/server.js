@@ -165,6 +165,7 @@ function buildTick(st) {
     return {
         session_id: st.sessionId,
         session_name: st.sessionName,
+        instructor_name: st.instructorName || null,
         status: st.status,
         current_block_index: ci,
         current_block: blocks[ci] || null,
@@ -226,7 +227,11 @@ async function persistState(st, action) {
 // ─── Load Session from DB ──────────────────────────────────────────────────
 async function loadSession(sessionId) {
     const [rows] = await pool.execute(
-        "SELECT gs.*, s.id as sala_id_val FROM gym_sessions gs LEFT JOIN salas s ON gs.sala_id = s.id WHERE gs.id = ?",
+        `SELECT gs.*, s.id as sala_id_val, u.name as instructor_name
+         FROM gym_sessions gs
+         LEFT JOIN salas s ON gs.sala_id = s.id
+         LEFT JOIN users u ON gs.instructor_id = u.id
+         WHERE gs.id = ?`,
         [sessionId]
     );
     if (!rows.length) return null;
@@ -243,6 +248,7 @@ async function loadSession(sessionId) {
         sessionId: parseInt(row.id),
         salaId: parseInt(row.sala_id),
         sessionName: row.name,
+        instructorName: row.instructor_name || null,
         // On fresh server load, never auto-resume 'playing' — require explicit control:play
         status: row.status === 'playing' ? 'paused' : (row.status || 'idle'),
         blocks: JSON.parse(row.blocks_json || '[]'),
@@ -430,6 +436,7 @@ io.on('connection', (socket) => {
                     // Persist on st so timer-driven logs (auto-advance, stop) have context
                     st.gymName = info[0].gname;
                     st.salaName = info[0].sname;
+                    st.instructorName = info[0].uname; // available in every buildTick
                 }
             } catch (_) { /* non-critical */ }
 
@@ -438,6 +445,9 @@ io.on('connection', (socket) => {
                 startTimer(sala_id);
             }
             socket.emit('session:state', buildTick(st));
+            // Also broadcast to all display clients already connected to this sala room,
+            // so sala.php transitions from waiting → idle immediately (no 20s poll needed).
+            socket.to(`sala:${sala_id}`).emit('session:state', buildTick(st));
             mon('instructor', `Instructor ${socket.data.userName || '?'} [${socket.data.gymName || '?'}] → sala ${sala_id}`, { sala_id, session_id, socketId: socket.id });
             console.log(`[Socket] Instructor joined sala ${sala_id}, session ${session_id}`);
         } catch (e) {
@@ -741,6 +751,21 @@ io.on('connection', (socket) => {
         console.log(`[Socket] Disconnected: ${socket.id} (${role})`);
         if (role !== 'monitor') mon('disconnect', `🔚 ${desc}`, { id: socket.id, role, user: socket.data.userName, gym: socket.data.gymName });
     });
+});
+
+// ─── HTTP: Detach Sala ────────────────────────────────────────────────────
+// Called by PHP when a session is uncoupled from a sala.
+// Clears in-memory state and notifies display clients to return to waiting.
+app.get('/internal/detach-sala', (req, res) => {
+    const sala_id = parseInt(req.query.sala_id);
+    if (!sala_id) return res.json({ ok: false, error: 'Missing sala_id' });
+    stopTimer(sala_id);
+    _stopClockTimer(sala_id);
+    sessionStates.delete(sala_id);
+    io.to(`sala:${sala_id}`).emit('session:detach');
+    mon('detach', `🔌 Sala ${sala_id} desacoplada — display de vuelta a espera`, { sala_id });
+    console.log(`[HTTP] Sala ${sala_id} detached — display notified`);
+    res.json({ ok: true });
 });
 
 // ─── HTTP: PHP Notification Endpoint ─────────────────────────────────────

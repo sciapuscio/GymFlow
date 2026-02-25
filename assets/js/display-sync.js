@@ -90,18 +90,35 @@
         });
 
         socket.on('session:state', (tick) => applyState(tick));
-        socket.on('session:tick', (tick) => applyState(tick));
+        // Ticks only processed after we've received an initial session:state.
+        // This prevents instructor-side broadcasts from flickering the waiting screen.
+        socket.on('session:tick', (tick) => { if (_hasSession) applyState(tick); });
 
         // When instructor jumps to a block while paused → show "¡PREPARATE! [exercise]"
         // instead of leaving the PAUSA screen up. _previewBlock keeps this alive across ticks.
+        // Guard: ignore if display hasn't received a session:state yet (still on waiting screen).
         socket.on('session:block_change', ({ block }) => {
-            if (!block) return;
+            if (!block || !_hasSession) return;
             _previewBlock = block;
             _showPreviewOverlay(block);
         });
 
         socket.on('disconnect', () => {
             console.warn('[DisplaySync] Disconnected, reconnecting...');
+        });
+
+        // ── Sala desacoplada — el instructor desvinculó esta sala de la sesión ──
+        // Volvemos al waiting screen y reiniciamos el presence poller.
+        socket.on('session:detach', () => {
+            console.log('[DisplaySync] session:detach — volviendo a waiting screen');
+            _hasSession = false;
+            currentState = null;
+            _previewBlock = null;
+            _clockActive = false;
+            if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+            if (_finishedTimer) { clearTimeout(_finishedTimer); _finishedTimer = null; }
+            _showWaitingScreen();
+            startPresencePoller();
         });
 
         // ── WOD Summary Overlay ──────────────────────────────────────────────
@@ -284,8 +301,15 @@
             // Show current block name on idle screen if one is loaded
             const idleLabel = document.getElementById('idle-class-label');
             if (idleLabel && block) idleLabel.textContent = block.name || '';
-            _applyClockMode(false); // close clock when idle
-            stopTicker();
+            // Show instructor name (universal block below won't run due to return)
+            const instrElIdle = document.getElementById('idle-instructor-name');
+            if (instrElIdle && state.instructor_name) {
+                instrElIdle.textContent = '🏋️ ' + state.instructor_name;
+                instrElIdle.style.display = 'block';
+            }
+            _applyClockMode(false);
+            _clockActive = false;
+            if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
             return;
         }
 
@@ -353,6 +377,19 @@
         // Session name
         const sessionNameEl = document.getElementById('display-session-name');
         if (sessionNameEl && state.session_name) sessionNameEl.textContent = state.session_name;
+
+        // Instructor name — update both the idle screen element and the live corner widget
+        const _instrName = state.instructor_name || null;
+        ['idle-instructor-name', 'display-instructor-name'].forEach(elId => {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            if (_instrName) {
+                el.textContent = '🏋️  ' + _instrName;
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        });
 
         // WOD overlay: apply from tick so reconnecting displays get correct state
         if (state.wod_overlay !== undefined) {

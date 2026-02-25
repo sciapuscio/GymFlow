@@ -251,6 +251,9 @@ layout_footer($user);
                             </div>
                             <a href="<?php echo BASE_URL ?>/pages/display/sala.php?code=<?php echo urlencode($sala['display_code']) ?>"
                                 target="_blank" class="btn btn-ghost btn-sm">Display</a>
+                            <button class="btn btn-secondary btn-sm"
+                                onclick="openRenameSala(<?php echo $sala['id'] ?>, <?php echo htmlspecialchars(json_encode($sala['name']), ENT_QUOTES) ?>)"
+                                title="Renombrar sala">✏️</button>
                             <button class="btn btn-danger btn-sm" onclick="deleteSala(<?php echo $sala['id'] ?>)">×</button>
                         </div>
                     <?php endforeach; ?>
@@ -315,6 +318,27 @@ layout_footer($user);
             <div class="form-group"><label class="form-label">Capacidad</label><input type="number" class="form-control"
                     name="capacity" value="20" min="1"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Sala</button>
+        </form>
+    </div>
+</div>
+
+<!-- Rename Sala Modal -->
+<div class="modal-overlay" id="rename-sala-modal">
+    <div class="modal" style="max-width:380px">
+        <div class="modal-header">
+            <h3 class="modal-title">Renombrar Sala</h3>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')"><svg
+                    width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg></button>
+        </div>
+        <form onsubmit="submitRenameSala(event)">
+            <input type="hidden" id="rename-sala-id">
+            <div class="form-group">
+                <label class="form-label">Nuevo nombre</label>
+                <input class="form-control" id="rename-sala-name" required placeholder="Sala Crossfit">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Guardar nombre</button>
         </form>
     </div>
 </div>
@@ -441,6 +465,24 @@ layout_footer($user);
         location.reload();
     }
 
+    function openRenameSala(id, currentName) {
+        document.getElementById('rename-sala-id').value = id;
+        document.getElementById('rename-sala-name').value = currentName;
+        document.getElementById('rename-sala-modal').classList.add('open');
+        setTimeout(() => document.getElementById('rename-sala-name').select(), 80);
+    }
+
+    async function submitRenameSala(e) {
+        e.preventDefault();
+        const id = document.getElementById('rename-sala-id').value;
+        const name = document.getElementById('rename-sala-name').value.trim();
+        if (!name) return;
+        await GF.put(`${window.GF_BASE}/api/salas.php?id=${id}`, { name });
+        showToast('Nombre actualizado', 'success');
+        document.getElementById('rename-sala-modal').classList.remove('open');
+        location.reload();
+    }
+
     async function createUser(e) {
         e.preventDefault();
         const data = { name: document.getElementById('u-name').value, email: document.getElementById('u-email').value, password: document.getElementById('u-pass').value, role: document.getElementById('u-role').value, gym_id: GYM_ID };
@@ -495,13 +537,13 @@ layout_footer($user);
         } else {
             logoPreview.src = '';
             logoPreview.style.display = 'none';
-            logoDropHint.innerHTML = `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                 style="margin:0 auto 8px;display:block;opacity:.4">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                            </svg>
-                            Clic o arrastrá tu logo aquí<br>
-                            <span style="font-size:11px;color:rgba(255,255,255,0.25)">PNG, JPG, SVG — máx. 2 MB</span>`;
+            logoDropHint.innerHTML = '<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"'
+                + ' style="margin:0 auto 8px;display:block;opacity:.4">'
+                + '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"'
+                + ' d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>'
+                + '<' + '/svg>'
+                + ' Clic o arrastrá tu logo aquí<br>'
+                + '<span style="font-size:11px;color:rgba(255,255,255,0.25)">PNG, JPG, SVG — máx. 2 MB<' + '/span>';
             logoDropHint.style.fontSize = '13px';
             logoDropHint.style.color = 'rgba(255,255,255,0.4)';
             logoActions.style.display = 'none';
