@@ -98,9 +98,24 @@ function requireGymAccess(array $user, int $gymId): void
 
 function login(string $email, string $password): ?array
 {
+    $normalized = strtolower(trim($email));
+
+    // ── Try exact match first ──────────────────────────────────────────────
     $stmt = db()->prepare("SELECT * FROM users WHERE email = ? AND active = 1");
-    $stmt->execute([strtolower(trim($email))]);
+    $stmt->execute([$normalized]);
     $user = $stmt->fetch();
+
+    // ── Fallback: if user typed user@slug (no dot after @), also try user@slug.* ─
+    // This lets legacy accounts (@gym.com) log in with the short form (@gym)
+    if (!$user && strpos($normalized, '@') !== false) {
+        [, $domain] = explode('@', $normalized, 2);
+        if (strpos($domain, '.') === false) {
+            // short form → look for any @domain.* email
+            $stmt2 = db()->prepare("SELECT * FROM users WHERE email LIKE ? AND active = 1");
+            $stmt2->execute([$normalized . '.%']);
+            $user = $stmt2->fetch() ?: null;
+        }
+    }
 
     if (!$user || !password_verify($password, $user['password_hash'])) {
         return null;
