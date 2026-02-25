@@ -62,7 +62,7 @@ $PRI_LABEL = ['low' => 'Baja', 'normal' => 'Normal', 'high' => 'Alta'];
             &nbsp;·&nbsp; Prioridad: <?php echo $PRI_LABEL[$ticket['priority']] ?>
         </div>
     </div>
-    <?php if ($ticket['status'] !== 'closed'): ?>
+    <?php if ($ticket['status'] !== 'closed' && $ticket['status'] !== 'resolved'): ?>
         <button class="btn btn-secondary btn-sm" id="close-btn" onclick="closeTicket()">✖ Cerrar caso</button>
     <?php endif ?>
 </div>
@@ -92,7 +92,8 @@ $PRI_LABEL = ['low' => 'Baja', 'normal' => 'Normal', 'high' => 'Alta'];
                         &nbsp;·&nbsp; <?php echo date('d/m/y H:i', strtotime($m['created_at'])) ?>
                     </div>
                     <div style="font-size:14px;white-space:pre-wrap;line-height:1.6">
-                        <?php echo htmlspecialchars($m['message']) ?></div>
+                        <?php echo htmlspecialchars($m['message']) ?>
+                    </div>
                 </div>
             </div>
         <?php endforeach ?>
@@ -102,9 +103,20 @@ $PRI_LABEL = ['low' => 'Baja', 'normal' => 'Normal', 'high' => 'Alta'];
     <div id="typing-indicator"
         style="font-size:12px;color:var(--gf-text-muted);min-height:20px;margin-bottom:6px;padding-left:4px"></div>
 
+    <!-- Resolution banner (shown on load if already resolved/closed) -->
+    <?php if ($ticket['status'] === 'resolved' || $ticket['status'] === 'closed'): ?>
+    <div id="resolved-banner" style="text-align:center;padding:12px 16px;margin-bottom:12px;
+        background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);
+        border-radius:10px;font-size:13px;color:#10b981;font-weight:600">
+        <?php echo $ticket['status'] === 'resolved'
+            ? '✅ Tu caso fue marcado como <strong>Resuelto</strong> por el equipo de GymFlow. Si necesitás más ayuda, abrí un nuevo caso.'
+            : '🔒 Este caso fue <strong>Cerrado</strong>.' ?>
+    </div>
+    <?php endif ?>
+
     <!-- Reply form -->
     <div id="reply-area" class="card"
-        style="padding:16px;flex-shrink:0;<?php echo $ticket['status'] === 'closed' ? 'display:none' : '' ?>">
+        style="padding:16px;flex-shrink:0;<?php echo in_array($ticket['status'], ['closed','resolved']) ? 'display:none' : '' ?>">
         <form id="reply-form" onsubmit="sendMessage(event)">
             <textarea id="msg-input" name="message" class="input" rows="3"
                 placeholder="Escribí tu mensaje... (Enter para enviar, Shift+Enter para nueva línea)"
@@ -169,11 +181,30 @@ $PRI_LABEL = ['low' => 'Baja', 'normal' => 'Normal', 'high' => 'Alta'];
         const badge = document.getElementById('status-badge');
         badge.textContent = STATUS_LABEL[status] || status;
         badge.style.color = STATUS_COLOR[status] || '';
-        if (status === 'closed') {
+
+        const inactive = status === 'closed' || status === 'resolved';
+        if (inactive) {
             document.getElementById('reply-area').style.display = 'none';
             document.getElementById('close-btn')?.remove();
+
+            // Show resolution banner above the thread
+            let banner = document.getElementById('resolved-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'resolved-banner';
+                banner.style.cssText = `text-align:center;padding:12px 16px;margin-bottom:12px;
+                    background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);
+                    border-radius:10px;font-size:13px;color:#10b981;font-weight:600`;
+                document.getElementById('thread').parentNode.insertBefore(
+                    banner, document.getElementById('thread')
+                );
+            }
+            banner.innerHTML = status === 'resolved'
+                ? '✅ Tu caso fue marcado como <strong>Resuelto</strong> por el equipo de GymFlow. Si necesitás más ayuda, abrí un nuevo caso.'
+                : '🔒 Este caso fue <strong>Cerrado</strong>.';
         }
     });
+
 
     // ── Send message ───────────────────────────────────────────────────────────
     let emitting = false;
