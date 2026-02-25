@@ -492,7 +492,7 @@ if (!$sala) {
         <?php endif; ?>
 
         <div style="text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,7vw,96px);
+            <div id="sala-name-waiting" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,7vw,96px);
                 letter-spacing:.12em;color:#fff;line-height:1;margin-bottom:.2em">
                 <?php echo htmlspecialchars($sala['name']) ?>
             </div>
@@ -551,7 +551,7 @@ if (!$sala) {
             <div id="idle-instructor-name" style="display:none;margin-top:10px;font-size:clamp(13px,1.6vw,20px);font-weight:600;
                         color:rgba(255,255,255,0.45);letter-spacing:.12em;text-transform:uppercase;text-align:center">
             </div>
-            <div class="idle-sala-name">
+            <div id="sala-name-idle" class="idle-sala-name">
                 <?php echo htmlspecialchars($sala['name']) ?>
             </div>
         </div>
@@ -644,12 +644,11 @@ if (!$sala) {
                 <?php endif; ?>
 
                 <div class="display-sala-info">
-                    <div class="display-sala-name">
+                    <div id="sala-name-live" class="display-sala-name">
                         <?php echo htmlspecialchars($sala['name']) ?>
                     </div>
                     <div class="display-session-name" id="display-session-name"></div>
-                    <div id="display-instructor-name"
-                         style="display:none;font-size:clamp(10px,1.1vw,14px);font-weight:600;
+                    <div id="display-instructor-name" style="display:none;font-size:clamp(10px,1.1vw,14px);font-weight:600;
                                 letter-spacing:.1em;color:rgba(255,255,255,0.35);
                                 text-transform:uppercase;margin-top:2px">
                     </div>

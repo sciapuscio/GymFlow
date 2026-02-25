@@ -105,6 +105,17 @@ if ($method === 'PUT' && $id) {
         jsonError('No fields');
     $params[] = $id;
     db()->prepare("UPDATE salas SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
+
+    // If the name changed, notify the display screen in real time
+    if (!empty($data['name'])) {
+        @file_get_contents(
+            'http://localhost:3001/internal/sala-renamed?sala_id=' . $id
+            . '&name=' . urlencode($data['name']),
+            false,
+            stream_context_create(['http' => ['timeout' => 2, 'ignore_errors' => true]])
+        );
+    }
+
     jsonResponse(['success' => true]);
 }
 

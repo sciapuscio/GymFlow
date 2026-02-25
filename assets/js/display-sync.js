@@ -121,6 +121,15 @@
             startPresencePoller();
         });
 
+        // ── Sala renombrada por el admin — actualiza el nombre en pantalla ──
+        socket.on('sala:renamed', ({ name }) => {
+            console.log('[DisplaySync] sala:renamed →', name);
+            ['sala-name-waiting', 'sala-name-idle', 'sala-name-live'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = name;
+            });
+        });
+
         // ── WOD Summary Overlay ──────────────────────────────────────────────
         socket.on('display:wod_overlay', ({ active, blocks }) => {
             _renderWodOverlay(active, blocks);

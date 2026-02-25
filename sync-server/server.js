@@ -768,6 +768,20 @@ app.get('/internal/detach-sala', (req, res) => {
     res.json({ ok: true });
 });
 
+// ─── HTTP: Sala Renamed ───────────────────────────────────────────────────
+// Called by PHP after a sala name change to update the display screen live.
+app.get('/internal/sala-renamed', (req, res) => {
+    const sala_id = parseInt(req.query.sala_id);
+    const name = (req.query.name || '').trim();
+    if (!sala_id || !name) return res.json({ ok: false, error: 'Missing sala_id or name' });
+    // Update in-memory state name too if there's an active session
+    const st = sessionStates.get(sala_id);
+    if (st) st.salaName = name;
+    io.to(`sala:${sala_id}`).emit('sala:renamed', { name });
+    console.log(`[HTTP] Sala ${sala_id} renamed → "${name}"`);
+    res.json({ ok: true });
+});
+
 // ─── HTTP: PHP Notification Endpoint ─────────────────────────────────────
 // Called by PHP after CRUD operations to reload session into memory
 app.get('/internal/reload', async (req, res) => {
