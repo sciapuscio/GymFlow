@@ -89,11 +89,19 @@ layout_footer($user);
 
             <!-- QR image via Google Charts API (no JS library needed) -->
             <div id="qr-container"
-                style="display:inline-block;padding:16px;background:#fff;border-radius:12px;margin-bottom:16px">
+                style="display:inline-block;padding:16px;background:#fff;border-radius:12px;margin-bottom:16px;position:relative">
                 <img id="qr-img"
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=<?php echo urlencode($checkinUrl) ?>"
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=<?php echo urlencode($checkinUrl) ?>"
                     alt="QR Check-in <?php echo htmlspecialchars($gym['name']) ?>" width="240" height="240"
                     style="display:block">
+                <?php if (!empty($gym['logo_path'])): ?>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                    width:56px;height:56px;background:#fff;border-radius:50%;padding:4px;
+                    display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #eee">
+                        <img src="<?php echo BASE_URL . $gym['logo_path'] ?>" alt="Logo"
+                            style="width:44px;height:44px;object-fit:contain;border-radius:50%">
+                    </div>
+                <?php endif ?>
             </div>
 
             <div
@@ -102,9 +110,9 @@ layout_footer($user);
             </div>
             <div style="font-size:12px;color:var(--gf-text-dim)">Escaneá para registrar tu presencia</div>
 
-            <hr style="margin:16px 0">
+            <hr class="no-print" style="margin:16px 0">
 
-            <div
+            <div class="no-print"
                 style="font-size:11px;color:var(--gf-text-dim);word-break:break-all;background:var(--gf-surface-2);padding:8px 12px;border-radius:6px;text-align:left">
                 <strong style="color:var(--gf-text-muted)">URL:</strong><br>
                 <?php echo htmlspecialchars($checkinUrl) ?>
@@ -167,7 +175,8 @@ layout_footer($user);
         /* Hide everything except the QR card */
         .sidebar,
         .page-header,
-        .card:not(#print-only) {
+        .card:not(#print-only),
+        .no-print {
             display: none !important;
         }
 
