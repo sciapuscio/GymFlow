@@ -18,6 +18,24 @@ function getBody(): array
     return json_decode($raw, true) ?? [];
 }
 
+/**
+ * Reads the Bearer token from the Authorization header.
+ * Handles Apache stripping HTTP_AUTHORIZATION via multiple fallbacks.
+ * Returns the raw token string, or null if not present.
+ */
+if (!function_exists('getBearerToken')) {
+    function getBearerToken(): ?string
+    {
+        $header = $_SERVER['HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+            ?? (function_exists('getallheaders') ? (getallheaders()['Authorization'] ?? '') : '')
+            ?? '';
+        if (!str_starts_with($header, 'Bearer '))
+            return null;
+        return trim(substr($header, 7));
+    }
+}
+
 function sanitize(string $val): string
 {
     return htmlspecialchars(trim($val), ENT_QUOTES, 'UTF-8');

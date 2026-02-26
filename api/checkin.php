@@ -18,6 +18,7 @@
  *   de escaneo antes de que el alumno confirme.
  */
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/helpers.php';
 
 handleCors();
@@ -26,10 +27,9 @@ header('Content-Type: application/json; charset=utf-8');
 // ── Helper: autenticar alumno por bearer token ───────────────────────────────
 function getMemberFromToken(): ?array
 {
-    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    if (!str_starts_with($header, 'Bearer '))
+    $token = getBearerToken();
+    if (!$token)
         return null;
-    $token = trim(substr($header, 7));
 
     $stmt = db()->prepare("
         SELECT m.*, mat.gym_id AS token_gym_id

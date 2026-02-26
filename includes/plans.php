@@ -17,7 +17,7 @@
 
 const PLAN_DEFINITIONS = [
     'trial' => [
-        'label' => 'Trial (30 días)',
+        'label' => 'Trial',
         'salas' => 1,
         'instructors' => 1,      // null = unlimited
         'price_ars' => 0,

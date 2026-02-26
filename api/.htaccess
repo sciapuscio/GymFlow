@@ -1,0 +1,5 @@
+# GymFlow API — Apache config
+# Passes the Authorization header through to PHP (stripped by Apache by default)
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

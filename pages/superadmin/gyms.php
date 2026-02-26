@@ -12,6 +12,7 @@ $gymnList = db()->query(
             COUNT(DISTINCT u.id) as user_count, 
             COUNT(DISTINCT s.id) as sala_count,
             gs.plan, gs.status as sub_status,
+            gs.billing_cycle,
             gs.current_period_end,
             gs.trial_ends_at,
             gs.extra_salas,
@@ -328,6 +329,14 @@ layout_footer($user);
                                     <div style="font-size:10px;color:var(--gf-text-muted);margin-top:2px">
                                         +<?php echo $extraSalas ?> sala<?php echo $extraSalas > 1 ? 's' : '' ?> add-on</div>
                                 <?php endif ?>
+                                <?php
+                                $cycle = $g['billing_cycle'] ?? 'monthly';
+                                $cycleLabel = $cycle === 'annual' ? '📅 Anual' : '🗓️ Mensual';
+                                $cycleColor = $cycle === 'annual' ? '#10b981' : 'var(--gf-text-muted)';
+                                ?>
+                                <div style="font-size:10px;color:<?php echo $cycleColor ?>;margin-top:3px;font-weight:600">
+                                    <?php echo $cycleLabel ?>
+                                </div>
                             </td>
                             <td style="min-width:90px">
                                 <div class="usage-bar-wrap">

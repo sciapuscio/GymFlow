@@ -59,6 +59,11 @@ $allowedPlans = ['instructor', 'gimnasio', 'centro'];
 if (!in_array($plan, $allowedPlans, true))
     $errors['plan'] = 'Plan inválido. Elegí uno de los planes disponibles.';
 
+// Billing cycle
+$billingCycle = trim($data['billing_cycle'] ?? 'monthly');
+if (!in_array($billingCycle, ['monthly', 'annual'], true))
+    $billingCycle = 'monthly';
+
 if (!empty($errors)) {
     jsonResponse(['error' => 'Validation failed', 'fields' => $errors], 422);
 }
@@ -141,13 +146,15 @@ try {
     );
     $stmt->execute([$gymId, $dc]);
 
-    // 5. Create 30-day trial subscription with the chosen plan
-    $trialEnd = date('Y-m-d', strtotime('+30 days'));
+    // 5. Create trial subscription with the chosen plan and billing cycle
+    //    monthly = 30 days trial | annual = 60 days trial (2 months free)
+    $trialDays = $billingCycle === 'annual' ? 60 : 30;
+    $trialEnd = date('Y-m-d', strtotime("+{$trialDays} days"));
     db()->prepare(
         "INSERT INTO gym_subscriptions
-            (gym_id, plan, status, trial_ends_at, current_period_start, current_period_end, extra_salas, price_ars)
-         VALUES (?, ?, 'active', ?, CURDATE(), ?, 0, 0)"
-    )->execute([$gymId, $plan, $trialEnd, $trialEnd]);
+            (gym_id, plan, billing_cycle, status, trial_ends_at, current_period_start, current_period_end, extra_salas, price_ars)
+         VALUES (?, ?, ?, 'active', ?, CURDATE(), ?, 0, 0)"
+    )->execute([$gymId, $plan, $billingCycle, $trialEnd, $trialEnd]);
 
     // 6. Generate auth session token → log the user in immediately
     require_once __DIR__ . '/../config/app.php';
@@ -167,20 +174,20 @@ try {
     ]);
 
     jsonResponse([
-        'success'    => true,
-        'message'    => '¡Bienvenido a GymFlow! Tu prueba gratuita de 30 días ha comenzado.',
-        'token'      => $token,
+        'success' => true,
+        'message' => '¡Bienvenido a GymFlow! Tu prueba gratuita de 30 días ha comenzado.',
+        'token' => $token,
         'expires_at' => $expires,
-        'gym_id'     => $gymId,
-        'gym_name'   => $gymName,
-        'gym_slug'   => $slug,
-        'user_id'    => $userId,
-        'user_name'  => $adminName,
+        'gym_id' => $gymId,
+        'gym_name' => $gymName,
+        'gym_slug' => $slug,
+        'user_id' => $userId,
+        'user_name' => $adminName,
         'user_email' => $adminEmail,
-        'role'       => 'admin',
-        'plan'       => $plan,
+        'role' => 'admin',
+        'plan' => $plan,
         'trial_ends' => $trialEnd,
-        'redirect'   => '../index.php',
+        'redirect' => '../index.php',
     ], 201);
 
 } catch (Exception $e) {

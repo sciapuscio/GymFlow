@@ -1062,6 +1062,7 @@
                     <!-- STEP 2 — Plan selection -->
                     <div class="form-step" id="step2">
                         <input type="hidden" id="selected_plan" value="gimnasio" />
+                        <input type="hidden" id="billing_cycle" value="monthly" />
 
                         <div class="field-group" style="margin-bottom:6px;">
                             <label>Elegí tu plan <span class="req">*</span></label>
@@ -1238,8 +1239,14 @@
                                 </div>
                                 <div style="height:1px;background:var(--border);"></div>
                                 <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-size:.85rem;color:var(--muted)">Facturación</span>
+                                    <span style="font-size:.9rem;" id="sum_billing">Mensual</span>
+                                </div>
+                                <div style="height:1px;background:var(--border);"></div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
                                     <span style="font-size:.85rem;color:var(--muted)">Prueba gratuita</span>
-                                    <span style="font-size:.9rem;color:var(--success);">✓ 30 días · sin tarjeta</span>
+                                    <span style="font-size:.9rem;color:var(--success);" id="sum_trial">✓ 30 días · sin
+                                        tarjeta</span>
                                 </div>
                             </div>
                         </div>
@@ -1360,6 +1367,9 @@
                 document.getElementById('sum_email').textContent = val('admin_email') || '—';
                 const plan = document.getElementById('selected_plan').value || 'gimnasio';
                 document.getElementById('sum_plan').textContent = planLabels[plan] || plan;
+                const cycle = document.getElementById('billing_cycle').value;
+                document.getElementById('sum_billing').textContent = cycle === 'annual' ? 'Anual (2 meses gratis 🎁)' : 'Mensual';
+                document.getElementById('sum_trial').textContent = cycle === 'annual' ? '✓ 60 días · sin tarjeta' : '✓ 30 días · sin tarjeta';
             }
 
             // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1484,6 +1494,7 @@
                     phone: val('phone'),
                     gym_type: val('gym_type'),
                     plan: document.getElementById('selected_plan').value || 'gimnasio',
+                    billing_cycle: document.getElementById('billing_cycle').value || 'monthly',
                     admin_name: val('admin_name'),
                     admin_email: val('admin_email'),
                     admin_password: document.getElementById('admin_password').value,
@@ -1560,6 +1571,12 @@
                     });
                 }
             });
+
+            // ── Leer billing_cycle desde URL (?billing=annual|monthly) ──────────
+            const urlBilling = new URLSearchParams(window.location.search).get('billing');
+            if (urlBilling === 'annual' || urlBilling === 'monthly') {
+                document.getElementById('billing_cycle').value = urlBilling;
+            }
 
         })();
     </script>

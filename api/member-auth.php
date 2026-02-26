@@ -1,39 +1,42 @@
 <?php
 /**
- * GymFlow — Member Auth API (para app mobile Flutter)
- *
- * POST /api/member-auth.php?action=register
- *   body: { name, email, password, gym_slug }
- *   → crea credenciales en el member existente (o crea el member si no existe)
- *   → devuelve { token, member }
- *
- * POST /api/member-auth.php?action=login
- *   body: { email, password, gym_slug }
- *   → devuelve { token, member }
- *
- * GET  /api/member-auth.php?action=me
- *   header: Authorization: Bearer <token>
- *   → devuelve datos del member + membresía activa
- *
- * DELETE /api/member-auth.php?action=logout
- *   header: Authorization: Bearer <token>
- *   → revoca el token
+ * GymFlow — Member Auth API
  */
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/helpers.php';
 
 handleCors();
 header('Content-Type: application/json; charset=utf-8');
+
+// Catch any uncaught exception → JSON error
+set_exception_handler(function (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+    exit;
+});
+
+// Catch PHP fatal errors → JSON error
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        http_response_code(500);
+        echo json_encode(['error' => $err['message'], 'file' => basename($err['file']), 'line' => $err['line']]);
+    }
+});
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // ── Helper: get authenticated member from Bearer token ──────────────────────
 function getAuthMember(): ?array
 {
-    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    if (!str_starts_with($header, 'Bearer '))
+    $token = getBearerToken();
+    if (!$token)
         return null;
-    $token = trim(substr($header, 7));
 
     $stmt = db()->prepare("
         SELECT m.*, mat.id AS token_id, mat.gym_id
@@ -71,6 +74,17 @@ function memberPayload(array $m, int $gymId): array
     $ms->execute([$m['id'], $gymId]);
     $membership = $ms->fetch();
 
+    // Gym branding — wrapped in try/catch so a missing column never crashes /me
+    $gym = null;
+    try {
+        $gymStmt = db()->prepare("SELECT name, logo_path, primary_color, secondary_color FROM gyms WHERE id = ?");
+        $gymStmt->execute([$gymId]);
+        $gym = $gymStmt->fetch() ?: null;
+    } catch (\Throwable $e) {
+        // Column might not exist yet — silently ignore
+        error_log('gym branding query failed: ' . $e->getMessage());
+    }
+
     return [
         'id' => (int) $m['id'],
         'name' => $m['name'],
@@ -78,6 +92,12 @@ function memberPayload(array $m, int $gymId): array
         'phone' => $m['phone'],
         'qr_token' => $m['qr_token'],
         'membership' => $membership ?: null,
+        'gym' => $gym ? [
+            'name' => $gym['name'],
+            'logo_path' => $gym['logo_path'],
+            'primary_color' => $gym['primary_color'],
+            'secondary_color' => $gym['secondary_color'],
+        ] : null,
     ];
 }
 

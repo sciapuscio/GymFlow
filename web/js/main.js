@@ -269,7 +269,14 @@
                     if (p.note) { p.note.innerHTML = '&nbsp;'; p.note.classList.remove('has-note'); }
                 }
             });
+
+            // ── Actualizar todos los links a registro.html con el ciclo elegido ──
+            const billing = isAnual ? 'annual' : 'monthly';
+            document.querySelectorAll('a[href*="registro.html"]').forEach(link => {
+                link.href = 'registro.html?billing=' + billing;
+            });
         });
     }
 
 })();
+

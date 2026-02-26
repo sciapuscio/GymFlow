@@ -155,7 +155,28 @@ layout_footer($user);
                 </form>
             </div>
 
-            <div class="card" style="border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.05)">
+            <div class="card" style="border-color:rgba(0,245,212,.2);background:rgba(0,245,212,.04)">
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">📱 Código del Gym (App)</h3>
+                <p style="font-size:12px;color:var(--gf-text-muted);margin-bottom:10px;line-height:1.5">
+                    Este es el código que los alumnos usan para registrarse e iniciar sesión en la app GymFlow.
+                    Formato: <code
+                        style="background:var(--gf-surface-2);padding:1px 6px;border-radius:4px">email@codigo</code>
+                </p>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="flex:1;background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;padding:12px 16px;font-family:monospace;font-size:18px;font-weight:700;color:var(--gf-accent);letter-spacing:.05em"
+                        id="gym-slug-display">
+                        <?php echo htmlspecialchars($gym['slug']) ?>
+                    </div>
+                    <button
+                        onclick="navigator.clipboard.writeText('<?php echo addslashes($gym['slug']) ?>');this.textContent='✅ Copiado!';setTimeout(()=>this.textContent='📋 Copiar',2000)"
+                        class="btn btn-sm"
+                        style="white-space:nowrap;background:rgba(0,245,212,.12);color:var(--gf-accent);border:1px solid rgba(0,245,212,.3)">
+                        📋 Copiar
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
                 <div style="font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:8px">⚠️ Sobre la regeneración
                 </div>
                 <p style="font-size:12px;color:var(--gf-text-muted);line-height:1.6">
