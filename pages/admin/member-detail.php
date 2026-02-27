@@ -64,6 +64,8 @@ layout_footer($user);
     </div>
     <div class="flex gap-2 ml-auto">
         <button class="btn btn-secondary" onclick="openEditModal()">✏️ Editar</button>
+        <button class="btn btn-secondary" style="color:#f59e0b;border-color:rgba(245,158,11,0.3)"
+            onclick="resetPin()">🔑 Blanquear contraseña</button>
         <button class="btn btn-primary" onclick="openAssignModal()">+ Asignar membresía</button>
     </div>
 </div>
@@ -383,4 +385,19 @@ layout_footer($user);
 
     loadMembershipHistory();
     loadAttendances();
+
+    async function resetPin() {
+        if (!confirm('¿Blanquear la contraseña de este alumno y generar un PIN temporal?')) return;
+        const res = await fetch(`${BASE_URL}/api/member-reset-pin.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ member_id: MEMBER_ID })
+        });
+        const json = await res.json();
+        if (json.ok) {
+            alert(`\u2705 PIN temporal generado: ${json.pin}\n\nEntregale este PIN al alumno. Cuando inicie sesi\u00f3n, la app le pedir\u00e1 que cree una nueva contrase\u00f1a.`);
+        } else {
+            alert('Error: ' + (json.error || 'No se pudo generar el PIN'));
+        }
+    }
 </script>

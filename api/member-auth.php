@@ -171,12 +171,24 @@ if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $member->execute([$email, $gymId]);
     $member = $member->fetch();
 
-    if (!$member || !$member['password_hash'] || !password_verify($password, $member['password_hash'])) {
+    if (!$member) {
         jsonError('Credenciales incorrectas', 401);
     }
 
+    // Accept: normal password OR temp PIN (4 digits set by staff)
+    $validNormal = $member['password_hash'] && password_verify($password, $member['password_hash']);
+    $validTempPin = $member['temp_pin'] && $password === $member['temp_pin'];
+
+    if (!$validNormal && !$validTempPin) {
+        jsonError('Credenciales incorrectas', 401);
+    }
+
+    $mustChange = (bool) ($member['must_change_pwd'] || $validTempPin);
+
     $token = generateMemberToken($member['id'], $gymId, $data['device'] ?? '');
-    jsonResponse(['token' => $token, 'member' => memberPayload($member, $gymId)]);
+    $payload = memberPayload($member, $gymId);
+    $payload['must_change_password'] = $mustChange;
+    jsonResponse(['token' => $token, 'member' => $payload]);
 }
 
 // ── ME ────────────────────────────────────────────────────────────────────────

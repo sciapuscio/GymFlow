@@ -202,10 +202,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'qr',
             ]);
 
-    // 7b. Marcar la reserva de hoy como 'attended' (si existe)
+    // 7b. Marcar la reserva de hoy como 'present' (si existe)
     db()->prepare("
         UPDATE member_reservations
-        SET status = 'attended'
+        SET status = 'present'
         WHERE member_id = ? AND gym_id = ? AND class_date = CURDATE() AND status = 'reserved'
     ")->execute([$member['id'], $gymId]);
 

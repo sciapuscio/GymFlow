@@ -231,6 +231,9 @@ if ($action === 'book' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($existing['status'] === 'reserved') {
             jsonError('Ya tenés una reserva para esta clase.', 409);
         }
+        if ($existing['status'] === 'present') {
+            jsonError('Ya registraste presencia en esta clase.', 409);
+        }
         // Re-activate cancelled booking + deduct session
         db()->prepare("
             UPDATE member_reservations
