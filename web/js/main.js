@@ -254,6 +254,18 @@
             { amount: document.querySelector('[data-mensual="55.000"]'), note: document.getElementById('noteCentro'), anualLabel: '$45.800 / mes · pagás $549.600 / año' }
         ];
 
+        // ── Helper: actualizar links con billing + plan ──────────────────────
+        function updateRegistroLinks() {
+            const billing = isAnual ? 'annual' : 'monthly';
+            document.querySelectorAll('a[href*="registro.html"]').forEach(link => {
+                const plan = link.dataset.plan;
+                link.href = 'registro.html?billing=' + billing + (plan ? '&plan=' + plan : '');
+            });
+        }
+
+        // Inicializar links al cargar la página (billing=monthly por defecto)
+        updateRegistroLinks();
+
         billingToggle.addEventListener('click', () => {
             isAnual = !isAnual;
             billingToggle.setAttribute('aria-checked', String(isAnual));
@@ -270,11 +282,7 @@
                 }
             });
 
-            // ── Actualizar todos los links a registro.html con el ciclo elegido ──
-            const billing = isAnual ? 'annual' : 'monthly';
-            document.querySelectorAll('a[href*="registro.html"]').forEach(link => {
-                link.href = 'registro.html?billing=' + billing;
-            });
+            updateRegistroLinks();
         });
     }
 

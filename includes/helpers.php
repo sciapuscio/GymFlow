@@ -155,3 +155,33 @@ function randomIntelligent(array $exercises, array $options = []): array
     shuffle($pool);
     return array_slice(array_values($pool), 0, $count);
 }
+
+/**
+ * Produce a signed cookie value: "rawValue.hmac"
+ * The HMAC prevents client-side tampering.
+ */
+function signCookieValue(string $value): string
+{
+    $sig = hash_hmac('sha256', $value, defined('COOKIE_HMAC_KEY') ? COOKIE_HMAC_KEY : 'gymflow_cookie_fallback');
+    return $value . '.' . $sig;
+}
+
+/**
+ * Verify and extract the raw value from a signed cookie.
+ * Returns null if missing, malformed, or tampered.
+ */
+function verifyCookieValue(string $cookieName): ?string
+{
+    $raw = $_COOKIE[$cookieName] ?? null;
+    if (!$raw)
+        return null;
+    $dot = strrpos($raw, '.');
+    if ($dot === false)
+        return null;
+    $value = substr($raw, 0, $dot);
+    $sig = substr($raw, $dot + 1);
+    $expected = hash_hmac('sha256', $value, defined('COOKIE_HMAC_KEY') ? COOKIE_HMAC_KEY : 'gymflow_cookie_fallback');
+    if (!hash_equals($expected, $sig))
+        return null;
+    return $value;
+}

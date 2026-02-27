@@ -67,10 +67,22 @@ function requireAuth(string ...$roles): array
     // ── Subscription gate (skipped for superadmin) ───────────────────────────
     if ($user['role'] !== 'superadmin' && !empty($user['gym_id'])) {
         $sub = getGymSubscription((int) $user['gym_id']);
+
+        $isTrial = $sub && $sub['status'] === 'trial';
+        $isActive = $sub && $sub['status'] === 'active';
+
+        // Trial válido: status='trial' y trial_ends_at no vencido
+        $trialValid = $isTrial
+            && !empty($sub['trial_ends_at'])
+            && $sub['trial_ends_at'] >= date('Y-m-d');
+
+        // Activo válido: status='active' y current_period_end no vencido
+        $activeValid = $isActive
+            && (!empty($sub['current_period_end']) ? $sub['current_period_end'] >= date('Y-m-d') : true);
+
         $blocked = !$sub
             || $sub['status'] === 'suspended'
-            || ($sub['status'] !== 'active')
-            || (!empty($sub['current_period_end']) && $sub['current_period_end'] < date('Y-m-d'));
+            || (!$trialValid && !$activeValid);
 
         if ($blocked) {
             if ($isBrowser) {

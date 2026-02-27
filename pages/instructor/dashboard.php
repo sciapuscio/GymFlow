@@ -7,7 +7,9 @@ require_once __DIR__ . '/../../includes/layout.php';
 $user = requireAuth('instructor', 'admin', 'superadmin');
 
 // Stats
-$gymId = (int) $user['gym_id'];
+$gymId = $user['role'] === 'superadmin'
+    ? (int) ($_GET['gym_id'] ?? verifyCookieValue('sa_gym_ctx') ?? 0)
+    : (int) $user['gym_id'];
 $stmtSessions = db()->prepare("SELECT COUNT(*) FROM gym_sessions WHERE instructor_id = ? AND DATE(created_at) = CURDATE()");
 $stmtSessions->execute([$user['id']]);
 $todaySessions = (int) $stmtSessions->fetchColumn();
@@ -249,11 +251,12 @@ layout_footer($user);
 </div>
 
 <script>
+    const GYM_ID = <?php echo $gymId ?>;
     async function duplicateSession(id) {
         if (!confirm('¿Duplicar esta sesión?')) return;
         const r = await fetch(`${window.GF_BASE}/api/sessions.php?id=${id}`);
         const s = await r.json();
-        const body = { name: s.name + ' (copia)', blocks_json: s.blocks_json, sala_id: s.sala_id };
+        const body = { name: s.name + ' (copia)', blocks_json: s.blocks_json, sala_id: s.sala_id, gym_id: GYM_ID };
         const r2 = await fetch(window.GF_BASE + '/api/sessions.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) });
         if (r2.ok) { showToast('Sesión duplicada', 'success'); location.reload(); }
     }

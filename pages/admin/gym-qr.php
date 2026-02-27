@@ -9,7 +9,9 @@ require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
 
 $user = requireAuth('admin', 'superadmin', 'staff');
-$gymId = (int) $user['gym_id'];
+$gymId = $user['role'] === 'superadmin'
+    ? (int) ($_GET['gym_id'] ?? verifyCookieValue('sa_gym_ctx') ?? 0)
+    : (int) $user['gym_id'];
 
 // Fetch gym data (including qr_token)
 $gym = db()->prepare("SELECT * FROM gyms WHERE id = ?");
@@ -32,6 +34,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'regen
     db()->prepare("UPDATE gyms SET qr_token = ? WHERE id = ?")->execute([$newToken, $gymId]);
     header('Location: ' . BASE_URL . '/pages/admin/gym-qr.php?regenerated=1');
     exit;
+}
+
+// Auto-generate qr_token if gym doesn't have one yet (e.g. created before migration)
+if (empty($gym['qr_token'])) {
+    $newToken = sprintf(
+        '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000,
+        mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff)
+    );
+    db()->prepare("UPDATE gyms SET qr_token = ? WHERE id = ?")->execute([$newToken, $gymId]);
+    $gym['qr_token'] = $newToken;
 }
 
 // Build check-in URL — the URL that gets encoded in the QR
@@ -60,8 +79,7 @@ layout_footer($user);
     <h1 style="font-size:18px;font-weight:700">QR Check-in</h1>
     <div style="margin-left:auto;display:flex;gap:10px">
         <button onclick="window.print()" class="btn btn-primary btn-sm">🖨️ Imprimir</button>
-        <form method="POST" style="display:inline"
-            onsubmit="return confirm('¿Regenerar el QR? Los códigos usados antes dejarán de funcionar.')">
+        <form method="POST" style="display:inline">
             <input type="hidden" name="action" value="regenerate">
             <button type="submit" class="btn btn-danger btn-sm">🔄 Regenerar QR</button>
         </form>

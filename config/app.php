@@ -74,4 +74,16 @@ if (!defined('OTP_HMAC_KEY')) {
     define('OTP_HMAC_KEY', 'gymflow_otp_insecure_key_' . ($_SERVER['HTTP_HOST'] ?? 'local'));
 }
 
+// ── Cookie HMAC Key ───────────────────────────────────────────────────────────
+// Firmar cookies sensibles (ej: sa_gym_ctx) para evitar manipulación.
+// DEBE definirse en local.php en producción: define('COOKIE_HMAC_KEY', 'una-clave-aleatoria-larga');
+if (!defined('COOKIE_HMAC_KEY')) {
+    $isLocal2 = str_starts_with(strtolower($_SERVER['HTTP_HOST'] ?? 'localhost'), 'localhost')
+        || str_starts_with($_SERVER['HTTP_HOST'] ?? '', '127.');
+    if (!$isLocal2) {
+        error_log('[GymFlow SECURITY] COOKIE_HMAC_KEY no está definida en local.php — las cookies de superadmin no son seguras');
+    }
+    define('COOKIE_HMAC_KEY', 'gymflow_cookie_insecure_key_' . ($_SERVER['HTTP_HOST'] ?? 'local'));
+}
+
 date_default_timezone_set(TIMEZONE);

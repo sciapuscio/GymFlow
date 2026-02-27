@@ -74,18 +74,37 @@ $slotsStmt->execute([$gymId]);
 $rawSlots = $slotsStmt->fetchAll();
 
 
-// ── Compute next occurrence date for each day_of_week ────────────────────────
-$today = new DateTime('today', new DateTimeZone(TIMEZONE));
-$todayDow = (int) $today->format('N') - 1; // 0=Mon..6=Sun (matches DB)
+// ── Compute base date for the requested week ──────────────────────────────────
+// If week_start is provided (YYYY-MM-DD, must be a Monday), use it.
+// Otherwise fall back to the Monday of the current week.
+$weekStartParam = trim($_GET['week_start'] ?? '');
+$baseMonday = null;
+if ($weekStartParam && preg_match('/^\d{4}-\d{2}-\d{2}$/', $weekStartParam)) {
+    try {
+        $baseMonday = new DateTime($weekStartParam, new DateTimeZone(TIMEZONE));
+        // Ensure it's really a Monday (weekday N=1); if not, snap to Monday
+        if ((int) $baseMonday->format('N') !== 1) {
+            $baseMonday->modify('last monday');
+        }
+    } catch (\Throwable $e) {
+        $baseMonday = null;
+    }
+}
+if (!$baseMonday) {
+    $today = new DateTime('today', new DateTimeZone(TIMEZONE));
+    $todayDow = (int) $today->format('N'); // 1=Mon..7=Sun
+    $baseMonday = (clone $today)->modify('-' . ($todayDow - 1) . ' days');
+}
 
 $enrichedSlots = [];
 foreach ($rawSlots as $slot) {
     $slotId = (int) $slot['id'];
-    $dow = (int) $slot['day_of_week'];
+    $dow = (int) $slot['day_of_week']; // 0=Mon..6=Sun
 
-    // Next (or current) occurrence of this weekday
-    $daysAhead = ($dow - $todayDow + 7) % 7;
-    $nextDate = (clone $today)->modify("+{$daysAhead} days")->format('Y-m-d');
+    // Compute the date of this weekday within the target week.
+    // $baseMonday is Monday (dow=0), so we add $dow days.
+    $slotDate = (clone $baseMonday)->modify("+{$dow} days");
+    $nextDate = $slotDate->format('Y-m-d');
 
     // Enrichment: booking counts + member reservation (fail-safe)
     $bookedCount = 0;
@@ -108,7 +127,6 @@ foreach ($rawSlots as $slot) {
         $myRes = $myStmt->fetch() ?: null;
     } catch (\Throwable $e) {
         error_log('[GymFlow] schedules enrichment failed: ' . $e->getMessage());
-        // Keep defaults: bookedCount=0, myRes=null
     }
 
     $enrichedSlots[] = [

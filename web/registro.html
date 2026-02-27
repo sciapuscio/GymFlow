@@ -848,6 +848,85 @@
             font-weight: 700;
         }
 
+        /* ---- BILLING TOGGLE IN FORM ---- */
+        .billing-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface2);
+            border: 1.5px solid var(--border2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: border-color var(--trans);
+        }
+
+        .billing-toggle-row:hover {
+            border-color: rgba(229, 255, 61, .4);
+        }
+
+        .billing-toggle-label {
+            font-family: var(--font-display);
+            font-size: 0.87rem;
+            font-weight: 700;
+        }
+
+        .billing-toggle-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .btgl {
+            width: 48px;
+            height: 26px;
+            border-radius: 13px;
+            background: var(--border2);
+            position: relative;
+            flex-shrink: 0;
+            transition: background var(--trans);
+        }
+
+        .btgl::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            top: 3px;
+            left: 3px;
+            transition: transform var(--trans);
+        }
+
+        .btgl.on {
+            background: var(--primary);
+        }
+
+        .btgl.on::after {
+            transform: translateX(22px);
+            background: #0a0b0f;
+        }
+
+        .billing-annual-badge {
+            display: none;
+            font-family: var(--font-display);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+            background: var(--primary);
+            color: #0a0b0f;
+            border-radius: 100px;
+            padding: 2px 10px;
+            margin-left: 8px;
+        }
+
+        .billing-annual-badge.show {
+            display: inline-block;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 900px) {
             .page {
@@ -1066,8 +1145,22 @@
 
                         <div class="field-group" style="margin-bottom:6px;">
                             <label>Elegí tu plan <span class="req">*</span></label>
-                            <p style="font-size:.8rem;color:var(--dim);margin-bottom:16px;margin-top:-4px;">30 días
-                                gratis en cualquier plan · Sin tarjeta de crédito</p>
+                            <p style="font-size:.8rem;color:var(--dim);margin-bottom:16px;margin-top:-4px;">Prueba
+                                gratuita incluida · Sin tarjeta de crédito</p>
+                        </div>
+
+                        <!-- Billing cycle toggle -->
+                        <div class="billing-toggle-row" id="billingToggleForm" role="switch" aria-checked="false"
+                            tabindex="0">
+                            <div>
+                                <div class="billing-toggle-label">
+                                    Facturación anual
+                                    <span class="billing-annual-badge" id="billingBadgeForm">2 meses gratis 🎁</span>
+                                </div>
+                                <div class="billing-toggle-sub" id="billingToggleSub">Activar para obtener 60 días de
+                                    prueba gratis</div>
+                            </div>
+                            <div class="btgl" id="btglForm"></div>
                         </div>
 
                         <div class="plan-cards">
@@ -1079,7 +1172,8 @@
                                         <span class="plan-card-name">Gimnasio</span>
                                         <span class="plan-card-badge">Más popular</span>
                                     </div>
-                                    <div class="plan-card-price"><strong>$29.000</strong> ARS / mes</div>
+                                    <div class="plan-card-price"><strong data-mensual="29.000"
+                                            data-anual="24.200">$29.000</strong> ARS / mes</div>
                                     <div class="plan-card-features">
                                         <span class="plan-card-feature">Hasta 3 salas</span>
                                         <span class="plan-card-feature">Instructores ilimitados</span>
@@ -1094,7 +1188,8 @@
                                     <div class="plan-card-top">
                                         <span class="plan-card-name">Instructor</span>
                                     </div>
-                                    <div class="plan-card-price"><strong>$12.000</strong> ARS / mes</div>
+                                    <div class="plan-card-price"><strong data-mensual="12.000"
+                                            data-anual="10.000">$12.000</strong> ARS / mes</div>
                                     <div class="plan-card-features">
                                         <span class="plan-card-feature">1 sala</span>
                                         <span class="plan-card-feature">1 instructor</span>
@@ -1109,7 +1204,8 @@
                                     <div class="plan-card-top">
                                         <span class="plan-card-name">Centro</span>
                                     </div>
-                                    <div class="plan-card-price"><strong>$55.000</strong> ARS / mes</div>
+                                    <div class="plan-card-price"><strong data-mensual="55.000"
+                                            data-anual="45.800">$55.000</strong> ARS / mes</div>
                                     <div class="plan-card-features">
                                         <span class="plan-card-feature">Hasta 8 salas</span>
                                         <span class="plan-card-feature">Instructores ilimitados</span>
@@ -1535,8 +1631,9 @@
                     document.querySelector('.form-header p').textContent = '';
                     document.getElementById('successScreen').classList.add('show');
                     if (json.gym_name) {
+                        const trialDays = (document.getElementById('billing_cycle').value === 'annual') ? 60 : 30;
                         document.getElementById('successMsg').textContent =
-                            `"${json.gym_name}" fue creado exitosamente. Tu prueba gratuita de 30 días ha comenzado. Redirigiendo al panel...`;
+                            `"${json.gym_name}" fue creado exitosamente. Tu prueba gratuita de ${trialDays} días ha comenzado. Redirigiendo al panel...`;
                     }
 
                     if (json.token) localStorage.setItem('gf_token', json.token);
@@ -1572,10 +1669,53 @@
                 }
             });
 
+            // ── Toggle de facturación dentro del formulario (Step 2) ──────────────
+            let formIsAnual = false;
+
+            function setFormBillingUI(annual) {
+                formIsAnual = annual;
+                document.getElementById('billing_cycle').value = annual ? 'annual' : 'monthly';
+                const btgl = document.getElementById('btglForm');
+                const badge = document.getElementById('billingBadgeForm');
+                const sub = document.getElementById('billingToggleSub');
+                const tog = document.getElementById('billingToggleForm');
+                if (btgl) btgl.classList.toggle('on', annual);
+                if (badge) badge.classList.toggle('show', annual);
+                if (sub) sub.textContent = annual
+                    ? '✓ Activado — 60 días de prueba gratis incluidos'
+                    : 'Activar para obtener 60 días de prueba gratis';
+                if (tog) tog.setAttribute('aria-checked', String(annual));
+                // ── Recalcular precios de las cards ─────────────────────────
+                document.querySelectorAll('.plan-card-price strong[data-mensual]').forEach(el => {
+                    el.textContent = '$' + (annual ? el.dataset.anual : el.dataset.mensual);
+                });
+                // ── Actualizar planLabels para el resumen ────────────────────
+                planLabels['instructor'] = 'Instructor · $' + (annual ? '10.000' : '12.000') + '/mes';
+                planLabels['gimnasio'] = 'Gimnasio · $' + (annual ? '24.200' : '29.000') + '/mes';
+                planLabels['centro'] = 'Centro · $' + (annual ? '45.800' : '55.000') + '/mes';
+            }
+
+            const billingToggleForm = document.getElementById('billingToggleForm');
+            if (billingToggleForm) {
+                billingToggleForm.addEventListener('click', () => setFormBillingUI(!formIsAnual));
+                billingToggleForm.addEventListener('keydown', e => {
+                    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setFormBillingUI(!formIsAnual); }
+                });
+            }
+
             // ── Leer billing_cycle desde URL (?billing=annual|monthly) ──────────
             const urlBilling = new URLSearchParams(window.location.search).get('billing');
             if (urlBilling === 'annual' || urlBilling === 'monthly') {
-                document.getElementById('billing_cycle').value = urlBilling;
+                setFormBillingUI(urlBilling === 'annual');
+            }
+
+            // ── Leer plan desde URL (?plan=instructor|gimnasio|centro) ──────────
+            const urlPlan = new URLSearchParams(window.location.search).get('plan');
+            if (urlPlan && ['instructor', 'gimnasio', 'centro'].includes(urlPlan)) {
+                document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+                const targetCard = document.querySelector(`.plan-card[data-plan="${urlPlan}"]`);
+                if (targetCard) targetCard.classList.add('selected');
+                document.getElementById('selected_plan').value = urlPlan;
             }
 
         })();

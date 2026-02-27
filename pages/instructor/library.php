@@ -5,7 +5,9 @@ require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
 
 $user = requireAuth('instructor', 'admin', 'superadmin');
-$gymId = (int) $user['gym_id'];
+$gymId = $user['role'] === 'superadmin'
+    ? (int) ($_GET['gym_id'] ?? verifyCookieValue('sa_gym_ctx') ?? 0)
+    : (int) $user['gym_id'];
 
 $stmt = db()->prepare(
     "SELECT e.*,

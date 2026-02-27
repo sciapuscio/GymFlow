@@ -146,6 +146,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($dup->fetch())
         jsonError('Ya registraste tu presencia hoy.', 409);
 
+    // 6b. Validar ventana de check-in: debe haber una clase de hoy que empiece
+    //     en los próximos N minutos o que ya haya comenzado (y no terminado).
+    $windowMin = (int) ($gym['checkin_window_minutes'] ?? 30);
+    $windowOpen = db()->prepare("
+        SELECT ss.start_time, ss.end_time
+        FROM member_reservations mr
+        JOIN schedule_slots ss ON ss.id = mr.schedule_slot_id
+        WHERE mr.member_id  = ?
+          AND mr.gym_id     = ?
+          AND mr.class_date  = CURDATE()
+          AND mr.status      = 'reserved'
+          AND ADDTIME(NOW(), SEC_TO_TIME(? * 60)) >= CONCAT(CURDATE(), ' ', ss.start_time)
+          AND NOW() < CONCAT(CURDATE(), ' ', ss.end_time)
+        LIMIT 1
+    ");
+    $windowOpen->execute([$member['id'], $gymId, $windowMin]);
+    $upcomingClass = $windowOpen->fetch();
+
+    if (!$upcomingClass) {
+        // Intentar dar info útil: próxima clase del día
+        $nextClass = db()->prepare("
+            SELECT ss.start_time
+            FROM member_reservations mr
+            JOIN schedule_slots ss ON ss.id = mr.schedule_slot_id
+            WHERE mr.member_id  = ?
+              AND mr.gym_id     = ?
+              AND mr.class_date  = CURDATE()
+              AND mr.status      = 'reserved'
+              AND CONCAT(CURDATE(), ' ', ss.start_time) > NOW()
+            ORDER BY ss.start_time ASC
+            LIMIT 1
+        ");
+        $nextClass->execute([$member['id'], $gymId]);
+        $next = $nextClass->fetch();
+
+        if ($next) {
+            $openAt = date('H:i', strtotime($next['start_time']) - $windowMin * 60);
+            jsonError("El check-in para tu próxima clase abre a las {$openAt}.", 403);
+        } else {
+            jsonError('No tenés ninguna clase reservada en este momento. Reservá una clase desde la Grilla.', 403);
+        }
+    }
+
     // 7. Registrar asistencia
     db()->prepare("
         INSERT INTO member_attendances
@@ -158,6 +201,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $membership['id'],
                 'qr',
             ]);
+
+    // 7b. Marcar la reserva de hoy como 'attended' (si existe)
+    db()->prepare("
+        UPDATE member_reservations
+        SET status = 'attended'
+        WHERE member_id = ? AND gym_id = ? AND class_date = CURDATE() AND status = 'reserved'
+    ")->execute([$member['id'], $gymId]);
 
     // 8. Incrementar sessions_used
     db()->prepare("

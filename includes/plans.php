@@ -108,9 +108,13 @@ function getGymPlanInfo(int $gymId): ?array
     if (!$sub)
         return null;
 
-    $plan = $sub['plan'] ?? 'trial';
+    $reservedPlan = $sub['plan'] ?? 'trial';
     $extra = (int) ($sub['extra_salas'] ?? 0);
-    $limits = getPlanLimits($plan, $extra);
+    $status = $sub['status'] ?? 'active';
+
+    // During trial → enforce trial limits regardless of reserved plan
+    $effectivePlan = ($status === 'trial') ? 'trial' : $reservedPlan;
+    $limits = getPlanLimits($effectivePlan, $status === 'trial' ? 0 : $extra);
     $usage = getGymUsage($gymId);
 
     return [
@@ -119,6 +123,9 @@ function getGymPlanInfo(int $gymId): ?array
         'usage' => $usage,
         'can_add_sala' => $usage['salas'] < $limits['salas'],
         'can_add_instructor' => $limits['instructors'] === null || $usage['instructors'] < $limits['instructors'],
+        'is_trial' => $status === 'trial',
+        'trial_ends_at' => $sub['trial_ends_at'] ?? null,
+        'reserved_plan' => $reservedPlan,   // what they'll get after trial
     ];
 }
 

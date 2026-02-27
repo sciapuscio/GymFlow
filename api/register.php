@@ -106,8 +106,8 @@ try {
 
     // 1. Create gym
     $stmt = db()->prepare(
-        "INSERT INTO gyms (name, slug, city, phone, gym_type, primary_color, secondary_color, font_family, font_display, spotify_mode, active)
-         VALUES (?, ?, ?, ?, ?, '#e5ff3d', '#6c63ff', 'Inter', 'Outfit', 'disabled', 1)"
+        "INSERT INTO gyms (name, slug, city, phone, gym_type, primary_color, secondary_color, font_family, font_display, spotify_mode, qr_token, active)
+         VALUES (?, ?, ?, ?, ?, '#e5ff3d', '#6c63ff', 'Inter', 'Outfit', 'disabled', UUID(), 1)"
     );
     $stmt->execute([sanitize($gymName), $slug, sanitize($city), sanitize($phone), sanitize($gymType)]);
     $gymId = (int) db()->lastInsertId();
@@ -153,7 +153,7 @@ try {
     db()->prepare(
         "INSERT INTO gym_subscriptions
             (gym_id, plan, billing_cycle, status, trial_ends_at, current_period_start, current_period_end, extra_salas, price_ars)
-         VALUES (?, ?, ?, 'active', ?, CURDATE(), ?, 0, 0)"
+         VALUES (?, ?, ?, 'trial', ?, CURDATE(), ?, 0, 0)"
     )->execute([$gymId, $plan, $billingCycle, $trialEnd, $trialEnd]);
 
     // 6. Generate auth session token → log the user in immediately
@@ -175,7 +175,7 @@ try {
 
     jsonResponse([
         'success' => true,
-        'message' => '¡Bienvenido a GymFlow! Tu prueba gratuita de 30 días ha comenzado.',
+        'message' => "¡Bienvenido a GymFlow! Tu prueba gratuita de {$trialDays} días ha comenzado.",
         'token' => $token,
         'expires_at' => $expires,
         'gym_id' => $gymId,

@@ -62,8 +62,8 @@ if ($method === 'POST') {
 
     db()->prepare(
         "INSERT INTO schedule_slots
-            (gym_id, sala_id, instructor_id, day_of_week, start_time, end_time, label, recurrent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1)"
+            (gym_id, sala_id, instructor_id, day_of_week, start_time, end_time, label, capacity, recurrent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
     )->execute([
                 $gymId,
                 (int) $data['sala_id'],
@@ -72,6 +72,8 @@ if ($method === 'POST') {
                 $data['start_time'],
                 $data['end_time'],
                 $label ?: null,
+                isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null
+                ? (int) $data['capacity'] : null,
             ]);
 
     $newId = (int) db()->lastInsertId();
@@ -112,7 +114,7 @@ if ($method === 'PUT' && $id) {
 
     db()->prepare(
         "UPDATE schedule_slots
-         SET day_of_week=?, start_time=?, end_time=?, sala_id=?, label=?
+         SET day_of_week=?, start_time=?, end_time=?, sala_id=?, label=?, capacity=?
          WHERE id=? AND gym_id=?"
     )->execute([
                 (int) ($data['day_of_week'] ?? 0),
@@ -120,6 +122,8 @@ if ($method === 'PUT' && $id) {
                 $data['end_time'] ?? '',
                 (int) ($data['sala_id'] ?? 0),
                 $label ?: null,
+                isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null
+                ? (int) $data['capacity'] : null,
                 $id,
                 $gymId,
             ]);

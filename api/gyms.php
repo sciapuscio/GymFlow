@@ -59,8 +59,8 @@ if ($method === 'POST' && !isset($_GET['logo'])) {
     $slug = strtolower(preg_replace('/[^a-z0-9]+/', '-', $data['name']));
 
     $stmt = db()->prepare(
-        "INSERT INTO gyms (name, slug, primary_color, secondary_color, font_family, font_display, spotify_mode) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO gyms (name, slug, primary_color, secondary_color, font_family, font_display, spotify_mode, qr_token) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, UUID())"
     );
     $stmt->execute([
         sanitize($data['name']),

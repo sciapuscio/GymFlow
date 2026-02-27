@@ -60,10 +60,19 @@ if ($method === 'GET' && $id) {
 
 // POST — create session
 if ($method === 'POST' && !isset($_GET['action'])) {
-    $user = requireAuth('instructor', 'admin');
+    $user = requireAuth('instructor', 'admin', 'superadmin');
     $data = getBody();
     if (empty($data['name']))
         jsonError('Name required');
+
+    // superadmin uses gym_id from request body; regular users use their session gym_id
+    if ($user['role'] === 'superadmin') {
+        $gymId = (int) ($data['gym_id'] ?? 0);
+        if (!$gymId)
+            jsonError('gym_id required — superadmin must pass gym_id in body');
+    } else {
+        $gymId = (int) $user['gym_id'];
+    }
 
     $blocks = $data['blocks_json'] ?? [];
     $total = computeTemplateTotal($blocks);
@@ -73,7 +82,7 @@ if ($method === 'POST' && !isset($_GET['action'])) {
          VALUES (?,?,?,?,?,?,?,?,?)"
     );
     $stmt->execute([
-        (int) $user['gym_id'],
+        $gymId,
         $data['sala_id'] ?? null,
         $user['id'],
         $data['template_id'] ?? null,
@@ -89,7 +98,7 @@ if ($method === 'POST' && !isset($_GET['action'])) {
 
 // POST — control actions: play, pause, stop, skip, extend, swap
 if ($method === 'POST' && isset($_GET['action']) && $id) {
-    $user = requireAuth('instructor', 'admin');
+    $user = requireAuth('instructor', 'admin', 'superadmin');
     $action = $_GET['action'];
     $data = getBody();
 

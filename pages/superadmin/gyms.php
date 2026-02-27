@@ -291,7 +291,10 @@ layout_footer($user);
                         $salaPct = $limits['salas'] > 0 ? min(100, round($salaCount / $limits['salas'] * 100)) : 0;
                         $salaBarClass = $salaPct >= 100 ? 'usage-full' : ($salaPct >= 80 ? 'usage-warn' : 'usage-ok');
 
-                        $planBadgeClass = match ($plan) {
+                        // Si está en período de trial, mostrar badge TRIAL sin importar el plan elegido
+                        $subStatus = $g['sub_status'] ?? 'active';
+                        $badgePlan = $subStatus === 'trial' ? 'trial' : $plan;
+                        $planBadgeClass = match ($badgePlan) {
                             'instructor' => 'plan-instructor',
                             'gimnasio' => 'plan-gimnasio',
                             'centro' => 'plan-centro',
@@ -322,9 +325,15 @@ layout_footer($user);
                                 </div>
                             </td>
                             <td>
-                                <span class="plan-badge <?php echo $planBadgeClass ?>">
-                                    <?php echo $limits['label'] ?>
+                                <span class="plan-badge <?php echo $planBadgeClass ?>"
+                                    title="<?php echo $subStatus === 'trial' && in_array($plan, ['instructor', 'gimnasio', 'centro']) ? 'Plan reservado: ' . strtoupper($plan) : '' ?>">
+                                    <?php echo $subStatus === 'trial' ? 'Trial' : $limits['label'] ?>
                                 </span>
+                                <?php if ($subStatus === 'trial' && in_array($plan, ['instructor', 'gimnasio', 'centro'])): ?>
+                                    <div style="font-size:10px;color:var(--gf-text-muted);margin-top:3px;font-weight:600">
+                                        → <?php echo ucfirst($plan) ?>
+                                    </div>
+                                <?php endif ?>
                                 <?php if ($extraSalas > 0): ?>
                                     <div style="font-size:10px;color:var(--gf-text-muted);margin-top:2px">
                                         +<?php echo $extraSalas ?> sala<?php echo $extraSalas > 1 ? 's' : '' ?> add-on</div>
@@ -383,7 +392,7 @@ layout_footer($user);
                                     'notes' => '',
                                 ])) ?>)">Ciclo</button>
                                 <button class="btn btn-secondary btn-sm"
-                                    onclick="openPayModal(<?php echo $g['id'] ?>, '<?php echo htmlspecialchars(addslashes($g['name'])) ?>')">💳
+                                    onclick="openPayModal(<?php echo $g['id'] ?>, '<?php echo htmlspecialchars(addslashes($g['name'])) ?>', '<?php echo in_array($plan, ['instructor', 'gimnasio', 'centro']) ? htmlspecialchars($plan) : '' ?>')">💳
                                     Pago</button>
                                 <button class="btn <?php echo $g['active'] ? 'btn-danger' : 'btn-primary' ?> btn-sm"
                                     onclick="toggleGym(<?php echo $g['id'] ?>, <?php echo (int) !$g['active'] ?>)">
@@ -764,13 +773,17 @@ layout_footer($user);
 <script>
     let _payGymId = null;
 
-    function openPayModal(gymId, gymName) {
+    function openPayModal(gymId, gymName, gymPlan) {
         _payGymId = gymId;
         document.getElementById('pay-gym-id').value = gymId;
         document.getElementById('pay-gym-name').textContent = gymName;
         // Pre-fill plan from current row
         document.getElementById('pay-form').reset();
         document.getElementById('pay-gym-id').value = gymId;
+        // Pre-select the plan the gym reserved
+        if (gymPlan && document.querySelector(`#pay-plan option[value="${gymPlan}"]`)) {
+            document.getElementById('pay-plan').value = gymPlan;
+        }
         // Dates: start = today, end = today + 30d
         const today = new Date(); const end = new Date();
         end.setDate(end.getDate() + 30);

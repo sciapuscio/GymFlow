@@ -12,6 +12,10 @@ if (!$gymId) {
     header('Location: ' . BASE_URL . '/pages/superadmin/dashboard.php');
     exit;
 }
+// Store which gym superadmin is managing so instructor sub-pages (builder, etc.) inherit the context
+if ($user['role'] === 'superadmin' && $gymId) {
+    setcookie('sa_gym_ctx', signCookieValue((string) $gymId), 0, '/');
+}
 
 $gym = db()->prepare("SELECT * FROM gyms WHERE id = ?");
 $gym->execute([$gymId]);
@@ -50,15 +54,20 @@ $planInfo = $sub ? getGymPlanInfo($gymId) : null;
 
 // Compute subscription display state
 $subBanner = null;
-if ($sub && $user['role'] !== 'superadmin') {
+if ($sub) {
+    $isSuperAdmin = $user['role'] === 'superadmin';
     $today = new DateTime();
     $periodEnd = $sub['current_period_end'] ? new DateTime($sub['current_period_end']) : null;
     $daysLeft = $periodEnd ? (int) $today->diff($periodEnd)->days * ($today <= $periodEnd ? 1 : -1) : null;
 
-    if ($sub['plan'] === 'trial' && $daysLeft !== null && $daysLeft >= 0) {
-        $subBanner = ['type' => 'trial', 'days' => $daysLeft, 'end' => $sub['current_period_end']];
-    } elseif ($daysLeft !== null && $daysLeft <= 7 && $daysLeft >= 0) {
-        $subBanner = ['type' => 'expiring', 'days' => $daysLeft, 'end' => $sub['current_period_end']];
+    $trialEndsAt = $sub['trial_ends_at'] ?? null;
+    $trialEnd = $trialEndsAt ? new DateTime($trialEndsAt) : null;
+    $trialDaysLeft = $trialEnd ? (int) $today->diff($trialEnd)->days * ($today <= $trialEnd ? 1 : -1) : null;
+
+    if ($sub['status'] === 'trial' && $trialDaysLeft !== null && $trialDaysLeft >= 0) {
+        $subBanner = ['type' => 'trial', 'days' => $trialDaysLeft, 'end' => $trialEndsAt, 'is_superadmin' => $isSuperAdmin];
+    } elseif (!$isSuperAdmin && $daysLeft !== null && $daysLeft <= 7 && $daysLeft >= 0) {
+        $subBanner = ['type' => 'expiring', 'days' => $daysLeft, 'end' => $sub['current_period_end'], 'is_superadmin' => false];
     }
 }
 
@@ -69,6 +78,7 @@ nav_item(BASE_URL . '/pages/instructor/dashboard.php', 'Instructor', '<svg width
 nav_section('CRM');
 nav_item(BASE_URL . '/pages/admin/members.php', 'Alumnos', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>', 'members', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/membership-plans.php', 'Planes', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>', 'plans', 'dashboard');
+nav_item(BASE_URL . '/pages/admin/asistencias.php', 'Asistencias', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>', 'asistencias', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/gym-qr.php', 'QR Check-in', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>', 'gym-qr', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/support.php', 'Soporte', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>', 'support', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/gym-portal.php', 'Portada App', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>', 'gym-portal', 'dashboard');
@@ -93,7 +103,13 @@ layout_footer($user);
     <div class="flex gap-2 ml-auto">
         <button class="btn btn-secondary" onclick="document.getElementById('branding-modal').classList.add('open')">🎨
             Branding</button>
-        <button class="btn btn-primary" onclick="document.getElementById('sala-modal').classList.add('open')">+ Nueva
+        <?php
+        $salaAtLimit = $planInfo && !$planInfo['can_add_sala'];
+        ?>
+        <button class="btn btn-primary" <?php if ($salaAtLimit): ?>disabled
+                title="Límite de salas alcanzado (<?php echo $planInfo['limits']['salas'] ?> sala<?php echo $planInfo['limits']['salas'] !== 1 ? 's' : '' ?> en plan Trial)"
+            <?php else: ?>onclick="document.getElementById('sala-modal').classList.add('open')" <?php endif ?>
+            style="<?php echo $salaAtLimit ? 'opacity:.45;cursor:not-allowed' : '' ?>">+ Nueva
             Sala</button>
     </div>
 </div>
@@ -176,10 +192,17 @@ layout_footer($user);
         $border = $isTrial ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.22)';
         $icon = $isTrial ? '⏳' : '🔔';
         $bannerId = 'sub-banner-' . $gymId;
+        $isSA = $subBanner['is_superadmin'] ?? false;
         if ($isTrial) {
-            $msg = $days === 0
-                ? 'Tu período de prueba <strong>vence hoy</strong>.'
-                : "Tu período de prueba vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (el {$endFmt}).";
+            if ($days === 0) {
+                $msg = $isSA
+                    ? 'El período de prueba del cliente <strong>vence hoy</strong>.'
+                    : 'Tu período de prueba <strong>vence hoy</strong>.';
+            } else {
+                $msg = $isSA
+                    ? "El período de prueba del cliente vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (el {$endFmt})."
+                    : "Tu período de prueba vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (el {$endFmt}).";
+            }
         } else {
             $msg = "Tu suscripción vence en <strong>{$days} día" . ($days !== 1 ? 's' : '') . "</strong> (el {$endFmt}). Renovar antes de esa fecha para no perder acceso.";
         }
@@ -216,8 +239,9 @@ layout_footer($user);
 
     <?php
     // ── Limit-reached banner ────────────────────────────────────────────────
-    $showSalaLimitBanner = $planInfo && !$planInfo['can_add_sala'] && $user['role'] !== 'superadmin';
-    $showInstrLimitBanner = $planInfo && !$planInfo['can_add_instructor'] && $user['role'] !== 'superadmin';
+    $showSalaLimitBanner = $planInfo && !$planInfo['can_add_sala'];
+    $showInstrLimitBanner = $planInfo && !$planInfo['can_add_instructor'];
+    $isSuperAdminView = $user['role'] === 'superadmin';
     if ($showSalaLimitBanner || $showInstrLimitBanner):
         ?>
         <div
@@ -225,13 +249,22 @@ layout_footer($user);
             <span style="font-size:20px;flex-shrink:0">📦</span>
             <div style="flex:1;line-height:1.5">
                 <?php if ($showSalaLimitBanner): ?>
-                    <strong>Límite de salas alcanzado.</strong> Tu plan
-                    <em><?php echo htmlspecialchars($planInfo['limits']['label']) ?></em> permite
-                    <?php echo $planInfo['limits']['salas'] ?> sala<?php echo $planInfo['limits']['salas'] !== 1 ? 's' : '' ?>.
+                    <strong>Límite de salas alcanzado.</strong>
+                    <?php if ($isSuperAdminView): ?>
+                        El plan actual del cliente (<em><?php echo htmlspecialchars($planInfo['limits']['label']) ?></em>) permite
+                        <?php echo $planInfo['limits']['salas'] ?> sala<?php echo $planInfo['limits']['salas'] !== 1 ? 's' : '' ?>.
+                    <?php else: ?>
+                        Tu plan <em><?php echo htmlspecialchars($planInfo['limits']['label']) ?></em> permite
+                        <?php echo $planInfo['limits']['salas'] ?> sala<?php echo $planInfo['limits']['salas'] !== 1 ? 's' : '' ?>.
+                    <?php endif ?>
                 <?php endif ?>
                 <?php if ($showInstrLimitBanner): ?>
                     <?php if ($showSalaLimitBanner): ?> &nbsp;·&nbsp; <?php endif ?>
-                    <strong>Límite de instructores alcanzado.</strong> Tu plan permite 1 instructor.
+                    <?php if ($isSuperAdminView): ?>
+                        <strong>Límite de instructores alcanzado.</strong> El plan actual del cliente permite 1 instructor.
+                    <?php else: ?>
+                        <strong>Límite de instructores alcanzado.</strong> Tu plan permite 1 instructor.
+                    <?php endif ?>
                 <?php endif ?>
                 <span style="color:var(--gf-text-muted)"> Contactá a GymFlow para ampliar tu plan o agregar salas
                     extra.</span>
@@ -296,7 +329,10 @@ layout_footer($user);
             <div class="flex items-center justify-between mb-4">
                 <h2 style="font-size:16px;font-weight:700">Salas</h2>
                 <button class="btn btn-primary btn-sm"
-                    onclick="document.getElementById('sala-modal').classList.add('open')">+ Sala</button>
+                    <?php if ($salaAtLimit): ?>disabled title="Límite alcanzado"
+                        style="opacity:.45;cursor:not-allowed"
+                    <?php else: ?>onclick="document.getElementById('sala-modal').classList.add('open')"
+                    <?php endif ?>>+ Sala</button>
             </div>
             <?php if (empty($salas)): ?>
                 <div class="empty-state" style="padding:20px">Sin salas. Creá la primera.</div>

@@ -5,7 +5,9 @@ require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
 
 $user = requireAuth('instructor', 'admin', 'superadmin', 'staff');
-$gymId = (int) $user['gym_id'];
+$gymId = $user['role'] === 'superadmin'
+    ? (int) ($_GET['gym_id'] ?? verifyCookieValue('sa_gym_ctx') ?? 0)
+    : (int) $user['gym_id'];
 
 $stmtSalas = db()->prepare("SELECT id, name FROM salas WHERE gym_id = ? AND active = 1");
 $stmtSalas->execute([$gymId]);
@@ -145,7 +147,7 @@ layout_footer($user);
                             <!-- Action buttons (visible on hover) -->
                             <div class="slot-actions">
                                 <button class="slot-btn slot-btn-edit" title="Editar"
-                                    onclick="editSlot(<?= $slot['id'] ?>,<?= $slot['day_of_week'] ?>,'<?= addslashes(substr($slot['start_time'], 0, 5)) ?>','<?= addslashes(substr($slot['end_time'], 0, 5)) ?>',<?= (int) $slot['sala_id'] ?>,'<?= addslashes($slot['class_name'] ?? $slot['session_name'] ?? '') ?>')">
+                                    onclick="editSlot(<?= $slot['id'] ?>,<?= $slot['day_of_week'] ?>,'<?= addslashes(substr($slot['start_time'], 0, 5)) ?>','<?= addslashes(substr($slot['end_time'], 0, 5)) ?>',<?= (int) $slot['sala_id'] ?>,'<?= addslashes($slot['class_name'] ?? $slot['session_name'] ?? '') ?>',<?= $slot['capacity'] !== null ? (int) $slot['capacity'] : 'null' ?>)">
                                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -170,6 +172,11 @@ layout_footer($user);
                             <div style="font-size:10px;color:var(--gf-text-dim)">
                                 <?php echo htmlspecialchars($slot['sala_name']) ?>
                             </div>
+                            <?php if (!empty($slot['capacity'])): ?>
+                                <div style="font-size:9px;color:var(--gf-text-dim);margin-top:2px">
+                                    👥 <?php echo (int) $slot['capacity'] ?> cupos
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
 
@@ -224,6 +231,11 @@ layout_footer($user);
             </div>
             <div class="form-group"><label class="form-label">Nombre de la clase</label><input class="form-control"
                     id="slot-name" placeholder="CrossFit, HIIT, Yoga..." required></div>
+            <div class="form-group">
+                <label class="form-label">Capacidad máxima <span style="color:var(--gf-text-dim);font-size:11px">(dejar
+                        vacío = sin límite)</span></label>
+                <input type="number" class="form-control" id="slot-capacity" placeholder="Ej: 20" min="1" max="500">
+            </div>
             <button type="submit" class="btn btn-primary" id="slot-submit-btn"
                 style="width:100%;margin-top:8px">Agregar</button>
         </form>
@@ -249,10 +261,11 @@ layout_footer($user);
         document.getElementById('slot-start').value = '08:00';
         document.getElementById('slot-end').value = '09:00';
         document.getElementById('slot-name').value = '';
+        document.getElementById('slot-capacity').value = '';
         document.getElementById('slot-modal').classList.add('open');
     }
 
-    function editSlot(id, day, start, end, salaId, name) {
+    function editSlot(id, day, start, end, salaId, name, capacity) {
         document.getElementById('slot-editing-id').value = id;
         document.getElementById('slot-modal-title').textContent = 'Editar Clase';
         document.getElementById('slot-submit-btn').textContent = 'Guardar cambios';
@@ -261,18 +274,21 @@ layout_footer($user);
         document.getElementById('slot-end').value = end;
         document.getElementById('slot-sala').value = salaId;
         document.getElementById('slot-name').value = name;
+        document.getElementById('slot-capacity').value = capacity ?? '';
         document.getElementById('slot-modal').classList.add('open');
     }
 
     async function saveSlot(e) {
         e.preventDefault();
         const editId = document.getElementById('slot-editing-id').value;
+        const capVal = document.getElementById('slot-capacity').value;
         const data = {
             day_of_week: +document.getElementById('slot-day').value,
             start_time: document.getElementById('slot-start').value,
             end_time: document.getElementById('slot-end').value,
             sala_id: +document.getElementById('slot-sala').value,
             class_name: document.getElementById('slot-name').value,
+            capacity: capVal !== '' ? +capVal : null,
         };
         try {
             if (editId) {

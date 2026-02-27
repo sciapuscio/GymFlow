@@ -5,7 +5,10 @@ require_once __DIR__ . '/../../includes/helpers.php';
 require_once __DIR__ . '/../../includes/layout.php';
 
 $user = requireAuth('instructor', 'admin', 'superadmin');
-$gymId = (int) $user['gym_id'];
+// Superadmin: use ?gym_id param first, then fall back to cookie set by admin/dashboard.php
+$gymId = $user['role'] === 'superadmin'
+    ? (int) ($_GET['gym_id'] ?? verifyCookieValue('sa_gym_ctx') ?? 0)
+    : (int) $user['gym_id'];
 
 $stmtSalas = db()->prepare("SELECT id, name, display_code FROM salas WHERE gym_id = ? AND active = 1 ORDER BY name");
 $stmtSalas->execute([$gymId]);
@@ -229,6 +232,7 @@ layout_footer($user);
     <script src="<?php echo BASE_URL ?>/assets/js/builder.js"></script>
     <script>
         // Initialize builder
+        const GYM_ID = <?php echo $gymId ?>;
         const EDIT_SESSION = <?php echo json_encode($editSession ? ['id' => $editSession['id'], 'blocks_json' => json_decode($editSession['blocks_json'], true), 'sala_id' => $editSession['sala_id']] : null) ?>;
         const SALAS = <?php echo json_encode(array_map(fn($s) => ['id' => $s['id'], 'name' => $s['name']], $salas)) ?>;
         window.SPOTIFY_CONNECTED = <?php echo $spotifyConnected ? 'true' : 'false' ?>;
@@ -271,7 +275,7 @@ layout_footer($user);
             document.getElementById('sala-select').options[0] && (document.getElementById('sum-sala').textContent =
                 document.getElementById('sala-select').selectedOptions[0]?.text || 'Sin asignar');
 
-            const body = { name, sala_id: salaId ? parseInt(salaId) : null, blocks_json: blocks };
+            const body = { name, sala_id: salaId ? parseInt(salaId) : null, blocks_json: blocks, gym_id: GYM_ID };
             let resp;
             if (EDIT_SESSION) {
                 resp = await GF.put(`${window.GF_BASE}/api/sessions.php?id=${EDIT_SESSION.id}`, body);
