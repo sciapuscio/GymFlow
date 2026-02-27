@@ -113,7 +113,7 @@ foreach ($rawSlots as $slot) {
         $cntStmt = db()->prepare("
             SELECT COUNT(*) AS cnt
             FROM member_reservations
-            WHERE schedule_slot_id = ? AND class_date = ? AND status = 'reserved'
+            WHERE schedule_slot_id = ? AND class_date = ? AND status IN ('reserved','present')
         ");
         $cntStmt->execute([$slotId, $nextDate]);
         $bookedCount = (int) $cntStmt->fetch()['cnt'];

@@ -2,6 +2,7 @@
 config/local.php
 config/database.php
 config/.env
+config/firebase-service-account.json
 .env
 *.env
 
