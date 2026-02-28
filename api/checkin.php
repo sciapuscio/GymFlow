@@ -179,9 +179,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 6b. Validar ventana de check-in: debe haber una clase de hoy que empiece
     //     en los próximos N minutos o que ya haya comenzado (y no terminado).
+    //     Si el QR es de una sede, solo vale la clase de esa sede.
     $windowMin = (int) ($gym['checkin_window_minutes'] ?? 30);
+    $sedeFilter = $sedeId ? ' AND mr.sede_id = ?' : '';
     $windowOpen = db()->prepare("
-        SELECT ss.start_time, ss.end_time
+        SELECT mr.id AS reservation_id, ss.start_time, ss.end_time
         FROM member_reservations mr
         JOIN schedule_slots ss ON ss.id = mr.schedule_slot_id
         WHERE mr.member_id  = ?
@@ -190,9 +192,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           AND mr.status      = 'reserved'
           AND ADDTIME(NOW(), SEC_TO_TIME(? * 60)) >= CONCAT(CURDATE(), ' ', ss.start_time)
           AND NOW() < CONCAT(CURDATE(), ' ', ss.end_time)
+          {$sedeFilter}
         LIMIT 1
     ");
-    $windowOpen->execute([$member['id'], $gymId, $windowMin]);
+    $params = [$member['id'], $gymId, $windowMin];
+    if ($sedeId)
+        $params[] = $sedeId;
+    $windowOpen->execute($params);
     $upcomingClass = $windowOpen->fetch();
 
     if (!$upcomingClass) {
@@ -206,17 +212,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               AND mr.class_date  = CURDATE()
               AND mr.status      = 'reserved'
               AND CONCAT(CURDATE(), ' ', ss.start_time) > NOW()
+              {$sedeFilter}
             ORDER BY ss.start_time ASC
             LIMIT 1
         ");
-        $nextClass->execute([$member['id'], $gymId]);
+        $params2 = [$member['id'], $gymId];
+        if ($sedeId)
+            $params2[] = $sedeId;
+        $nextClass->execute($params2);
         $next = $nextClass->fetch();
 
         if ($next) {
             $openAt = date('H:i', strtotime($next['start_time']) - $windowMin * 60);
             jsonError("El check-in para tu próxima clase abre a las {$openAt}.", 403);
         } else {
-            jsonError('No tenés ninguna clase reservada en este momento. Reservá una clase desde la Grilla.', 403);
+            $msg = $sedeId
+                ? 'No tenés ninguna clase reservada en esta sede en este momento.'
+                : 'No tenés ninguna clase reservada en este momento. Reservá una clase desde la Grilla.';
+            jsonError($msg, 403);
         }
     }
 
@@ -234,12 +247,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'qr',
             ]);
 
-    // 7b. Marcar la reserva de hoy como 'present' (si existe)
+    // 7b. Marcar la reserva como 'present' (la específica que habilitó el checkin)
     db()->prepare("
         UPDATE member_reservations
         SET status = 'present'
-        WHERE member_id = ? AND gym_id = ? AND class_date = CURDATE() AND status = 'reserved'
-    ")->execute([$member['id'], $gymId]);
+        WHERE id = ?
+    ")->execute([$upcomingClass['reservation_id']]);
 
     // 8. Incrementar sessions_used
     db()->prepare("
