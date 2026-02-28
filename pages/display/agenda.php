@@ -29,14 +29,16 @@ $sedeName = '';
 // Cargar slots iniciales
 $sql = "SELECT ss.*, ss.label AS class_name,
             s.name AS sala_name, s.accent_color AS sala_accent, s.bg_color AS sala_bg,
-            se.name AS sede_name
+            se.name AS sede_name,
+            COALESCE(ss.sede_id, s.sede_id) AS effective_sede_id
      FROM   schedule_slots ss
      LEFT JOIN salas s ON ss.sala_id = s.id
-     LEFT JOIN sedes se ON ss.sede_id = se.id
+     LEFT JOIN sedes se ON se.id = COALESCE(ss.sede_id, s.sede_id)
      WHERE  ss.gym_id = ?";
 $params = [$gym['id']];
 if ($sedeId) {
-    $sql .= " AND ss.sede_id = ?";
+    // Sede específica: solo slots de esa sede (directo o herencia de sala)
+    $sql .= " AND COALESCE(ss.sede_id, s.sede_id) = ?";
     $params[] = $sedeId;
     $stmtSedeName = db()->prepare("SELECT name FROM sedes WHERE id = ? AND gym_id = ?");
     $stmtSedeName->execute([$sedeId, $gym['id']]);
@@ -47,6 +49,9 @@ if ($sedeId) {
     $stmtSalaName = db()->prepare("SELECT name FROM salas WHERE id = ? AND gym_id = ?");
     $stmtSalaName->execute([$salaId, $gym['id']]);
     $salaName = $stmtSalaName->fetchColumn() ?: '';
+} else {
+    // Sin filtro = Gimnasio central: solo slots SIN sede específica
+    $sql .= " AND COALESCE(ss.sede_id, s.sede_id) IS NULL";
 }
 $sql .= " ORDER BY ss.day_of_week, ss.start_time";
 $stmtSlots = db()->prepare($sql);
@@ -59,10 +64,10 @@ foreach ($slots as $s) {
     $byDay[(int) $s['day_of_week']][] = $s;
 }
 
-$accent  = htmlspecialchars($gym['primary_color'] ?? '#00f5d4');
+$accent = htmlspecialchars($gym['primary_color'] ?? '#00f5d4');
 $accent2 = htmlspecialchars($gym['secondary_color'] ?? '#ff6b35');
 $gymName = htmlspecialchars($gym['name']);
-$gymId   = (int) $gym['id'];
+$gymId = (int) $gym['id'];
 $filterLabel = $sedeName ? htmlspecialchars($sedeName) : ($salaName ? 'Sala: ' . htmlspecialchars($salaName) : '');
 
 $pageTitle = $filterLabel ?: 'Programación Semanal';
@@ -505,7 +510,8 @@ $pageTitle = $filterLabel ?: 'Programación Semanal';
                                     </div>
                                 <?php endif; ?>
                                 <?php if (!$sedeId && !empty($slot['sede_name'])): ?>
-                                    <div class="slot-sede" style="font-size:clamp(7px,.65vw,9px);font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-top:1px">
+                                    <div class="slot-sede"
+                                        style="font-size:clamp(7px,.65vw,9px);font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-top:1px">
                                         <?= htmlspecialchars($slot['sede_name']) ?>
                                     </div>
                                 <?php endif; ?>
@@ -527,10 +533,10 @@ $pageTitle = $filterLabel ?: 'Programación Semanal';
     <!-- Socket.IO -->
     <script src="<?= SOCKET_URL ?>/socket.io/socket.io.js"></script>
     <script>
-        const GYM_ID  = <?= $gymId ?>;
-        const SALA_ID  = <?= $salaId ?>; // 0 = todas las salas
-        const SEDE_ID  = <?= $sedeId ?>; // 0 = todas las sedes
-        const TODAY   = <?= $phpDay ?>; // 0=Lun..6=Dom
+        const GYM_ID = <?= $gymId ?>;
+        const SALA_ID = <?= $salaId ?>; // 0 = todas las salas
+        const SEDE_ID = <?= $sedeId ?>; // 0 = todas las sedes
+        const TODAY = <?= $phpDay ?>; // 0=Lun..6=Dom
 
         // ── Clock ──────────────────────────────────────────────────────────────────
         (function clockTick() {
