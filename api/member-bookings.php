@@ -134,9 +134,17 @@ if ($action === 'list' && $_SERVER['REQUEST_METHOD'] === 'GET') {
         LEFT JOIN users u ON u.id = ss.instructor_id AND u.role = 'instructor'
         WHERE r.member_id = ? AND r.gym_id = ?
         ORDER BY
-            CASE WHEN r.class_date >= CURDATE() THEN 0 ELSE 1 END ASC,
-            r.class_date ASC,
-            r.class_time ASC
+            -- 1. Clases presentes primero (la más reciente arriba)
+            CASE WHEN r.status IN ('present','attended') THEN 0 ELSE 1 END ASC,
+            CASE WHEN r.status IN ('present','attended') THEN r.class_date ELSE NULL END DESC,
+            CASE WHEN r.status IN ('present','attended') THEN r.class_time ELSE NULL END DESC,
+            -- 2. Reservas futuras (próximas primero)
+            CASE WHEN r.status = 'reserved' AND CONCAT(r.class_date,' ',r.class_time) >= NOW() THEN 0 ELSE 1 END ASC,
+            CASE WHEN r.status = 'reserved' AND CONCAT(r.class_date,' ',r.class_time) >= NOW() THEN r.class_date ELSE NULL END ASC,
+            CASE WHEN r.status = 'reserved' AND CONCAT(r.class_date,' ',r.class_time) >= NOW() THEN r.class_time ELSE NULL END ASC,
+            -- 3. El resto (canceladas, ausentes) más recientes primero
+            r.class_date DESC,
+            r.class_time DESC
         LIMIT 100
     ");
     $listStmt->execute([$memberId, $gymId]);
