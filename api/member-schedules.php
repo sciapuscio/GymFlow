@@ -62,10 +62,13 @@ $slotsStmt = db()->prepare("
         ss.label         AS class_name,
         ss.color,
         {$capacitySql}
+        COALESCE(ss.sede_id, s.sede_id) AS sede_id,
         s.name           AS sala_name,
+        se.name          AS sede_name,
         u.name           AS instructor_name
     FROM schedule_slots ss
     LEFT JOIN salas s ON s.id = ss.sala_id
+    LEFT JOIN sedes se ON se.id = COALESCE(ss.sede_id, s.sede_id)
     LEFT JOIN users u ON u.id = ss.instructor_id AND u.role = 'instructor'
     WHERE ss.gym_id = ?
     ORDER BY ss.day_of_week, ss.start_time
@@ -73,6 +76,45 @@ $slotsStmt = db()->prepare("
 $slotsStmt->execute([$gymId]);
 $rawSlots = $slotsStmt->fetchAll();
 
+// ── Load sedes accessible to this member ──────────────────────────────────────
+// Check active membership: all_sedes=1 → show all; else show only pivot sedes
+$memberSedesQuery = "
+    SELECT DISTINCT se.id, se.name
+    FROM sedes se
+    WHERE se.gym_id = ? AND se.active = 1
+    AND (
+        -- Member has an active membership covering all sedes
+        EXISTS (
+            SELECT 1 FROM member_memberships mm
+            WHERE mm.member_id = ? AND mm.end_date >= CURDATE()
+            AND mm.all_sedes = 1
+        )
+        OR
+        -- Member has an active membership covering this specific sede
+        EXISTS (
+            SELECT 1 FROM member_memberships mm
+            JOIN member_membership_sedes mms ON mms.membership_id = mm.id
+            WHERE mm.member_id = ? AND mm.end_date >= CURDATE()
+            AND mms.sede_id = se.id
+        )
+    )
+    ORDER BY se.name
+";
+$sedesStmt = db()->prepare($memberSedesQuery);
+$sedesStmt->execute([$gymId, $memberId, $memberId]);
+$sedes = $sedesStmt->fetchAll();
+
+// If member has no memberships at all yet, show all sedes (fallback)
+if (empty($sedes)) {
+    $sedesStmt = db()->prepare("SELECT id, name FROM sedes WHERE gym_id = ? AND active = 1 ORDER BY name");
+    $sedesStmt->execute([$gymId]);
+    $sedes = $sedesStmt->fetchAll();
+}
+
+// Load preferred sede for this member
+$prefStmt = db()->prepare("SELECT sede_id_preferred FROM members WHERE id = ?");
+$prefStmt->execute([$memberId]);
+$sedeIdPreferred = $prefStmt->fetchColumn() ?: null;
 
 // ── Compute base date for the requested week ──────────────────────────────────
 // If week_start is provided (YYYY-MM-DD, must be a Monday), use it.
@@ -138,6 +180,8 @@ foreach ($rawSlots as $slot) {
         'color' => $slot['color'],
         'capacity' => $slot['capacity'] !== null ? (int) $slot['capacity'] : null,
         'sala_name' => $slot['sala_name'],
+        'sede_id' => $slot['sede_id'] !== null ? (int) $slot['sede_id'] : null,
+        'sede_name' => $slot['sede_name'] ?? null,
         'instructor_name' => $slot['instructor_name'],
         'next_date' => $nextDate,
         'booked_count' => $bookedCount,
@@ -156,5 +200,7 @@ $gymData = $gymStmt->fetch();
 
 jsonResponse([
     'gym' => $gymData ?: null,
+    'sedes' => $sedes,
+    'sede_id_preferred' => $sedeIdPreferred ? (int) $sedeIdPreferred : null,
     'slots' => $enrichedSlots,
 ]);

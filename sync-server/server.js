@@ -1022,6 +1022,43 @@ io.on('connection', (socket) => {
     });
 });
 
+// ─── Auto-Absent: mark confirmed reservations absent after check-in window ───
+const http2 = require('http');
+const AUTO_ABSENT_INTERVAL_MS = 60 * 1000; // every 60s
+
+function runAutoAbsent() {
+    const options = {
+        hostname: '127.0.0.1',
+        port: PORT,      // same process handles it via PHP proxy? No — call PHP directly
+        path: '/api/auto-absent.php',
+        method: 'POST',
+        headers: { 'Content-Length': 0 },
+    };
+    // Call the PHP API on the webserver (port 80)
+    const phpReq = http2.request({ hostname: '127.0.0.1', port: 80, path: '/api/auto-absent.php', method: 'POST', headers: { 'Content-Length': 0 } }, (res) => {
+        let body = '';
+        res.on('data', d => body += d);
+        res.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                if (data.marked > 0) {
+                    console.log(`[AutoAbsent] Marked ${data.marked} reservation(s) absent for gyms: ${data.gym_ids.join(', ')}`);
+                    // Notify connected clients for each affected gym
+                    (data.gym_ids || []).forEach(gymId => {
+                        io.to(`gym:${gymId}`).emit('reservations:absent', { gym_id: gymId, count: data.marked });
+                    });
+                }
+            } catch (_) { }
+        });
+    });
+    phpReq.on('error', () => { }); // silently ignore if PHP is down
+    phpReq.end();
+}
+
+setInterval(runAutoAbsent, AUTO_ABSENT_INTERVAL_MS);
+// Run once on startup (after a small delay)
+setTimeout(runAutoAbsent, 5000);
+
 // ─── Start ─────────────────────────────────────────────────────────────────
 server.listen(PORT, () => {
     console.log(`\n╔═══════════════════════════════════════╗`);
@@ -1032,3 +1069,4 @@ server.listen(PORT, () => {
         c.release();
     }).catch(e => console.error('[DB] Connection failed:', e.message));
 });
+

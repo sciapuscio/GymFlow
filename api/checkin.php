@@ -41,19 +41,31 @@ function getMemberFromToken(): ?array
     return $stmt->fetch() ?: null;
 }
 
-// ── GET — info pública del gym (pantalla de escaneo) ─────────────────────────
+// ── GET — info pública del gym (pantalla de escaneo) ──────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $gymQr = $_GET['gym_qr_token'] ?? '';
-    if (!$gymQr)
+    $qrToken = $_GET['gym_qr_token'] ?? '';
+    if (!$qrToken)
         jsonError('gym_qr_token requerido', 400);
 
-    $gym = db()->prepare("SELECT id, name, primary_color, logo_path FROM gyms WHERE qr_token = ? AND active = 1");
-    $gym->execute([$gymQr]);
-    $gym = $gym->fetch();
-    if (!$gym)
-        jsonError('QR inválido o gym inactivo', 404);
+    // Try sede first, then gym
+    $sedeStmt = db()->prepare("SELECT s.id AS sede_id, s.name AS sede_name, g.id, g.name, g.primary_color, g.logo_path FROM sedes s JOIN gyms g ON g.id = s.gym_id WHERE s.qr_token = ? AND s.active = 1 AND g.active = 1");
+    $sedeStmt->execute([$qrToken]);
+    $sedeRow = $sedeStmt->fetch();
 
-    // Check if there's a live session right now
+    if ($sedeRow) {
+        $gym = ['id' => $sedeRow['id'], 'name' => $sedeRow['name'], 'primary_color' => $sedeRow['primary_color'], 'logo_path' => $sedeRow['logo_path']];
+        $sedeId = $sedeRow['sede_id'];
+        $sedeName = $sedeRow['sede_name'];
+    } else {
+        $gymStmt = db()->prepare("SELECT id, name, primary_color, logo_path FROM gyms WHERE qr_token = ? AND active = 1");
+        $gymStmt->execute([$qrToken]);
+        $gym = $gymStmt->fetch();
+        if (!$gym)
+            jsonError('QR inválido o gym inactivo', 404);
+        $sedeId = null;
+        $sedeName = null;
+    }
+
     $session = db()->prepare("
         SELECT s.id, s.name, sl.name AS sala_name, s.started_at
         FROM gym_sessions s
@@ -66,6 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     jsonResponse([
         'gym' => $gym,
+        'sede_id' => $sedeId,
+        'sede_name' => $sedeName,
         'live_session' => $liveSession ?: null,
         'checkin_open' => true,
     ]);
@@ -79,19 +93,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         jsonError('No autorizado. Iniciá sesión en la app.', 401);
 
     $data = getBody();
-    $gymQr = trim($data['gym_qr_token'] ?? '');
-    if (!$gymQr)
+    $qrToken = trim($data['gym_qr_token'] ?? '');
+    if (!$qrToken)
         jsonError('gym_qr_token requerido', 400);
 
-    // 2. Resolver gym por QR
-    $gym = db()->prepare("
-        SELECT id, name, checkin_window_minutes
-        FROM gyms WHERE qr_token = ? AND active = 1
-    ");
-    $gym->execute([$gymQr]);
-    $gym = $gym->fetch();
-    if (!$gym)
-        jsonError('QR inválido', 404);
+    // 2. Resolver QR — puede ser de sede o de gym
+    $sedeId = null;
+    $sedeStmt = db()->prepare("SELECT s.id AS sede_id, g.id AS gym_id, g.name, g.checkin_window_minutes FROM sedes s JOIN gyms g ON g.id = s.gym_id WHERE s.qr_token = ? AND s.active = 1 AND g.active = 1");
+    $sedeStmt->execute([$qrToken]);
+    $sedeRow = $sedeStmt->fetch();
+
+    if ($sedeRow) {
+        $sedeId = (int) $sedeRow['sede_id'];
+        $gym = ['id' => $sedeRow['gym_id'], 'name' => $sedeRow['name'], 'checkin_window_minutes' => $sedeRow['checkin_window_minutes'] ?? 30];
+    } else {
+        $gymStmt = db()->prepare("SELECT id, name, checkin_window_minutes FROM gyms WHERE qr_token = ? AND active = 1");
+        $gymStmt->execute([$qrToken]);
+        $gym = $gymStmt->fetch();
+        if (!$gym)
+            jsonError('QR inválido', 404);
+    }
     $gymId = (int) $gym['id'];
 
     // 3. Verificar que el alumno pertenece a este gym
@@ -99,18 +120,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         jsonError('Este QR no corresponde a tu gimnasio.', 403);
     }
 
-    // 4. Verificar membresía activa con clases disponibles
+    // 4. Verificar membresía activa
     $ms = db()->prepare("
-        SELECT id, sessions_used, sessions_limit, end_date, plan_id
+        SELECT id, sessions_used, sessions_limit, end_date, plan_id, all_sedes
         FROM member_memberships
         WHERE member_id = ? AND gym_id = ? AND end_date >= CURDATE()
         ORDER BY end_date DESC LIMIT 1
     ");
     $ms->execute([$member['id'], $gymId]);
     $membership = $ms->fetch();
-
     if (!$membership)
         jsonError('No tenés una membresía activa.', 403);
+
+    // 4b. Validar acceso a sede (si el QR es de una sede y la membresía no es global)
+    if ($sedeId && !(int) ($membership['all_sedes'] ?? 1)) {
+        $sedeAccess = db()->prepare("
+            SELECT id FROM member_membership_sedes
+            WHERE membership_id = ? AND sede_id = ?
+        ");
+        $sedeAccess->execute([$membership['id'], $sedeId]);
+        if (!$sedeAccess->fetch())
+            jsonError('Tu membresía no está habilitada para esta sede.', 403);
+    }
 
     $sessionsLimit = (int) $membership['sessions_limit'];
     $sessionsUsed = (int) $membership['sessions_used'];
@@ -192,12 +223,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 7. Registrar asistencia
     db()->prepare("
         INSERT INTO member_attendances
-            (member_id, gym_session_id, gym_id, membership_id, method)
-        VALUES (?,?,?,?,?)
+            (member_id, gym_session_id, gym_id, sede_id, membership_id, method)
+        VALUES (?,?,?,?,?,?)
     ")->execute([
                 $member['id'],
                 $sessionId,
                 $gymId,
+                $sedeId,
                 $membership['id'],
                 'qr',
             ]);

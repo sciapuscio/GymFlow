@@ -20,21 +20,30 @@ if (!$gym) {
     exit('<p style="color:#fff;padding:40px;font-family:sans-serif">Gimnasio no encontrado</p>');
 }
 
-// Filtro opcional por sala
+// Filtro opcional por sala o sede
 $salaId = isset($_GET['sala']) ? (int) $_GET['sala'] : 0;
+$sedeId = isset($_GET['sede']) ? (int) $_GET['sede'] : 0;
 $salaName = '';
+$sedeName = '';
 
 // Cargar slots iniciales
 $sql = "SELECT ss.*, ss.label AS class_name,
-            s.name AS sala_name, s.accent_color AS sala_accent, s.bg_color AS sala_bg
+            s.name AS sala_name, s.accent_color AS sala_accent, s.bg_color AS sala_bg,
+            se.name AS sede_name
      FROM   schedule_slots ss
      LEFT JOIN salas s ON ss.sala_id = s.id
+     LEFT JOIN sedes se ON ss.sede_id = se.id
      WHERE  ss.gym_id = ?";
 $params = [$gym['id']];
-if ($salaId) {
+if ($sedeId) {
+    $sql .= " AND ss.sede_id = ?";
+    $params[] = $sedeId;
+    $stmtSedeName = db()->prepare("SELECT name FROM sedes WHERE id = ? AND gym_id = ?");
+    $stmtSedeName->execute([$sedeId, $gym['id']]);
+    $sedeName = $stmtSedeName->fetchColumn() ?: '';
+} elseif ($salaId) {
     $sql .= " AND ss.sala_id = ?";
     $params[] = $salaId;
-    // Get sala name for header
     $stmtSalaName = db()->prepare("SELECT name FROM salas WHERE id = ? AND gym_id = ?");
     $stmtSalaName->execute([$salaId, $gym['id']]);
     $salaName = $stmtSalaName->fetchColumn() ?: '';
@@ -54,7 +63,9 @@ $accent  = htmlspecialchars($gym['primary_color'] ?? '#00f5d4');
 $accent2 = htmlspecialchars($gym['secondary_color'] ?? '#ff6b35');
 $gymName = htmlspecialchars($gym['name']);
 $gymId   = (int) $gym['id'];
-$pageTitle = $salaName ? 'Sala: ' . htmlspecialchars($salaName) : 'Programación Semanal';
+$filterLabel = $sedeName ? htmlspecialchars($sedeName) : ($salaName ? 'Sala: ' . htmlspecialchars($salaName) : '');
+
+$pageTitle = $filterLabel ?: 'Programación Semanal';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -493,6 +504,11 @@ $pageTitle = $salaName ? 'Sala: ' . htmlspecialchars($salaName) : 'Programación
                                         <?= $salaStr ?>
                                     </div>
                                 <?php endif; ?>
+                                <?php if (!$sedeId && !empty($slot['sede_name'])): ?>
+                                    <div class="slot-sede" style="font-size:clamp(7px,.65vw,9px);font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-top:1px">
+                                        <?= htmlspecialchars($slot['sede_name']) ?>
+                                    </div>
+                                <?php endif; ?>
                                 <?php if ($isLive): ?>
                                     <div class="live-badge-chip">En curso</div>
                                 <?php endif; ?>
@@ -513,6 +529,7 @@ $pageTitle = $salaName ? 'Sala: ' . htmlspecialchars($salaName) : 'Programación
     <script>
         const GYM_ID  = <?= $gymId ?>;
         const SALA_ID  = <?= $salaId ?>; // 0 = todas las salas
+        const SEDE_ID  = <?= $sedeId ?>; // 0 = todas las sedes
         const TODAY   = <?= $phpDay ?>; // 0=Lun..6=Dom
 
         // ── Clock ──────────────────────────────────────────────────────────────────
@@ -562,7 +579,8 @@ $pageTitle = $salaName ? 'Sala: ' . htmlspecialchars($salaName) : 'Programación
 
         function renderSlots(slots) {
             // Apply sala filter if active
-            if (SALA_ID) slots = slots.filter(s => parseInt(s.sala_id) === SALA_ID);
+            if (SEDE_ID) slots = slots.filter(s => parseInt(s.sede_id) === SEDE_ID);
+            else if (SALA_ID) slots = slots.filter(s => parseInt(s.sala_id) === SALA_ID);
 
             // Group by day
             const byDay = Array.from({ length: 7 }, () => []);
@@ -604,6 +622,7 @@ $pageTitle = $salaName ? 'Sala: ' . htmlspecialchars($salaName) : 'Programación
         <div class="slot-time">${fmt(s.start_time)} – ${fmt(s.end_time)}</div>
         <div class="slot-name">${name}</div>
         ${sala ? `<div class="slot-sala">${sala}</div>` : ''}
+        ${!SEDE_ID && s.sede_name ? `<div class="slot-sede" style="font-size:clamp(7px,.65vw,9px);font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-top:1px">${s.sede_name}</div>` : ''}
         ${isLive ? '<div class="live-badge-chip">En curso</div>' : ''}
       `;
                     col.appendChild(card);

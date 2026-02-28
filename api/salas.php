@@ -82,8 +82,9 @@ if ($method === 'POST') {
     $code = strtoupper(preg_replace('/[^A-Z0-9]/', '', strtoupper($data['name'])));
     $code = substr($code, 0, 6) . '-' . strtoupper(substr(uniqid(), -4));
 
-    $stmt = db()->prepare("INSERT INTO salas (gym_id, name, display_code, accent_color, bg_color) VALUES (?,?,?,?,?)");
-    $stmt->execute([$gymId, sanitize($data['name']), $code, $data['accent_color'] ?? null, $data['bg_color'] ?? null]);
+    $stmt = db()->prepare("INSERT INTO salas (gym_id, sede_id, name, display_code, accent_color, bg_color) VALUES (?,?,?,?,?,?)");
+    $stmt$sedeId = !empty($data['sede_id']) ? (int) $data['sede_id'] : null;
+    $stmt->execute([$gymId, $sedeId, sanitize($data['name']), $code, $data['accent_color'] ?? null, $data['bg_color'] ?? null]);
     $newId = db()->lastInsertId();
     db()->prepare("INSERT INTO sync_state (sala_id) VALUES (?)")->execute([$newId]);
     jsonResponse(['id' => $newId, 'display_code' => $code], 201);

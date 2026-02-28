@@ -9,16 +9,21 @@ $gymId = $user['role'] === 'superadmin'
     ? (int) ($_GET['gym_id'] ?? verifyCookieValue('sa_gym_ctx') ?? 0)
     : (int) $user['gym_id'];
 
-$stmtSalas = db()->prepare("SELECT id, name FROM salas WHERE gym_id = ? AND active = 1");
+$stmtSalas = db()->prepare("SELECT s.id, s.name, se.name AS sede_name FROM salas s LEFT JOIN sedes se ON se.id = s.sede_id WHERE s.gym_id = ? AND s.active = 1 ORDER BY se.name, s.name");
 $stmtSalas->execute([$gymId]);
 $salas = $stmtSalas->fetchAll();
+
+// Sedes for filter
+$stmtSedes = db()->prepare("SELECT id, name FROM sedes WHERE gym_id = ? AND active = 1 ORDER BY name");
+$stmtSedes->execute([$gymId]);
+$sedesFiltro = $stmtSedes->fetchAll();
 
 // Slug del gym para la cartelera
 $gymSlug = db()->prepare("SELECT slug FROM gyms WHERE id = ?");
 $gymSlug->execute([$gymId]);
 $gymSlug = $gymSlug->fetchColumn() ?: '';
 
-$stmtSlots = db()->prepare("SELECT ss.*, ss.label AS class_name, gs.name as session_name, gs.id as session_id, s.name as sala_name FROM schedule_slots ss JOIN salas s ON ss.sala_id = s.id LEFT JOIN gym_sessions gs ON ss.session_id = gs.id WHERE s.gym_id = ? ORDER BY ss.day_of_week, ss.start_time");
+$stmtSlots = db()->prepare("SELECT ss.*, ss.label AS class_name, gs.name as session_name, gs.id as session_id, s.name as sala_name, se.name as sede_name FROM schedule_slots ss LEFT JOIN salas s ON ss.sala_id = s.id LEFT JOIN sedes se ON ss.sede_id = se.id LEFT JOIN gym_sessions gs ON ss.session_id = gs.id WHERE ss.gym_id = ? ORDER BY ss.day_of_week, ss.start_time");
 $stmtSlots->execute([$gymId]);
 $slots = $stmtSlots->fetchAll();
 
@@ -51,15 +56,27 @@ layout_footer($user);
 <div class="page-header">
     <h1 style="font-size:20px;font-weight:700">Programación Semanal</h1>
     <div class="flex gap-2 ml-auto">
+        <?php if (!empty($sedesFiltro)): ?>
+        <select id="sede-filter" class="form-control" style="width:auto;padding:8px 12px;font-size:13px"
+            onchange="filterBySede(this.value)">
+            <option value="">Todas las sedes</option>
+            <?php foreach ($sedesFiltro as $sf): ?>
+                <option value="<?php echo $sf['id'] ?>">
+                    <?php echo htmlspecialchars($sf['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <?php else: ?>
         <select id="sala-filter" class="form-control" style="width:auto;padding:8px 12px;font-size:13px"
             onchange="filterBySala(this.value)">
             <option value="">Todas las salas</option>
             <?php foreach ($salas as $s): ?>
                 <option value="<?php echo $s['id'] ?>">
-                    <?php echo htmlspecialchars($s['name']) ?>
+                    <?php echo ($s['sede_name'] ? htmlspecialchars($s['sede_name']) . ' › ' : '') . htmlspecialchars($s['name']) ?>
                 </option>
             <?php endforeach; ?>
         </select>
+        <?php endif ?>
         <?php if ($gymSlug): ?>
             <a class="btn btn-secondary" id="cartelera-btn"
                 href="<?= BASE_URL ?>/pages/display/agenda.php?gym=<?= htmlspecialchars($gymSlug) ?>" target="_blank"
@@ -141,7 +158,7 @@ layout_footer($user);
                 </div>
                 <div style="display:flex;flex-direction:column;gap:6px" id="day-<?php echo $dayIdx ?>">
                     <?php foreach ($slotsByDay[$dayIdx] as $slot): ?>
-                        <div class="schedule-slot" data-sala="<?php echo $slot['sala_id'] ?>"
+                        <div class="schedule-slot" data-sala="<?php echo $slot['sala_id'] ?>" data-sede="<?php echo $slot['sede_id'] ?? '' ?>"
                             style="padding:8px 10px;background:var(--gf-accent-dim);border:1px solid rgba(0,245,212,.2);border-radius:8px">
 
                             <!-- Action buttons (visible on hover) -->
@@ -170,8 +187,11 @@ layout_footer($user);
                                 <?php echo htmlspecialchars($slot['class_name'] ?? $slot['session_name'] ?? 'Clase') ?>
                             </div>
                             <div style="font-size:10px;color:var(--gf-text-dim)">
-                                <?php echo htmlspecialchars($slot['sala_name']) ?>
+                                <?php echo htmlspecialchars($slot['sala_name'] ?? '') ?>
                             </div>
+                            <?php if (!empty($slot['sede_name'])): ?>
+                            <div class="slot-sede-badge" style="font-size:9px;font-weight:700;color:var(--gf-accent);margin-top:1px;letter-spacing:.04em;text-transform:uppercase"><?= htmlspecialchars($slot['sede_name']) ?></div>
+                            <?php endif ?>
                             <?php if (!empty($slot['capacity'])): ?>
                                 <div style="font-size:9px;color:var(--gf-text-dim);margin-top:2px">
                                     👥 <?php echo (int) $slot['capacity'] ?> cupos
@@ -219,15 +239,22 @@ layout_footer($user);
                 <div class="form-group"><label class="form-label">Fin</label><input type="time" class="form-control"
                         id="slot-end" value="09:00" required></div>
             </div>
-            <div class="form-group">
+                        <div class="form-group">
+                <?php if (!empty($sedesFiltro)): ?>
+                <label class="form-label">Sede</label>
+                <select class="form-control" id="slot-sala" required>
+                    <?php foreach ($sedesFiltro as $sf): ?>
+                    <option value="<?= $sf['id'] ?>" data-type="sede"><?= htmlspecialchars($sf['name']) ?></option>
+                    <?php endforeach ?>
+                </select>
+                <?php else: ?>
                 <label class="form-label">Sala</label>
                 <select class="form-control" id="slot-sala" required>
                     <?php foreach ($salas as $s): ?>
-                        <option value="<?php echo $s['id'] ?>">
-                            <?php echo htmlspecialchars($s['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
+                    <option value="<?= $s['id'] ?>" data-type="sala"><?= htmlspecialchars($s['name']) ?></option>
+                    <?php endforeach ?>
                 </select>
+                <?php endif ?>
             </div>
             <div class="form-group"><label class="form-label">Nombre de la clase</label><input class="form-control"
                     id="slot-name" placeholder="CrossFit, HIIT, Yoga..." required></div>
@@ -282,11 +309,14 @@ layout_footer($user);
         e.preventDefault();
         const editId = document.getElementById('slot-editing-id').value;
         const capVal = document.getElementById('slot-capacity').value;
+        const salaEl = document.getElementById('slot-sala');
+        const selectedOpt = salaEl.options[salaEl.selectedIndex];
+        const isSede = selectedOpt?.dataset?.type === 'sede';
         const data = {
             day_of_week: +document.getElementById('slot-day').value,
             start_time: document.getElementById('slot-start').value,
             end_time: document.getElementById('slot-end').value,
-            sala_id: +document.getElementById('slot-sala').value,
+            [isSede ? 'sede_id' : 'sala_id']: +salaEl.value,
             class_name: document.getElementById('slot-name').value,
             capacity: capVal !== '' ? +capVal : null,
         };
@@ -298,7 +328,7 @@ layout_footer($user);
                 await GF.post(BASE + '/api/schedules.php', data);
                 showToast('Clase agregada al horario', 'success');
             }
-            location.reload();
+            _persistFilterAndReload();
         } catch (err) {
             console.error('saveSlot error:', err);
             showToast('Error al guardar: ' + (err?.message || 'revisa la consola'), 'error');
@@ -324,11 +354,29 @@ layout_footer($user);
         try {
             await GF.delete(BASE + '/api/schedules.php?id=' + id);
             showToast('Clase eliminada', 'success');
-            location.reload();
+            _persistFilterAndReload();
         } catch (err) {
             console.error('deleteSlot error:', err);
             showToast('Error al eliminar: ' + (err?.message || 'revisa la consola'), 'error');
         }
+    }
+
+    function filterBySede(sedeId) {
+        document.querySelectorAll('.schedule-slot').forEach(el => {
+            el.style.display = (!sedeId || el.dataset.sede == sedeId) ? '' : 'none';
+        });
+        const btn = document.getElementById('cartelera-btn');
+        if (btn) {
+            const url = new URL(btn.href);
+            if (sedeId) url.searchParams.set('sede', sedeId);
+            else url.searchParams.delete('sede');
+            btn.href = url.toString();
+        }
+            sessionStorage.setItem('gf_scheduler_sede', sedeId || '');
+        // Show sede badges only when showing all (no filter)
+        document.querySelectorAll('.slot-sede-badge').forEach(b => {
+            b.style.display = sedeId ? 'none' : '';
+        });
     }
 
     function filterBySala(salaId) {
@@ -351,6 +399,55 @@ layout_footer($user);
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.addEventListener('click', e => { if (e.target === m) closeSlotModal(); });
     });
+
+
+    // ── Restore sede/sala filter after reload ─────────────────────────────────
+
+    (function restoreFilter() {
+
+        const savedSede = sessionStorage.getItem('gf_scheduler_sede');
+
+        const savedSala = sessionStorage.getItem('gf_scheduler_sala');
+
+        const sedeEl = document.getElementById('sede-filter');
+
+        const salaEl = document.getElementById('sala-filter');
+
+        if (sedeEl && savedSede) {
+
+            sedeEl.value = savedSede;
+
+            filterBySede(savedSede);
+
+        } else if (salaEl && savedSala) {
+
+            salaEl.value = savedSala;
+
+            filterBySala(savedSala);
+
+        }
+
+    })();
+
+
+    function _persistFilterAndReload() {
+        const sedeEl = document.getElementById('sede-filter');
+        const salaEl = document.getElementById('sala-filter');
+        if (sedeEl) sessionStorage.setItem('gf_scheduler_sede', sedeEl.value || '');
+        if (salaEl) sessionStorage.setItem('gf_scheduler_sala', salaEl.value || '');
+        location.reload();
+    }
+
+    // Restore filter after reload
+    (function restoreFilter() {
+        const savedSede = sessionStorage.getItem('gf_scheduler_sede');
+        const savedSala = sessionStorage.getItem('gf_scheduler_sala');
+        const sedeEl = document.getElementById('sede-filter');
+        const salaEl = document.getElementById('sala-filter');
+        if (sedeEl && savedSede) { sedeEl.value = savedSede; filterBySede(savedSede); }
+        else if (salaEl && savedSala) { salaEl.value = savedSala; filterBySala(savedSala); }
+    })();
+
 </script>
 
 <?php layout_end(); ?>

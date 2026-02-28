@@ -15,10 +15,18 @@ $gymId = $user['role'] === 'superadmin'
 
 $today = date('Y-m-d');
 $selDate = $_GET['date'] ?? $today;
-// Validate date format
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $selDate))
     $selDate = $today;
-$dayOfWeek = (int) date('N', strtotime($selDate)) - 1; // 0=Mon … 6=Sun (matches schedule_slots.day_of_week)
+$dayOfWeek = (int) date('N', strtotime($selDate)) - 1;
+
+// Load sedes and sede filter
+$sedesStmt = db()->prepare("SELECT id, name FROM sedes WHERE gym_id = ? AND active = 1 ORDER BY name");
+$sedesStmt->execute([$gymId]);
+$sedes = $sedesStmt->fetchAll();
+$sedeId = isset($_GET['sede_id']) && (int) $_GET['sede_id'] > 0 ? (int) $_GET['sede_id'] : null;
+// Auto-select if only one sede
+if (!$sedeId && count($sedes) === 1)
+    $sedeId = (int) $sedes[0]['id'];
 
 // Fetch slots for this day
 $slotsStmt = db()->prepare("
@@ -27,9 +35,10 @@ $slotsStmt = db()->prepare("
     FROM schedule_slots ss
     LEFT JOIN salas sal ON sal.id = ss.sala_id
     WHERE ss.gym_id = ? AND ss.day_of_week = ?
+    AND (? IS NULL OR ss.sede_id = ?)
     ORDER BY ss.start_time
 ");
-$slotsStmt->execute([$gymId, $dayOfWeek]);
+$slotsStmt->execute([$gymId, $dayOfWeek, $sedeId, $sedeId]);
 $slots = $slotsStmt->fetchAll();
 
 // For each slot, fetch reservations for the selected date
@@ -82,19 +91,34 @@ $dayNames = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
 
     <!-- Date navigator -->
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-        <a href="?date=<?= date('Y-m-d', strtotime($selDate . ' -1 day')) ?>" class="btn btn-sm"
-            style="padding:6px 10px">←</a>
+        <a href="?date=<?= date('Y-m-d', strtotime($selDate . ' -1 day')) ?><?= $sedeId ? '&sede_id=' . $sedeId : '' ?>"
+            class="btn btn-sm" style="padding:6px 10px">←</a>
         <form method="GET" style="display:flex;align-items:center;gap:6px">
             <input type="date" name="date" class="input" value="<?= $selDate ?>"
                 style="font-size:13px;padding:6px 10px;width:160px" onchange="this.form.submit()">
+            <?php if ($sedeId): ?>
+                <input type="hidden" name="sede_id" value="<?= $sedeId ?>">
+            <?php endif ?>
             <?php if ($user['role'] === 'superadmin' && $gymId): ?>
                 <input type="hidden" name="gym_id" value="<?= $gymId ?>">
             <?php endif ?>
         </form>
-        <a href="?date=<?= date('Y-m-d', strtotime($selDate . ' +1 day')) ?>" class="btn btn-sm"
-            style="padding:6px 10px">→</a>
+        <a href="?date=<?= date('Y-m-d', strtotime($selDate . ' +1 day')) ?><?= $sedeId ? '&sede_id=' . $sedeId : '' ?>"
+            class="btn btn-sm" style="padding:6px 10px">→</a>
         <?php if ($selDate !== $today): ?>
-            <a href="?date=<?= $today ?>" class="btn btn-sm btn-primary" style="font-size:12px">Hoy</a>
+            <a href="?date=<?= $today ?><?= $sedeId ? '&sede_id=' . $sedeId : '' ?>" class="btn btn-sm btn-primary"
+                style="font-size:12px">Hoy</a>
+        <?php endif ?>
+        <?php if (count($sedes) > 1): ?>
+            <select onchange="location.href=this.value" class="input"
+                style="font-size:13px;padding:6px 10px;max-width:160px">
+                <option value="?date=<?= $selDate ?>" <?= !$sedeId ? ' selected' : '' ?>>Todas las sedes</option>
+                <?php foreach ($sedes as $s): ?>
+                    <option value="?date=<?= $selDate ?>&sede_id=<?= $s['id'] ?>" <?= $sedeId === (int) $s['id'] ? ' selected' : '' ?>>
+                        <?= htmlspecialchars($s['name']) ?>
+                    </option>
+                <?php endforeach ?>
+            </select>
         <?php endif ?>
     </div>
 </div>

@@ -35,38 +35,58 @@ if ($method === 'POST') {
     if (!isset($data['day_of_week']) || !isset($data['start_time']) || !isset($data['end_time'])) {
         jsonError('Faltan campos obligatorios: day_of_week, start_time, end_time');
     }
-    if (empty($data['sala_id'])) {
-        jsonError('sala_id requerido');
+    if (empty($data['sala_id']) && empty($data['sede_id'])) {
+        jsonError('sala_id o sede_id requerido');
     }
 
-    // Verificar que la sala pertenece al gym
-    $stmtCheck = db()->prepare("SELECT id FROM salas WHERE id = ? AND gym_id = ? AND active = 1");
-    $stmtCheck->execute([(int) $data['sala_id'], $gymId]);
-    if (!$stmtCheck->fetch()) {
-        jsonError('Sala no encontrada o sin permisos', 403);
+    // Si viene sede_id pero no sala_id, intentar auto-resolver la sala (opcional)
+    $resolvedSalaId = null;
+    if (!empty($data['sede_id'])) {
+        $stmtSala = db()->prepare("SELECT id FROM salas WHERE sede_id = ? AND gym_id = ? AND active = 1 ORDER BY id ASC LIMIT 1");
+        $stmtSala->execute([(int) $data['sede_id'], $gymId]);
+        $resolvedSalaId = $stmtSala->fetchColumn() ?: null;
+        // Si no hay sala para la sede, el slot igual se guarda (sala_id = NULL)
+        // La sala de display es opcional; no bloquea la creacion de clases.
+        if ($resolvedSalaId) {
+            $data['sala_id'] = $resolvedSalaId;
+        }
     }
 
-    // Verificar solapamiento en la misma sala y día
-    $stmtOv = db()->prepare(
-        "SELECT id FROM schedule_slots
-         WHERE sala_id = ? AND day_of_week = ?
-           AND start_time < ? AND end_time > ?"
-    );
-    $stmtOv->execute([(int) $data['sala_id'], (int) $data['day_of_week'], $data['end_time'], $data['start_time']]);
-    if ($stmtOv->fetch()) {
-        jsonError('Conflicto de horario: ya existe una clase en esa sala en ese horario', 409);
+    // Verificar sala si se proporcionó explícitamente
+    if (!empty($data['sala_id'])) {
+        $stmtCheck = db()->prepare("SELECT id FROM salas WHERE id = ? AND gym_id = ? AND active = 1");
+        $stmtCheck->execute([(int) $data['sala_id'], $gymId]);
+        if (!$stmtCheck->fetch()) {
+            jsonError('Sala no encontrada o sin permisos', 403);
+        }
+    }
+
+    // Verificar solapamiento solo si hay sala asignada
+    if (!empty($data['sala_id'])) {
+        $stmtOv = db()->prepare(
+            "SELECT id FROM schedule_slots
+             WHERE sala_id = ? AND day_of_week = ?
+               AND start_time < ? AND end_time > ?"
+        );
+        $stmtOv->execute([(int) $data['sala_id'], (int) $data['day_of_week'], $data['end_time'], $data['start_time']]);
+        if ($stmtOv->fetch()) {
+            jsonError('Conflicto de horario: ya existe una clase en esa sala en ese horario', 409);
+        }
     }
 
     // Aceptar class_name o label indistintamente
     $label = trim($data['class_name'] ?? $data['label'] ?? '');
+    $sedeId = !empty($data['sede_id']) ? (int) $data['sede_id'] : null;
+    $salaIdFinal = !empty($data['sala_id']) ? (int) $data['sala_id'] : null;
 
     db()->prepare(
         "INSERT INTO schedule_slots
-            (gym_id, sala_id, instructor_id, day_of_week, start_time, end_time, label, capacity, recurrent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
+            (gym_id, sala_id, sede_id, instructor_id, day_of_week, start_time, end_time, label, capacity, recurrent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)"
     )->execute([
                 $gymId,
-                (int) $data['sala_id'],
+                $salaIdFinal,
+                $sedeId,
                 $user['id'],
                 (int) $data['day_of_week'],
                 $data['start_time'],
@@ -111,22 +131,25 @@ if ($method === 'PUT' && $id) {
     }
 
     $label = trim($data['class_name'] ?? $data['label'] ?? '');
+    $sedeIdUpd = array_key_exists('sede_id', $data) ? (!empty($data['sede_id']) ? (int) $data['sede_id'] : null) : false;
 
     db()->prepare(
         "UPDATE schedule_slots
-         SET day_of_week=?, start_time=?, end_time=?, sala_id=?, label=?, capacity=?
-         WHERE id=? AND gym_id=?"
-    )->execute([
-                (int) ($data['day_of_week'] ?? 0),
-                $data['start_time'] ?? '',
-                $data['end_time'] ?? '',
-                (int) ($data['sala_id'] ?? 0),
-                $label ?: null,
-                isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null
-                ? (int) $data['capacity'] : null,
-                $id,
-                $gymId,
-            ]);
+         SET day_of_week=?, start_time=?, end_time=?, sala_id=?, label=?, capacity=?"
+        . ($sedeIdUpd !== false ? ", sede_id=?" : "") .
+        " WHERE id=? AND gym_id=?"
+    )->execute(array_filter([
+                    (int) ($data['day_of_week'] ?? 0),
+                    $data['start_time'] ?? '',
+                    $data['end_time'] ?? '',
+                    (int) ($data['sala_id'] ?? 0),
+                    $label ?: null,
+                    isset($data['capacity']) && $data['capacity'] !== '' && $data['capacity'] !== null
+                    ? (int) $data['capacity'] : null,
+                    $sedeIdUpd !== false ? $sedeIdUpd : null,
+                    $id,
+                    $gymId,
+                ], fn($v) => $v !== null || $v === 0));
 
     // Notify agenda displays BEFORE exit
     @file_get_contents('http://localhost:3001/internal/schedule-updated?gym_id=' . $gymId);

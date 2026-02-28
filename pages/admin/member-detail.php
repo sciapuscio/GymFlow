@@ -42,6 +42,19 @@ $plansStmt = db()->prepare("SELECT id, name, price, currency, duration_days, ses
 $plansStmt->execute([$gymId]);
 $plans = $plansStmt->fetchAll();
 
+// Sedes for membership checkboxes
+$sedesStmt = db()->prepare("SELECT id, name FROM sedes WHERE gym_id = ? AND active = 1 ORDER BY name");
+$sedesStmt->execute([$gymId]);
+$sedes = $sedesStmt->fetchAll();
+
+// Current sede access for active membership
+$activeMembershipSedes = [];
+if ($activeMembership) {
+    $msedeStmt = db()->prepare("SELECT sede_id FROM member_membership_sedes WHERE membership_id = ?");
+    $msedeStmt->execute([$activeMembership['id']]);
+    $activeMembershipSedes = array_column($msedeStmt->fetchAll(), 'sede_id');
+}
+
 layout_header('Perfil — ' . $member['name'], 'admin', $user);
 nav_section('Admin');
 nav_item(BASE_URL . '/pages/admin/dashboard.php', 'Dashboard', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>', 'dashboard', 'members');
@@ -133,6 +146,10 @@ layout_footer($user);
                             ✅ Registrar pago completo
                         </button>
                     <?php endif ?>
+                    <button class="btn btn-secondary" style="font-size:12px;margin-top:8px"
+                        onclick="openEditMembership(<?php echo $activeMembership['id'] ?>)">
+                        ✏️ Editar membresía
+                    </button>
                 <?php else: ?>
                     <div style="color:var(--gf-text-muted);text-align:center;padding:24px 0">
                         <div style="font-size:32px;margin-bottom:8px">📋</div>
@@ -250,10 +267,114 @@ layout_footer($user);
                     <label class="form-label">Notas</label>
                     <input type="text" name="notes" class="input" placeholder="Opcional">
                 </div>
+                <?php if (!empty($sedes)): ?>
+                    <div class="form-group">
+                        <label class="form-label">Sedes habilitadas</label>
+                        <label
+                            style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:8px">
+                            <input type="checkbox" id="all-sedes-check" checked onchange="toggleSedeChecks(this.checked)">
+                            <span style="font-weight:600">Todas las sedes</span>
+                        </label>
+                        <div id="sede-checks"
+                            style="display:none;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+                            <?php foreach ($sedes as $s): ?>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                                    <input type="checkbox" name="sede_ids[]" value="<?= $s['id'] ?>" class="sede-check">
+                                    <?= htmlspecialchars($s['name']) ?>
+                                </label>
+                            <?php endforeach ?>
+                        </div>
+                    </div>
+                <?php endif ?>
                 <div class="flex gap-2 mt-4">
                     <button type="button" class="btn btn-secondary flex-1"
                         onclick="closeModal('assign-modal')">Cancelar</button>
                     <button type="submit" class="btn btn-primary flex-1">Asignar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Membership Modal -->
+<div class="modal-overlay" id="edit-membership-modal">
+    <div class="modal" style="max-width:480px">
+        <div class="modal-header">
+            <h3>Editar membresía</h3>
+            <button class="modal-close" onclick="closeModal('edit-membership-modal')">&#x2715;</button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-membership-form" onsubmit="saveEditMembership(event)">
+                <input type="hidden" id="em-id">
+                <div class="form-group">
+                    <label class="form-label">Plan</label>
+                    <input class="input" id="em-plan" readonly style="opacity:.6">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">Inicio</label>
+                        <input type="date" class="input" id="em-start">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vencimiento</label>
+                        <input type="date" class="input" id="em-end">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">Importe total</label>
+                        <input type="number" class="input" id="em-due" min="0" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Pagado</label>
+                        <input type="number" class="input" id="em-paid" min="0" step="100">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Estado de pago</label>
+                    <select class="input" id="em-pay-status">
+                        <option value="pending">Pendiente</option>
+                        <option value="partial">Parcial</option>
+                        <option value="paid">Pagado</option>
+                        <option value="overdue">Vencido</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Método de pago</label>
+                    <select class="input" id="em-pay-method">
+                        <option value="">—</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="mercadopago">MercadoPago</option>
+                        <option value="tarjeta">Tarjeta</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notas</label>
+                    <input type="text" class="input" id="em-notes" placeholder="Opcional">
+                </div>
+                <?php if (!empty($sedes)): ?>
+                    <div class="form-group">
+                        <label class="form-label">Sedes habilitadas</label>
+                        <label
+                            style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:8px">
+                            <input type="checkbox" id="em-all-sedes" onchange="toggleEmSedes(this.checked)">
+                            <span style="font-weight:600">Todas las sedes</span>
+                        </label>
+                        <div id="em-sede-checks" style="padding-left:20px;display:flex;flex-direction:column;gap:6px">
+                            <?php foreach ($sedes as $s): ?>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                                    <input type="checkbox" class="em-sede-check" value="<?= $s['id'] ?>">
+                                    <?= htmlspecialchars($s['name']) ?>
+                                </label>
+                            <?php endforeach ?>
+                        </div>
+                    </div>
+                <?php endif ?>
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-secondary flex-1"
+                        onclick="closeModal('edit-membership-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary flex-1">Guardar cambios</button>
                 </div>
             </form>
         </div>
@@ -312,14 +433,28 @@ layout_footer($user);
 
     async function saveMembership(e) {
         e.preventDefault();
-        const data = Object.fromEntries(new FormData(e.target).entries());
+        const fd = new FormData(e.target);
+        const data = Object.fromEntries(fd.entries());
         data.member_id = MEMBER_ID;
+        // Sede access
+        const allCheck = document.getElementById('all-sedes-check');
+        data.all_sedes = (allCheck && allCheck.checked) ? 1 : 0;
+        if (!data.all_sedes) {
+            data.sede_ids = [...document.querySelectorAll('.sede-check:checked')].map(c => c.value);
+        }
+        delete data['sede_ids[]']; // remove raw FormData entry
         const res = await fetch(`${BASE_URL}/api/member-memberships.php`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
         });
         const json = await res.json();
         if (json.success || json.id) { location.reload(); }
         else alert(json.error || 'Error');
+    }
+
+    function toggleSedeChecks(allSelected) {
+        const sedeSection = document.getElementById('sede-checks');
+        sedeSection.style.display = allSelected ? 'none' : 'flex';
+        document.querySelectorAll('.sede-check').forEach(c => c.checked = false);
     }
 
     async function saveMember(e) {
@@ -357,6 +492,7 @@ layout_footer($user);
             <div style="text-align:right">
                 <div style="font-size:12px;font-weight:600">$${Number(m.amount_paid).toLocaleString('es-AR')}</div>
                 <div style="font-size:10px;color:${expired ? '#6b7280' : 'var(--gf-text-muted)'}">${expired ? 'Vencido' : 'Vigente'}</div>
+                <button onclick="openEditMembership(${m.id})" style="margin-top:4px;font-size:11px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid var(--gf-border);color:var(--gf-text-muted);cursor:pointer">✏️ Editar</button>
             </div>
         </div>`;
         }).join('');
@@ -385,6 +521,61 @@ layout_footer($user);
 
     loadMembershipHistory();
     loadAttendances();
+
+    // ── Edit Membership ──────────────────────────────────────────────
+    async function openEditMembership(id) {
+        const res = await fetch(`${BASE_URL}/api/member-memberships.php?id=${id}`);
+        const m = await res.json();
+        document.getElementById('em-id').value = m.id;
+        document.getElementById('em-plan').value = m.plan_name || 'Sin plan';
+        document.getElementById('em-start').value = m.start_date || '';
+        document.getElementById('em-end').value = m.end_date || '';
+        document.getElementById('em-due').value = m.amount_due || 0;
+        document.getElementById('em-paid').value = m.amount_paid || 0;
+        document.getElementById('em-pay-status').value = m.payment_status || 'pending';
+        document.getElementById('em-pay-method').value = m.payment_method || '';
+        document.getElementById('em-notes').value = m.notes || '';
+        // Sedes
+        const allCheck = document.getElementById('em-all-sedes');
+        if (allCheck) {
+            const allSedes = m.all_sedes == 1 || !m.sede_ids || m.sede_ids.length === 0;
+            allCheck.checked = allSedes;
+            toggleEmSedes(allSedes);
+            document.querySelectorAll('.em-sede-check').forEach(cb => {
+                cb.checked = !allSedes && m.sede_ids.includes(String(cb.value));
+            });
+        }
+        document.getElementById('edit-membership-modal').classList.add('open');
+    }
+
+    function toggleEmSedes(allSelected) {
+        document.getElementById('em-sede-checks').style.display = allSelected ? 'none' : 'flex';
+        if (allSelected) document.querySelectorAll('.em-sede-check').forEach(c => c.checked = false);
+    }
+
+    async function saveEditMembership(e) {
+        e.preventDefault();
+        const id = document.getElementById('em-id').value;
+        const allSedes = document.getElementById('em-all-sedes')?.checked ? 1 : 0;
+        const sedeIds = allSedes ? [] : [...document.querySelectorAll('.em-sede-check:checked')].map(c => c.value);
+        const data = {
+            start_date: document.getElementById('em-start').value,
+            end_date: document.getElementById('em-end').value,
+            amount_due: +document.getElementById('em-due').value,
+            amount_paid: +document.getElementById('em-paid').value,
+            payment_status: document.getElementById('em-pay-status').value,
+            payment_method: document.getElementById('em-pay-method').value,
+            notes: document.getElementById('em-notes').value,
+            all_sedes: allSedes,
+            sede_ids: sedeIds,
+        };
+        const res = await fetch(`${BASE_URL}/api/member-memberships.php?id=${id}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        if (json.success) location.reload();
+        else alert(json.error || 'Error al guardar');
+    }
 
     async function resetPin() {
         if (!confirm('¿Blanquear la contraseña de este alumno y generar un PIN temporal?')) return;

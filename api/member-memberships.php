@@ -49,6 +49,24 @@ if ($method === 'GET') {
         jsonResponse($stmt->fetchAll());
     }
 
+    // Single membership by ID (for edit modal)
+    if ($id) {
+        $stmt = db()->prepare("
+            SELECT mm.*, mp.name AS plan_name
+            FROM member_memberships mm
+            LEFT JOIN membership_plans mp ON mp.id = mm.plan_id
+            WHERE mm.id = ? AND mm.gym_id = ?
+        ");
+        $stmt->execute([$id, $gymId]);
+        $mem = $stmt->fetch();
+        if (!$mem)
+            jsonError('Not found', 404);
+        $pivStmt = db()->prepare("SELECT sede_id FROM member_membership_sedes WHERE membership_id = ?");
+        $pivStmt->execute([$id]);
+        $mem['sede_ids'] = $pivStmt->fetchAll(PDO::FETCH_COLUMN);
+        jsonResponse($mem);
+    }
+
     // Historial de un alumno
     if (isset($_GET['member_id'])) {
         $memberId = (int) $_GET['member_id'];
@@ -124,7 +142,24 @@ if ($method === 'POST') {
         trim($data['payment_method'] ?? '') ?: null,
         trim($data['notes'] ?? '') ?: null,
     ]);
-    jsonResponse(['success' => true, 'id' => db()->lastInsertId()], 201);
+    $newMembershipId = db()->lastInsertId();
+
+    // Save all_sedes flag
+    $allSedes = (int) ($data['all_sedes'] ?? 1);
+    db()->prepare("UPDATE member_memberships SET all_sedes = ? WHERE id = ?")
+        ->execute([$allSedes, $newMembershipId]);
+
+    // Save sede pivot if not all_sedes
+    if (!$allSedes && !empty($data['sede_ids']) && is_array($data['sede_ids'])) {
+        $sedeInsert = db()->prepare("INSERT IGNORE INTO member_membership_sedes (membership_id, sede_id) VALUES (?, ?)");
+        foreach ($data['sede_ids'] as $sedeId) {
+            $sedeId = (int) $sedeId;
+            if ($sedeId > 0)
+                $sedeInsert->execute([$newMembershipId, $sedeId]);
+        }
+    }
+
+    jsonResponse(['success' => true, 'id' => $newMembershipId], 201);
 }
 
 // ── PUT — update payment / renew ────────────────────────────────────────────
@@ -170,6 +205,23 @@ if ($method === 'PUT' && $id) {
     $params[] = $gymId;
     db()->prepare("UPDATE member_memberships SET " . implode(', ', $fields) . " WHERE id = ? AND gym_id = ?")
         ->execute($params);
+
+    // Update all_sedes + sede pivot if provided
+    if (isset($data['all_sedes'])) {
+        $allSedes = (int) $data['all_sedes'];
+        db()->prepare("UPDATE member_memberships SET all_sedes = ? WHERE id = ? AND gym_id = ?")
+            ->execute([$allSedes, $id, $gymId]);
+        db()->prepare("DELETE FROM member_membership_sedes WHERE membership_id = ?")->execute([$id]);
+        if (!$allSedes && !empty($data['sede_ids']) && is_array($data['sede_ids'])) {
+            $sedeInsert = db()->prepare("INSERT IGNORE INTO member_membership_sedes (membership_id, sede_id) VALUES (?, ?)");
+            foreach ($data['sede_ids'] as $sedeId) {
+                $sedeId = (int) $sedeId;
+                if ($sedeId > 0)
+                    $sedeInsert->execute([$id, $sedeId]);
+            }
+        }
+    }
+
     jsonResponse(['success' => true]);
 }
 

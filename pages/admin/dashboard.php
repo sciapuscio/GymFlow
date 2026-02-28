@@ -25,9 +25,13 @@ if (!$gym) {
     exit;
 }
 
-$salas = db()->prepare("SELECT s.*, (SELECT COUNT(*) FROM gym_sessions gs WHERE gs.sala_id = s.id) as session_count FROM salas s WHERE s.gym_id = ? ORDER BY s.name");
+$salas = db()->prepare("SELECT s.*, (SELECT COUNT(*) FROM gym_sessions gs WHERE gs.sala_id = s.id) as session_count, se.name AS sede_name FROM salas s LEFT JOIN sedes se ON se.id = s.sede_id WHERE s.gym_id = ? ORDER BY se.name, s.name");
 $salas->execute([$gymId]);
 $salas = $salas->fetchAll();
+$sedesArr = db()->prepare("SELECT id, name FROM sedes WHERE gym_id = ? AND active = 1 ORDER BY name");
+$sedesArr->execute([$gymId]);
+$sedesArr = $sedesArr->fetchAll();
+
 
 $users = db()->prepare("SELECT * FROM users WHERE gym_id = ? AND role != 'superadmin' AND active = 1 ORDER BY role, name");
 $users->execute([$gymId]);
@@ -79,6 +83,7 @@ nav_section('CRM');
 nav_item(BASE_URL . '/pages/admin/members.php', 'Alumnos', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M15 7a3 3 0 11-6 0 3 3 0 016 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>', 'members', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/membership-plans.php', 'Planes', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>', 'plans', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/asistencias.php', 'Asistencias', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>', 'asistencias', 'dashboard');
+nav_item(BASE_URL . '/pages/admin/sedes.php', 'Sedes', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>', 'sedes', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/gym-qr.php', 'QR Check-in', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>', 'gym-qr', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/support.php', 'Soporte', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>', 'support', 'dashboard');
 nav_item(BASE_URL . '/pages/admin/gym-portal.php', 'Portada App', '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>', 'gym-portal', 'dashboard');
@@ -348,6 +353,9 @@ layout_footer($user);
                                 </div>
                                 <code
                                     style="font-size:11px;color:var(--gf-text-dim);background:rgba(255,255,255,.05);padding:2px 6px;border-radius:4px"><?php echo htmlspecialchars($sala['display_code']) ?></code>
+                                <?php if (!empty($sala['sede_name'])): ?>
+                                <span style="font-size:11px;color:var(--gf-accent);margin-left:4px"><?= htmlspecialchars($sala['sede_name']) ?></span>
+                                <?php endif ?>
                             </div>
                             <div style="font-size:12px;color:var(--gf-text-muted)">
                                 <?php echo $sala['session_count'] ?> sesiones
@@ -418,6 +426,16 @@ layout_footer($user);
         <form id="sala-form" onsubmit="createSala(event)">
             <div class="form-group"><label class="form-label">Nombre</label><input class="form-control" name="name"
                     required placeholder="Sala Principal"></div>
+            <?php if (!empty($sedesArr)): ?>
+            <div class="form-group"><label class="form-label">Sede</label>
+                <select name="sede_id" class="form-control">
+                    <option value="">-- Sin sede asignada --</option>
+                    <?php foreach ($sedesArr as $se): ?>
+                    <option value="<?= $se['id'] ?>"><?= htmlspecialchars($se['name']) ?></option>
+                    <?php endforeach ?>
+                </select>
+            </div>
+            <?php endif ?>
             <div class="form-group"><label class="form-label">Capacidad</label><input type="number" class="form-control"
                     name="capacity" value="20" min="1"></div>
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Crear Sala</button>
@@ -562,7 +580,8 @@ layout_footer($user);
     async function createSala(e) {
         e.preventDefault();
         const form = e.target;
-        const data = { name: form.name.value, capacity: +form.capacity.value, gym_id: GYM_ID };
+        const sedeEl = form.querySelector('[name=sede_id]');
+        const data = { name: form.name.value, capacity: +form.capacity.value, gym_id: GYM_ID, sede_id: sedeEl ? (sedeEl.value || null) : null };
         const res = await GF.post(window.GF_BASE + '/api/salas.php', data);
         if (res && res.code === 'SALA_LIMIT') {
             showToast(`Límite de salas alcanzado (${res.current}/${res.limit}). Contactá a GymFlow para ampliar tu plan.`, 'error');

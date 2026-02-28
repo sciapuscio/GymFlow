@@ -18,7 +18,8 @@ $gym = db()->prepare("SELECT * FROM gyms WHERE id = ?");
 $gym->execute([$gymId]);
 $gym = $gym->fetch();
 
-// Regenerate QR token if requested
+// Regenerate QR token if requested (gym or sede)
+$regenSedeId = (int) ($_POST['sede_id'] ?? 0);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'regenerate') {
     $newToken = sprintf(
         '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
@@ -31,12 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'regen
         mt_rand(0, 0xffff),
         mt_rand(0, 0xffff)
     );
-    db()->prepare("UPDATE gyms SET qr_token = ? WHERE id = ?")->execute([$newToken, $gymId]);
-    header('Location: ' . BASE_URL . '/pages/admin/gym-qr.php?regenerated=1');
+    if ($regenSedeId) {
+        db()->prepare("UPDATE sedes SET qr_token = ? WHERE id = ? AND gym_id = ?")->execute([$newToken, $regenSedeId, $gymId]);
+        header('Location: ' . BASE_URL . '/pages/admin/gym-qr.php?regenerated=1&sede_id=' . $regenSedeId);
+    } else {
+        db()->prepare("UPDATE gyms SET qr_token = ? WHERE id = ?")->execute([$newToken, $gymId]);
+        header('Location: ' . BASE_URL . '/pages/admin/gym-qr.php?regenerated=1');
+    }
     exit;
 }
 
-// Auto-generate qr_token if gym doesn't have one yet (e.g. created before migration)
+// Auto-generate qr_token if gym doesn't have one yet
 if (empty($gym['qr_token'])) {
     $newToken = sprintf(
         '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
@@ -53,8 +59,69 @@ if (empty($gym['qr_token'])) {
     $gym['qr_token'] = $newToken;
 }
 
-// Build check-in URL — the URL that gets encoded in the QR
-$checkinUrl = rtrim(BASE_URL, '/') . '/api/checkin.php?gym_qr_token=' . urlencode($gym['qr_token']);
+// Load sedes
+$sedesStmt = db()->prepare("SELECT * FROM sedes WHERE gym_id = ? AND active = 1 ORDER BY name");
+$sedesStmt->execute([$gymId]);
+$sedes = $sedesStmt->fetchAll();
+
+// ── Gym Settings: load checkin_window_minutes ─────────────────────────────────
+// Ensure table exists (idempotent)
+db()->exec("CREATE TABLE IF NOT EXISTS gym_settings (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    gym_id INT UNSIGNED NOT NULL,
+    setting_key VARCHAR(64) NOT NULL,
+    setting_value TEXT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_gym_setting (gym_id, setting_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// Handle save checkin window
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_checkin_window') {
+    $window = max(1, min(120, (int) ($_POST['checkin_window_minutes'] ?? 15)));
+    db()->prepare("INSERT INTO gym_settings (gym_id, setting_key, setting_value) VALUES (?,?,?)
+        ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)")
+        ->execute([$gymId, 'checkin_window_minutes', $window]);
+    header('Location: ' . BASE_URL . '/pages/admin/gym-qr.php?saved_settings=1' . ($activeSedeId ? '&sede_id=' . $activeSedeId : '') . ($user['role'] === 'superadmin' ? '&gym_id=' . $gymId : ''));
+    exit;
+}
+
+$stmtWindow = db()->prepare("SELECT setting_value FROM gym_settings WHERE gym_id = ? AND setting_key = 'checkin_window_minutes'");
+$stmtWindow->execute([$gymId]);
+$checkinWindow = (int) ($stmtWindow->fetchColumn() ?: 15);
+
+// Auto-generate qr_tokens for sedes that don't have one
+foreach ($sedes as &$s) {
+    if (empty($s['qr_token'])) {
+        $t = sprintf(
+            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0x0fff) | 0x4000,
+            mt_rand(0, 0x3fff) | 0x8000,
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff),
+            mt_rand(0, 0xffff)
+        );
+        db()->prepare("UPDATE sedes SET qr_token = ? WHERE id = ?")->execute([$t, $s['id']]);
+        $s['qr_token'] = $t;
+    }
+}
+unset($s);
+
+// Determine active context: sede or gym
+$activeSedeId = isset($_GET['sede_id']) && (int) $_GET['sede_id'] > 0 ? (int) $_GET['sede_id'] : 0;
+$activeSede = null;
+foreach ($sedes as $s) {
+    if ($s['id'] == $activeSedeId) {
+        $activeSede = $s;
+        break;
+    }
+}
+
+$activeToken = $activeSede ? $activeSede['qr_token'] : $gym['qr_token'];
+$activeLabel = $activeSede ? $activeSede['name'] : $gym['name'];
+$checkinUrl = rtrim(BASE_URL, '/') . '/api/checkin.php?gym_qr_token=' . urlencode($activeToken);
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
 layout_header('QR del Gym — ' . $gym['name'], 'admin', $user);
@@ -81,10 +148,28 @@ layout_footer($user);
         <button onclick="window.print()" class="btn btn-primary btn-sm">🖨️ Imprimir</button>
         <form method="POST" style="display:inline">
             <input type="hidden" name="action" value="regenerate">
+            <?php if ($activeSede): ?>
+                <input type="hidden" name="sede_id" value="<?= $activeSede['id'] ?>">
+            <?php endif ?>
             <button type="submit" class="btn btn-danger btn-sm">🔄 Regenerar QR</button>
         </form>
     </div>
 </div>
+
+<?php if (!empty($sedes)): ?>
+    <div style="padding:0 28px 4px;display:flex;gap:8px;flex-wrap:wrap">
+        <a href="?<?= $user['role'] === 'superadmin' ? 'gym_id=' . $gymId : '' ?>"
+            style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid;<?= !$activeSede ? 'background:var(--gf-accent);color:#080810;border-color:var(--gf-accent)' : 'background:transparent;color:var(--gf-text-muted);border-color:var(--gf-border)' ?>">
+            Gym general
+        </a>
+        <?php foreach ($sedes as $s): ?>
+            <a href="?sede_id=<?= $s['id'] ?><?= $user['role'] === 'superadmin' ? '&gym_id=' . $gymId : '' ?>"
+                style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid;<?= ($activeSede and $activeSede['id'] == $s['id']) ? 'background:var(--gf-accent);color:#080810;border-color:var(--gf-accent)' : 'background:transparent;color:var(--gf-text-muted);border-color:var(--gf-border)' ?>">
+                <?= htmlspecialchars($s['name']) ?>
+            </a>
+        <?php endforeach ?>
+    </div>
+<?php endif ?>
 
 <?php if (isset($_GET['regenerated'])): ?>
     <div style="padding:12px 28px">
@@ -102,20 +187,20 @@ layout_footer($user);
         <div class="card" id="print-only" style="text-align:center">
             <div
                 style="font-size:13px;font-weight:700;color:var(--gf-text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px">
-                QR del Gym
+                <?= $activeSede ? 'QR — ' . htmlspecialchars($activeSede['name']) : 'QR del Gym' ?>
             </div>
 
-            <!-- QR image via Google Charts API (no JS library needed) -->
+            <!-- QR image via qrserver.com (sin librería JS) -->
             <div id="qr-container"
                 style="display:inline-block;padding:16px;background:#fff;border-radius:12px;margin-bottom:16px;position:relative">
                 <img id="qr-img"
                     src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&ecc=H&data=<?php echo urlencode($checkinUrl) ?>"
-                    alt="QR Check-in <?php echo htmlspecialchars($gym['name']) ?>" width="240" height="240"
+                    alt="QR Check-in <?php echo htmlspecialchars($activeLabel) ?>" width="240" height="240"
                     style="display:block">
                 <?php if (!empty($gym['logo_path'])): ?>
                     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-                    width:56px;height:56px;background:#fff;border-radius:50%;padding:4px;
-                    display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #eee">
+                width:56px;height:56px;background:#fff;border-radius:50%;padding:4px;
+                display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #eee">
                         <img src="<?php echo BASE_URL . $gym['logo_path'] ?>" alt="Logo"
                             style="width:44px;height:44px;object-fit:contain;border-radius:50%">
                     </div>
@@ -124,7 +209,7 @@ layout_footer($user);
 
             <div
                 style="font-family:var(--font-display);font-size:22px;color:var(--gf-accent);letter-spacing:.1em;margin-bottom:4px">
-                <?php echo htmlspecialchars($gym['name']) ?>
+                <?php echo htmlspecialchars($activeLabel) ?>
             </div>
             <div style="font-size:12px;color:var(--gf-text-dim)">Escaneá para registrar tu presencia</div>
 
@@ -152,24 +237,33 @@ layout_footer($user);
             </div>
 
             <div class="card">
-                <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Configuración de check-in</h3>
-                <form method="POST" action="<?php echo BASE_URL ?>/api/gyms.php?action=update_checkin">
-                    <input type="hidden" name="gym_id" value="<?php echo $gymId ?>">
-                    <div style="display:grid;gap:12px">
-                        <div>
-                            <label class="form-label">Ventana de check-in (minutos antes de la clase)</label>
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:4px">Configuración de check-in</h3>
+                <p style="font-size:12px;color:var(--gf-text-muted);margin-bottom:14px;line-height:1.5">
+                    Después de iniciar la clase, los alumnos tienen esta ventana de tiempo para escanear el QR y
+                    registrar su presencia.
+                    Pasado ese tiempo, el sistema los marca automáticamente como <strong
+                        style="color:#ff8c42">Ausente</strong>.
+                </p>
+                <?php if (isset($_GET['saved_settings'])): ?>
+                    <div
+                        style="padding:8px 12px;border-radius:8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);font-size:12px;color:#10b981;margin-bottom:12px">
+                        ✅ Configuración guardada.</div>
+                <?php endif ?>
+                <form method="POST">
+                    <input type="hidden" name="action" value="save_checkin_window">
+                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <div style="flex:1;min-width:160px">
+                            <label class="form-label">Ventana de check-in (minutos)</label>
                             <input type="number" name="checkin_window_minutes" class="input"
-                                value="<?php echo (int) ($gym['checkin_window_minutes'] ?? 30) ?>" min="5" max="120">
+                                value="<?= $checkinWindow ?>" min="1" max="120" style="max-width:120px">
                         </div>
-                        <div>
-                            <label class="form-label">Límite de cancelación sin ausencia (minutos)</label>
-                            <input type="number" name="cancel_cutoff_minutes" class="input"
-                                value="<?php echo (int) ($gym['cancel_cutoff_minutes'] ?? 120) ?>" min="0" max="1440">
+                        <div style="padding-top:20px">
+                            <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                         </div>
                     </div>
-                    <div style="margin-top:14px">
-                        <button type="submit" class="btn btn-primary btn-sm">Guardar configuración</button>
-                    </div>
+                    <p style="font-size:11px;color:var(--gf-text-dim);margin-top:8px">⏱ Actualmente:
+                        <strong><?= $checkinWindow ?> min</strong> después del inicio de la clase para registrar
+                        presencia.</p>
                 </form>
             </div>
 
