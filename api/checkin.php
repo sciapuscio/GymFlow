@@ -159,23 +159,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $session->execute([$gymId]);
     $sessionId = ($session->fetch())['id'] ?? null;
 
-    // 6. Evitar doble check-in en el mismo día / misma sesión
+    // 6. Check duplicate per gym_session (if a live session is active)
     if ($sessionId) {
         $dup = db()->prepare("
             SELECT id FROM member_attendances
             WHERE member_id = ? AND gym_session_id = ?
         ");
         $dup->execute([$member['id'], $sessionId]);
-    } else {
-        // Sin sesión activa: prevenir más de 1 check-in por día
-        $dup = db()->prepare("
-            SELECT id FROM member_attendances
-            WHERE member_id = ? AND gym_id = ? AND DATE(checked_in_at) = CURDATE()
-        ");
-        $dup->execute([$member['id'], $gymId]);
+        if ($dup->fetch())
+            jsonError('Ya registraste tu presencia en esta sesión.', 409);
     }
-    if ($dup->fetch())
-        jsonError('Ya registraste tu presencia hoy.', 409);
 
     // 6b. Validar ventana de check-in: debe haber una clase de hoy que empiece
     //     en los próximos N minutos o que ya haya comenzado (y no terminado).
@@ -232,6 +225,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             jsonError($msg, 403);
         }
     }
+
+    // 6c. Evitar doble check-in en la MISMA CLASE (por si el alumno escanea dos veces)
+    //     Cada clase es independiente — un alumno puede tener múltiples clases en el día.
+    $alreadyDone = db()->prepare("
+        SELECT id FROM member_reservations
+        WHERE id = ? AND status IN ('present', 'attended')
+    ");
+    $alreadyDone->execute([$upcomingClass['reservation_id']]);
+    if ($alreadyDone->fetch())
+        jsonError('Ya registraste tu asistencia a esta clase.', 409);
 
     // 7. Registrar asistencia
     db()->prepare("
