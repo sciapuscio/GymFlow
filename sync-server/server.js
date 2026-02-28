@@ -1081,23 +1081,23 @@ async function runClassReminder() {
     try {
         conn = await pool.getConnection();
 
-        // Find confirmed reservations starting in 25-35 min, not yet notified
+        // Find reserved reservations starting in 25-35 min, not yet notified
         const [rows] = await conn.execute(`
             SELECT
-                mr.id       AS reservation_id,
+                mr.id           AS reservation_id,
                 mr.member_id,
                 mr.class_date,
-                ss.start_time,
-                ss.label    AS class_name,
-                m.name      AS member_name,
+                mr.class_time,
+                ss.label        AS class_name,
+                m.name          AS member_name,
                 mdt.fcm_token
             FROM member_reservations mr
-            JOIN schedule_slots ss ON ss.id = mr.slot_id
+            JOIN schedule_slots ss ON ss.id = mr.schedule_slot_id
             JOIN members m         ON m.id  = mr.member_id
             JOIN member_device_tokens mdt ON mdt.member_id = mr.member_id
-            WHERE mr.status = 'confirmed'
+            WHERE mr.status = 'reserved'
               AND mr.notified_30min = 0
-              AND CONCAT(mr.class_date, ' ', ss.start_time) BETWEEN
+              AND CONCAT(mr.class_date, ' ', mr.class_time) BETWEEN
                     DATE_ADD(NOW(), INTERVAL 25 MINUTE) AND
                     DATE_ADD(NOW(), INTERVAL 35 MINUTE)
         `);
@@ -1118,8 +1118,8 @@ async function runClassReminder() {
         const sentIds = [];
 
         for (const [resId, data] of byReservation) {
-            const { class_name, start_time, member_name, tokens } = data;
-            const timeLabel = start_time.substring(0, 5); // "HH:MM"
+            const { class_name, class_time, member_name, tokens } = data;
+            const timeLabel = class_time.substring(0, 5); // "HH:MM"
 
             const message = {
                 notification: {
