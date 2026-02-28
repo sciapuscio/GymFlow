@@ -18,10 +18,12 @@ $stmtSedes = db()->prepare("SELECT id, name FROM sedes WHERE gym_id = ? AND acti
 $stmtSedes->execute([$gymId]);
 $sedesFiltro = $stmtSedes->fetchAll();
 
-// Slug del gym para la cartelera
-$gymSlug = db()->prepare("SELECT slug FROM gyms WHERE id = ?");
-$gymSlug->execute([$gymId]);
-$gymSlug = $gymSlug->fetchColumn() ?: '';
+// Slug y nombre del gym
+$gymRow = db()->prepare("SELECT slug, name FROM gyms WHERE id = ?");
+$gymRow->execute([$gymId]);
+$gymRowData = $gymRow->fetch();
+$gymSlug = $gymRowData['slug'] ?? '';
+$gymName = $gymRowData['name'] ?? 'Gimnasio central';
 
 $stmtSlots = db()->prepare("SELECT ss.*, ss.label AS class_name, gs.name as session_name, gs.id as session_id, s.name as sala_name, se.name as sede_name FROM schedule_slots ss LEFT JOIN salas s ON ss.sala_id = s.id LEFT JOIN sedes se ON ss.sede_id = se.id LEFT JOIN gym_sessions gs ON ss.session_id = gs.id WHERE ss.gym_id = ? ORDER BY ss.day_of_week, ss.start_time");
 $stmtSlots->execute([$gymId]);
@@ -59,7 +61,7 @@ layout_footer($user);
         <?php if (!empty($sedesFiltro)): ?>
         <select id="sede-filter" class="form-control" style="width:auto;padding:8px 12px;font-size:13px"
             onchange="filterBySede(this.value)">
-            <option value="">Todas las sedes</option>
+            <option value=""><?php echo htmlspecialchars($gymName) ?></option>
             <?php foreach ($sedesFiltro as $sf): ?>
                 <option value="<?php echo $sf['id'] ?>">
                     <?php echo htmlspecialchars($sf['name']) ?>
