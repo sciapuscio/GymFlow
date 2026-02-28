@@ -148,9 +148,9 @@ $dayNames = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
                 <?php
                 $roster = $rosterBySlot[$slot['id']] ?? [];
                 $total = count($roster);
-                $attending = count(array_filter($roster, fn($r) => $r['status'] === 'attended'));
-                $reserved = count(array_filter($roster, fn($r) => $r['status'] === 'reserved'));
-                $absent = count(array_filter($roster, fn($r) => $r['status'] === 'absent'));
+                $attending = count(array_filter($roster, fn($r) => in_array($r['status'], ['attended', 'present'])));
+                $reserved  = count(array_filter($roster, fn($r) => $r['status'] === 'reserved'));
+                $absent    = count(array_filter($roster, fn($r) => $r['status'] === 'absent'));
                 $cap = $slot['capacity'];
                 ?>
                 <div class="card" style="overflow:hidden">
