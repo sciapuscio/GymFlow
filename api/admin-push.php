@@ -102,8 +102,14 @@ if ($method === 'POST') {
     // Tokens that FCM reports as invalid → delete from DB
     $staleTokens = ['UNREGISTERED', 'INVALID_ARGUMENT', 'REGISTRATION_TOKEN_NOT_REGISTERED'];
 
+    // Fetch gym logo for notification image
+    $gymRow = db()->prepare("SELECT logo_path FROM gyms WHERE id = ?");
+    $gymRow->execute([$gymId]);
+    $logoPath = $gymRow->fetchColumn();
+    $logoUrl = ($logoPath && defined('BASE_URL')) ? rtrim(BASE_URL, '/') . $logoPath : '';
+
     foreach ($tokens as $token) {
-        $result = sendFcmPush($token, $title, $body, $projectId, $accessToken);
+        $result = sendFcmPush($token, $title, $body, $projectId, $accessToken, $logoUrl);
         if ($result === 'ok') {
             $sent++;
         } else {

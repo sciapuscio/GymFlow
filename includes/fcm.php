@@ -47,15 +47,21 @@ function getFcmAccessToken(array $sa): string
 
 /**
  * Send a single FCM push notification.
- * @return string  'ok' on success, FCM error code string on failure (e.g. 'UNREGISTERED')
+ * @param string $imageUrl  Optional absolute URL for the large notification image (gym logo)
+ * @return string  'ok' on success, FCM error code on failure
  */
-function sendFcmPush(string $fcmToken, string $title, string $body, string $projectId, string $accessToken): string
+function sendFcmPush(string $fcmToken, string $title, string $body, string $projectId, string $accessToken, string $imageUrl = ''): string
 {
     $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+    $notification = ['title' => $title, 'body' => $body];
+    if ($imageUrl)
+        $notification['image'] = $imageUrl;
+
     $payload = json_encode([
         'message' => [
             'token' => $fcmToken,
-            'notification' => ['title' => $title, 'body' => $body],
+            'notification' => $notification,
             'android' => ['priority' => 'high'],
             'apns' => ['headers' => ['apns-priority' => '10']],
         ],
