@@ -10,6 +10,18 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mysql = require('mysql2/promise');
 
+// ─── Firebase Admin (FCM push notifications) ──────────────────────────────────
+const admin = require('firebase-admin');
+const serviceAccountPath = path.join(__dirname, '../config/firebase-service-account.json');
+try {
+    admin.initializeApp({
+        credential: admin.credential.cert(require(serviceAccountPath)),
+    });
+    console.log('[FCM] Firebase Admin initialized');
+} catch (e) {
+    console.error('[FCM] Firebase Admin init failed:', e.message);
+}
+
 // ─── Config ────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT) || 3001;
 const DB = {
@@ -1058,6 +1070,109 @@ function runAutoAbsent() {
 setInterval(runAutoAbsent, AUTO_ABSENT_INTERVAL_MS);
 // Run once on startup (after a small delay)
 setTimeout(runAutoAbsent, 5000);
+
+// ─── 30-Min Class Reminder ─────────────────────────────────────────────────
+// Runs every minute. Sends FCM push to members with a confirmed reservation
+// starting in 25–35 minutes. notified_30min flag prevents double-sending.
+const REMINDER_INTERVAL_MS = 60 * 1000; // every 1 minute
+
+async function runClassReminder() {
+    let conn;
+    try {
+        conn = await pool.getConnection();
+
+        // Find confirmed reservations starting in 25-35 min, not yet notified
+        const [rows] = await conn.execute(`
+            SELECT
+                mr.id       AS reservation_id,
+                mr.member_id,
+                mr.class_date,
+                ss.start_time,
+                ss.label    AS class_name,
+                m.name      AS member_name,
+                mdt.fcm_token
+            FROM member_reservations mr
+            JOIN schedule_slots ss ON ss.id = mr.slot_id
+            JOIN members m         ON m.id  = mr.member_id
+            JOIN member_device_tokens mdt ON mdt.member_id = mr.member_id
+            WHERE mr.status = 'confirmed'
+              AND mr.notified_30min = 0
+              AND CONCAT(mr.class_date, ' ', ss.start_time) BETWEEN
+                    DATE_ADD(NOW(), INTERVAL 25 MINUTE) AND
+                    DATE_ADD(NOW(), INTERVAL 35 MINUTE)
+        `);
+
+        if (rows.length === 0) return;
+
+        console.log(`[Reminder] Found ${rows.length} reservation(s) to notify`);
+
+        // Group by reservation_id → collect all FCM tokens for that member
+        const byReservation = new Map();
+        for (const row of rows) {
+            if (!byReservation.has(row.reservation_id)) {
+                byReservation.set(row.reservation_id, { ...row, tokens: [] });
+            }
+            byReservation.get(row.reservation_id).tokens.push(row.fcm_token);
+        }
+
+        const sentIds = [];
+
+        for (const [resId, data] of byReservation) {
+            const { class_name, start_time, member_name, tokens } = data;
+            const timeLabel = start_time.substring(0, 5); // "HH:MM"
+
+            const message = {
+                notification: {
+                    title: `⏰ Tu clase empieza pronto`,
+                    body: `${class_name} a las ${timeLabel} — ¡acordate de ir!`,
+                },
+                data: {
+                    type: 'class_reminder',
+                    reservation_id: String(resId),
+                },
+                tokens,
+            };
+
+            try {
+                const response = await admin.messaging().sendEachForMulticast(message);
+                console.log(`[Reminder] res#${resId} (${class_name} ${timeLabel}) → sent ${response.successCount}/${tokens.length}`);
+
+                // Remove invalid tokens
+                response.responses.forEach((r, i) => {
+                    if (!r.success) {
+                        const code = r.error?.code;
+                        if (code === 'messaging/registration-token-not-registered' ||
+                            code === 'messaging/invalid-registration-token') {
+                            conn.execute('DELETE FROM member_device_tokens WHERE fcm_token = ?', [tokens[i]])
+                                .catch(() => { });
+                        }
+                    }
+                });
+
+                sentIds.push(resId);
+            } catch (fcmErr) {
+                console.error(`[Reminder] FCM error for res#${resId}:`, fcmErr.message);
+            }
+        }
+
+        // Mark as notified to avoid re-sending
+        if (sentIds.length > 0) {
+            const placeholders = sentIds.map(() => '?').join(', ');
+            await conn.execute(
+                `UPDATE member_reservations SET notified_30min = 1 WHERE id IN (${placeholders})`,
+                sentIds
+            );
+            console.log(`[Reminder] Marked ${sentIds.length} reservation(s) as notified`);
+        }
+    } catch (err) {
+        console.error('[Reminder] Error:', err.message);
+    } finally {
+        if (conn) conn.release();
+    }
+}
+
+setInterval(runClassReminder, REMINDER_INTERVAL_MS);
+setTimeout(runClassReminder, 8000); // first check 8s after startup
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 server.listen(PORT, () => {
