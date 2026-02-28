@@ -56,8 +56,9 @@ foreach ($rows as $row) {
     $title = "¡Tu clase empieza en 30 min! 🏋️";
     $body = "{$row['class_name']} — {$time}hs. ¡No llegues tarde!";
 
-    $ok = sendFcmPush($row['fcm_token'], $title, $body, $projectId, $accessToken);
-    if ($ok) {
+    $staleTokens = ['UNREGISTERED', 'INVALID_ARGUMENT', 'REGISTRATION_TOKEN_NOT_REGISTERED'];
+    $result = sendFcmPush($row['fcm_token'], $title, $body, $projectId, $accessToken);
+    if ($result === 'ok') {
         // Mark as notified to avoid re-sending
         db()->prepare("UPDATE member_reservations SET notified_30min = 1 WHERE id = ?")
             ->execute([$row['reservation_id']]);

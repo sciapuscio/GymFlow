@@ -98,9 +98,21 @@ if ($method === 'POST') {
 
     $sent = 0;
     $failed = 0;
+    $cleaned = 0;
+    // Tokens that FCM reports as invalid → delete from DB
+    $staleTokens = ['UNREGISTERED', 'INVALID_ARGUMENT', 'REGISTRATION_TOKEN_NOT_REGISTERED'];
+
     foreach ($tokens as $token) {
-        $ok = sendFcmPush($token, $title, $body, $projectId, $accessToken);
-        $ok ? $sent++ : $failed++;
+        $result = sendFcmPush($token, $title, $body, $projectId, $accessToken);
+        if ($result === 'ok') {
+            $sent++;
+        } else {
+            $failed++;
+            if (in_array($result, $staleTokens, true)) {
+                db()->prepare("DELETE FROM member_device_tokens WHERE fcm_token = ?")->execute([$token]);
+                $cleaned++;
+            }
+        }
     }
 
     // Log

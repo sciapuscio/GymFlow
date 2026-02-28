@@ -47,9 +47,9 @@ function getFcmAccessToken(array $sa): string
 
 /**
  * Send a single FCM push notification.
- * @return bool  true = 200 OK, false = error
+ * @return string  'ok' on success, FCM error code string on failure (e.g. 'UNREGISTERED')
  */
-function sendFcmPush(string $fcmToken, string $title, string $body, string $projectId, string $accessToken): bool
+function sendFcmPush(string $fcmToken, string $title, string $body, string $projectId, string $accessToken): string
 {
     $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
     $payload = json_encode([
@@ -75,11 +75,16 @@ function sendFcmPush(string $fcmToken, string $title, string $body, string $proj
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($code !== 200) {
-        error_log("[GymFlow FCM] Error $code: $res");
-        return false;
-    }
-    return true;
+    if ($code === 200)
+        return 'ok';
+
+    // Extract FCM error code for caller to handle
+    $decoded = json_decode($res, true);
+    $fcmError = $decoded['error']['details'][0]['errorCode']
+        ?? $decoded['error']['status']
+        ?? 'UNKNOWN';
+    error_log("[GymFlow FCM] HTTP $code | $fcmError | token: " . substr($fcmToken, 0, 20) . '…');
+    return $fcmError;
 }
 
 /**
