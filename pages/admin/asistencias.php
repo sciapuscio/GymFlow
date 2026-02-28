@@ -74,10 +74,11 @@ layout_footer($user);
 
 // Status config
 $statusCfg = [
-    'attended' => ['label' => 'Presente', 'color' => '#10b981', 'bg' => 'rgba(16,185,129,.1)', 'icon' => '✅'],
-    'absent' => ['label' => 'Ausente', 'color' => '#ef4444', 'bg' => 'rgba(239,68,68,.1)', 'icon' => '❌'],
+    'attended' => ['label' => 'Presente',  'color' => '#10b981', 'bg' => 'rgba(16,185,129,.1)', 'icon' => '✅'],
+    'present'  => ['label' => 'Presente',  'color' => '#10b981', 'bg' => 'rgba(16,185,129,.1)', 'icon' => '✅'],
+    'absent'   => ['label' => 'Ausente',   'color' => '#ef4444', 'bg' => 'rgba(239,68,68,.1)',   'icon' => '❌'],
     'reserved' => ['label' => 'Reservado', 'color' => '#6b7280', 'bg' => 'rgba(107,114,128,.1)', 'icon' => '📋'],
-    'cancelled' => ['label' => 'Cancelado', 'color' => '#4b5563', 'bg' => 'rgba(75,85,99,.1)', 'icon' => '🚫'],
+    'cancelled'=> ['label' => 'Cancelado', 'color' => '#4b5563', 'bg' => 'rgba(75,85,99,.1)',    'icon' => '🚫'],
 ];
 $dayNames = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 ?>
