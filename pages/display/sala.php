@@ -896,7 +896,7 @@ if (!$sala) {
 
     <!-- RM QR Corner -->
     <div id="wod-qr-corner" style="
-        position:fixed;bottom:52px;right:12px;z-index:60;
+        position:fixed;bottom:52px;right:12px;z-index:350;
         display:none;flex-direction:column;align-items:center;gap:4px;
         opacity:0.85
     ">
@@ -944,6 +944,13 @@ if (!$sala) {
                 const tick = e.detail;
                 if (tick && tick.session_id) {
                     showRmQr(tick.session_id);
+                }
+            });
+            // Also show QR when the WOD overview overlay is activated
+            document.addEventListener('gf:wod:overlay', function (e) {
+                const d = e.detail;
+                if (d && d.active && d.session_id) {
+                    showRmQr(d.session_id);
                 }
             });
             document.addEventListener('gf:session:detach', hideRmQr);

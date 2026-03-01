@@ -146,7 +146,16 @@
     function _renderWodOverlay(active, blocks) {
         const overlay = document.getElementById('wod-overlay');
         if (!overlay) return;
-        if (!active) { overlay.style.display = 'none'; return; }
+        if (!active) {
+            overlay.style.display = 'none';
+            document.dispatchEvent(new CustomEvent('gf:wod:overlay', { detail: { active: false } }));
+            return;
+        }
+
+        // Dispatch so sala.php QR can appear on top of the overlay
+        document.dispatchEvent(new CustomEvent('gf:wod:overlay', {
+            detail: { active: true, session_id: currentState?.session_id ?? null }
+        }));
 
         // Populate session title from current state
         const titleEl = document.getElementById('wod-session-title');
