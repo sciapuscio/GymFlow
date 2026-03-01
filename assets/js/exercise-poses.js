@@ -56,6 +56,27 @@
             lk: [.34, .72], rk: [.68, .75],
             la: [.30, .94], ra: [.75, .89],
         },
+        // ── BOX STEP-UP ─────────────────────────────────
+        // Pie derecho (desde el viewer) elevado al nivel del cajón
+        step_high_r: {
+            head: [.46, .09], neck: [.46, .17],
+            ls: [.32, .24], rs: [.60, .24],
+            le: [.26, .37], re: [.66, .37],
+            lw: [.23, .52], rw: [.63, .52],
+            lh: [.40, .58], rh: [.56, .58],
+            lk: [.37, .76], rk: [.67, .48],   // rodilla derecha MUY alta
+            la: [.38, .94], ra: [.70, .66],    // pie izq en suelo, pie der en cajón
+        },
+        // Parado con ambos pies arriba (sobre el cajón) – figura más alta
+        step_on_top: {
+            head: [.46, .12], neck: [.46, .19],
+            ls: [.33, .26], rs: [.61, .26],
+            le: [.27, .38], re: [.67, .38],
+            lw: [.24, .53], rw: [.64, .53],
+            lh: [.40, .60], rh: [.56, .60],
+            lk: [.38, .72], rk: [.62, .72],
+            la: [.38, .84], ra: [.62, .84],    // ambos pies a hó  0.84 (encima del cajón)
+        },
         // ── HINGE (deadlift / RDL) ─────────────────────────────────────────
         hinge_top: {
             head: [.50, .08], neck: [.50, .16],
@@ -500,7 +521,7 @@
         // Lunge pattern
         'Lunges': 'lunge', 'Estocadas': 'lunge',
         'Bulgarian Split Squat': 'lunge', 'Sentadilla Búlgara': 'lunge',
-        'Box Step-Ups': 'lunge', 'Subidas al Cajón': 'lunge',
+        'Box Step-Ups': 'box_step', 'Subidas al Cajón': 'box_step',
         // Hinge pattern
         'Deadlift': 'hinge', 'Peso Muerto': 'hinge',
         'Romanian Deadlift': 'hinge', 'Peso Muerto Rumano': 'hinge',
@@ -536,7 +557,7 @@
         // Mountain climbers
         'Mountain Climbers': 'mc', 'Escaladores': 'mc',
         // Jump
-        'Box Jumps': 'jump', 'Saltos al Cajón': 'jump',
+        'Box Jumps': 'box_jump', 'Saltos al Cajón': 'box_jump',
         'Burpees': 'jump',
         'Jump Rope': 'jump', 'Soga': 'jump',
         'Double Unders': 'jump', 'Doble Comba': 'jump',
@@ -598,6 +619,9 @@
         'Ring Push-ups': 'rings', 'Flexiones en Anillas': 'rings',
         'Ring Rows': 'rings', 'Remo en Anillas': 'rings',
         'Muscle UP': 'rings', 'Muscle Up': 'rings',
+        // Box exercises
+        'Box Jumps': 'box', 'Saltos al Cajón': 'box',
+        'Box Step-Ups': 'box', 'Subidas al Cajón': 'box',
         // New exercises
         'Hang Power Clean': 'barbell_olympic', 'Cargada de Potencia desde Colgado': 'barbell_olympic',
         'Push Jerk': 'barbell_press',
@@ -609,7 +633,8 @@
     const ARCHETYPES = {
         // ── Compound movements ────────────────────────────────────────────────
         muscle_up: { frames: [P.pullv_hang, P.pullv_top, P.pressv_rack, P.pressv_top, P.pressv_rack, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 3200, restCycleDuration: 5000 },
-        squat: { frames: [P.squat_up, P.squat_down, P.squat_up], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
+        box_jump: { frames: [P.jump_crouch, P.jump_air, P.jump_crouch], restFrames: [P.stand], cycleDuration: 1400, restCycleDuration: 5000 },
+        box_step: { frames: [P.stand, P.step_high_r, P.step_on_top, P.step_high_r, P.stand], restFrames: [P.stand], cycleDuration: 3200, restCycleDuration: 5000 },
         lunge: { frames: [P.stand, P.lunge_l, P.stand, P.lunge_r], restFrames: [P.stand], cycleDuration: 2600, restCycleDuration: 5000 },
         hinge: { frames: [P.hinge_top, P.hinge_bottom, P.hinge_top], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000 },
         olympic: { frames: [P.olympic_start, P.olympic_pull, P.olympic_catch, P.olympic_pull, P.olympic_start], restFrames: [P.stand], cycleDuration: 2400, restCycleDuration: 5000 },

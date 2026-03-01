@@ -629,6 +629,60 @@
             ctx.stroke();
         }
 
+        // ── PLYO BOX ────────────────────────────────────────────────────
+        else if (eq === 'box') {
+            // Position: right of center, top at y~0.66 (matches step_on_top ankle)
+            var bxL = W * 0.56;
+            var bxR = W * 0.88;
+            var bxW2 = bxR - bxL;
+            var bxTop = H * 0.66;
+            var bxBot = H * 0.94;
+            var bxH2 = bxBot - bxTop;
+            var dep = bxW2 * 0.22;
+
+            // Front face
+            ctx.beginPath();
+            ctx.rect(bxL, bxTop, bxW2, bxH2);
+            ctx.fillStyle = 'rgba(155,115,65,0.65)';
+            ctx.fill();
+            // Wood grain
+            ctx.strokeStyle = 'rgba(100,70,35,0.25)';
+            ctx.lineWidth = lw * 0.5;
+            for (var g = 1; g < 4; g++) {
+                var gx = bxL + (bxW2 / 4) * g;
+                ctx.beginPath(); ctx.moveTo(gx, bxTop); ctx.lineTo(gx, bxBot); ctx.stroke();
+            }
+            ctx.beginPath(); ctx.rect(bxL, bxTop, bxW2, bxH2);
+            ctx.strokeStyle = 'rgba(240,200,140,0.38)'; ctx.lineWidth = lw * 0.8; ctx.stroke();
+
+            // Top face (isometric)
+            ctx.beginPath();
+            ctx.moveTo(bxL, bxTop);
+            ctx.lineTo(bxL + dep, bxTop - dep);
+            ctx.lineTo(bxR + dep, bxTop - dep);
+            ctx.lineTo(bxR, bxTop);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(210,170,115,0.72)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(240,200,140,0.38)'; ctx.lineWidth = lw * 0.8; ctx.stroke();
+            // Cross target
+            var tcx = bxL + bxW2 / 2 + dep / 2, tcy = bxTop - dep / 2, tcs = bxW2 * 0.11;
+            ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = lw * 0.7;
+            ctx.beginPath(); ctx.moveTo(tcx - tcs, tcy); ctx.lineTo(tcx + tcs, tcy);
+            ctx.moveTo(tcx, tcy - tcs); ctx.lineTo(tcx, tcy + tcs); ctx.stroke();
+
+            // Right side face (isometric)
+            ctx.beginPath();
+            ctx.moveTo(bxR, bxTop);
+            ctx.lineTo(bxR + dep, bxTop - dep);
+            ctx.lineTo(bxR + dep, bxBot - dep);
+            ctx.lineTo(bxR, bxBot);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(105,75,40,0.62)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(240,200,140,0.30)'; ctx.lineWidth = lw * 0.8; ctx.stroke();
+        }
+
         // ── ASSAULT BIKE ──────────────────────────────────────────────────────
         else if (eq === 'assault_bike') {
             var lh2 = px('lh'); var rh2 = px('rh');
