@@ -925,6 +925,7 @@ if (!$sala) {
         (function () {
             let _rmQr = null;
             let _rmLastSessionId = null;
+            let _rmLastFinishedId = null;   // tracks which session built the finished QR
 
             function _buildQr(el, url, size) {
                 el.innerHTML = '';
@@ -939,17 +940,21 @@ if (!$sala) {
             function showRmQr(sessionId) {
                 if (!sessionId) return;
                 const url = BASE + '/rm?s=' + sessionId;
-                const corner  = document.getElementById('wod-qr-corner');
-                const finSec  = document.getElementById('finished-qr-section');
-                const finScr  = document.getElementById('finished-screen');
+                const corner = document.getElementById('wod-qr-corner');
+                const finSec = document.getElementById('finished-qr-section');
+                const finScr = document.getElementById('finished-screen');
+                const finCanvas = document.getElementById('finished-qr-canvas');
                 const isFinished = finScr && finScr.style.display === 'flex';
 
                 if (isFinished) {
                     // Finished screen is active → show big centered QR, hide corner
                     if (corner) corner.style.display = 'none';
                     if (finSec) {
-                        const finCanvas = document.getElementById('finished-qr-canvas');
-                        if (finCanvas && !finCanvas.hasChildNodes()) _buildQr(finCanvas, url, 200);
+                        // Always rebuild if session changed
+                        if (finCanvas && sessionId !== _rmLastFinishedId) {
+                            _rmLastFinishedId = sessionId;
+                            _buildQr(finCanvas, url, 200);
+                        }
                         finSec.style.display = 'flex';
                     }
                     return;
@@ -962,13 +967,16 @@ if (!$sala) {
                 if (canvas) _buildQr(canvas, url, 72);
                 if (corner) corner.style.display = 'flex';
 
-                // Also pre-populate finished-qr-canvas while we're here
-                const finCanvas = document.getElementById('finished-qr-canvas');
-                if (finCanvas && !finCanvas.hasChildNodes()) _buildQr(finCanvas, url, 200);
+                // Pre-populate finished-qr-canvas only if session changed
+                if (finCanvas && sessionId !== _rmLastFinishedId) {
+                    _rmLastFinishedId = sessionId;
+                    _buildQr(finCanvas, url, 200);
+                }
             }
 
             function hideRmQr() {
                 _rmLastSessionId = null;
+                _rmLastFinishedId = null;   // ⭐ also reset so next session rebuilds cleanly
                 document.getElementById('wod-qr-corner').style.display = 'none';
                 document.getElementById('wod-qr-canvas').innerHTML = '';
                 const finSec = document.getElementById('finished-qr-section');
@@ -988,7 +996,7 @@ if (!$sala) {
             document.addEventListener('gf:session:tick', function (e) {
                 const tick = e.detail;
                 if (tick && tick.session_id) {
-         showRmQr(tick.session_id);
+                    showRmQr(tick.session_id);
                 }
             });
             // Also show QR when the WOD overview overlay is activated
