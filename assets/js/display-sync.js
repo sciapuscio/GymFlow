@@ -119,6 +119,7 @@
             if (_finishedTimer) { clearTimeout(_finishedTimer); _finishedTimer = null; }
             _showWaitingScreen();
             startPresencePoller();
+            document.dispatchEvent(new CustomEvent('gf:session:detach'));
         });
 
         // ── Sala renombrada por el admin — actualiza el nombre en pantalla ──
@@ -277,6 +278,8 @@
 
         const prev = currentState;
         currentState = state;
+        // Notify external modules (e.g. RM QR overlay)
+        document.dispatchEvent(new CustomEvent('gf:session:tick', { detail: state }));
 
         const status = state.status || 'idle';
         const blockIdx = state.current_block_index || 0;

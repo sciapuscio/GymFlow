@@ -32,6 +32,7 @@ if (!$sala) {
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="<?php echo BASE_URL ?>/assets/css/display.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
 <body class="state-idle">
@@ -892,6 +893,61 @@ if (!$sala) {
     </script>
     <script src="<?php echo BASE_URL ?>/assets/js/exercise-poses.js"></script>
     <script src="<?php echo BASE_URL ?>/assets/js/stickman.js"></script>
+
+    <!-- RM QR Corner -->
+    <div id="wod-qr-corner" style="
+        position:fixed;bottom:22px;left:22px;z-index:60;
+        display:none;flex-direction:column;align-items:center;gap:6px
+    ">
+        <div id="wod-qr-canvas" style="
+            background:#fff;padding:8px;border-radius:6px;
+            box-shadow:0 2px 16px rgba(0,0,0,.5)
+        "></div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;
+            color:rgba(255,255,255,.35);text-transform:uppercase">Registrá tu RM</div>
+    </div>
+
+    <script>
+        (function () {
+            let _rmQr = null;
+            let _rmLastSessionId = null;
+
+            function showRmQr(sessionId) {
+                if (!sessionId || sessionId === _rmLastSessionId) return;
+                _rmLastSessionId = sessionId;
+
+                const corner = document.getElementById('wod-qr-corner');
+                const canvas = document.getElementById('wod-qr-canvas');
+                canvas.innerHTML = ''; // clear previous
+
+                const url = BASE + '/rm?s=' + sessionId;
+                _rmQr = new QRCode(canvas, {
+                    text: url,
+                    width: 88,
+                    height: 88,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M,
+                });
+                corner.style.display = 'flex';
+            }
+
+            function hideRmQr() {
+                _rmLastSessionId = null;
+                document.getElementById('wod-qr-corner').style.display = 'none';
+                document.getElementById('wod-qr-canvas').innerHTML = '';
+            }
+
+            // Hook into display-sync.js events via CustomEvents
+            document.addEventListener('gf:session:tick', function (e) {
+                const tick = e.detail;
+                if (tick && tick.session_id && tick.status !== 'idle') {
+                    showRmQr(tick.session_id);
+                }
+            });
+            document.addEventListener('gf:session:detach', hideRmQr);
+        })();
+    </script>
 </body>
 
 </html>
