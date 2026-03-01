@@ -125,6 +125,26 @@
             lh: [.42, .56], rh: [.58, .56],
             lk: [.41, .74], rk: [.66, .64],
             la: [.38, .90], ra: [.66, .57]
+        },
+        // Scrub right: brazo izquierdo extendido a la izquierda frotando
+        scrub_r: {
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.35, .23], rs: [.65, .23],
+            le: [.16, .20], re: [.71, .36],
+            lw: [.00, .18], rw: [.74, .51],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94]
+        },
+        // Scrub left: brazo izquierdo extendido un poco menos (ida y vuelta)
+        scrub_l: {
+            head: [.50, .08], neck: [.50, .16],
+            ls: [.35, .23], rs: [.65, .23],
+            le: [.18, .22], re: [.71, .36],
+            lw: [.08, .20], rw: [.74, .51],
+            lh: [.42, .58], rh: [.58, .58],
+            lk: [.42, .76], rk: [.58, .76],
+            la: [.42, .94], ra: [.58, .94]
         }
     };
 
@@ -211,6 +231,8 @@
         // Idle personality
         this._idleAnim = null;   // { seq: [...], startMs: Date.now() }
         this._idleTimerId = null;
+        // Janitor easter egg
+        this._janitor = null;    // { startMs, state, offsetX, targetX }
     }
 
     StickFigure.prototype.setExercise = function (name) {
@@ -237,13 +259,79 @@
 
     StickFigure.prototype._scheduleNextIdle = function () {
         var self = this;
-        var delay = 4000 + Math.random() * 7000; // 4–11 seconds
+        var delay = 4000 + Math.random() * 7000; // 4-11 seconds
         this._idleTimerId = setTimeout(function () {
             if (self._phase !== 'rest' && self._phase !== 'idle') return;
             if (!self._running) return;
-            var idx = Math.floor(Math.random() * IDLE_SEQS.length);
-            self._idleAnim = { seq: IDLE_SEQS[idx], startMs: Date.now() };
+            // 25% chance of janitor easter egg during rest
+            if (self._phase === 'rest' && Math.random() < 0.25) {
+                self._startJanitor();
+            } else {
+                var idx = Math.floor(Math.random() * IDLE_SEQS.length);
+                self._idleAnim = { seq: IDLE_SEQS[idx], startMs: Date.now() };
+            }
         }, delay);
+    };
+
+    // ── Janitor Easter Egg ─────────────────────────────────────────────────────
+    // States: 'run_out' → 'scrub' → 'run_back'
+    StickFigure.prototype._startJanitor = function () {
+        // Target X offset: run ~85% of canvas width to the left (toward RECUPERACIÓN text)
+        var targetX = -(this.canvas.width * 0.82);
+        this._janitor = {
+            startMs: Date.now(),
+            state: 'run_out',
+            offsetX: 0,           // current horizontal translation
+            targetX: targetX,
+            scrubStartMs: 0,
+            scrubDuration: 1800,  // ms spent scrubbing
+            runSpeed: 0.65        // canvas-widths per second
+        };
+    };
+
+    StickFigure.prototype._updateJanitor = function () {
+        var j = this._janitor;
+        if (!j) return false;
+        var now = Date.now();
+        var W = this.canvas.width;
+        var spd = j.runSpeed * W / 1000; // px/ms
+
+        if (j.state === 'run_out') {
+            j.offsetX -= spd * 16;  // ~16ms per frame
+            if (j.offsetX <= j.targetX) {
+                j.offsetX = j.targetX;
+                j.state = 'scrub';
+                j.scrubStartMs = now;
+            }
+        } else if (j.state === 'scrub') {
+            if (now - j.scrubStartMs >= j.scrubDuration) {
+                j.state = 'run_back';
+            }
+        } else if (j.state === 'run_back') {
+            j.offsetX += spd * 16;
+            if (j.offsetX >= 0) {
+                j.offsetX = 0;
+                this._janitor = null;
+                this._scheduleNextIdle();
+                return false; // back to normal
+            }
+        }
+        return true; // still animating
+    };
+
+    StickFigure.prototype._janitorPose = function (elapsed) {
+        var j = this._janitor;
+        if (!j) return PS.stand;
+        if (j.state === 'run_out') {
+            // Running pose alternating jog_right/jog_left (mirrored — going left)
+            return (Math.floor(elapsed / 140) % 2 === 0) ? PS.jog_right : PS.jog_left;
+        } else if (j.state === 'run_back') {
+            return (Math.floor(elapsed / 140) % 2 === 0) ? PS.jog_left : PS.jog_right;
+        } else {
+            // Scrubbing: arm swipes left/right rapidly
+            var t = Date.now() - j.scrubStartMs;
+            return (Math.floor(t / 110) % 2 === 0) ? PS.scrub_r : PS.scrub_l;
+        }
     };
 
     StickFigure.prototype._startLoop = function () {
@@ -305,6 +393,41 @@
                     this._scheduleNextIdle();
                     this._drawPose(PS.stand, W, H);
                 }
+            }
+            return;
+        }
+
+        // ── Janitor easter egg ────────────────────────────────────────────────
+        if (isRest && this._janitor) {
+            var still = this._updateJanitor();
+            var pose = this._janitorPose(elapsed);
+            var ox = this._janitor ? this._janitor.offsetX : 0;
+            ctx.save();
+            ctx.translate(ox, 0);
+
+            // While scrubbing, draw an eraser blob at the left wrist position
+            if (this._janitor && this._janitor.state === 'scrub') {
+                var lw2 = pose['lw'] || [0.05, 0.2];
+                var ex = lw2[0] * W + ox;
+                var ey = lw2[1] * H;
+                // Draw eraser/cloth effect directly on main ctx (not translated)
+                ctx.restore();
+                ctx.save();
+                ctx.translate(ox, 0);
+                // Cloth rectangle that oscillates
+                var st = this._janitor ? (Date.now() - this._janitor.scrubStartMs) : 0;
+                var oscillate = Math.sin(st / 55) * 4;
+                ctx.fillStyle = 'rgba(255,255,255,0.18)';
+                ctx.beginPath();
+                ctx.roundRect(lw2[0] * W - 14 + oscillate, lw2[1] * H - 8, 22, 14, 3);
+                ctx.fill();
+            }
+
+            this._drawPose(pose, W, H);
+            ctx.restore();
+
+            if (!still && this._janitor === null) {
+                this._drawPose(PS.stand, W, H);
             }
             return;
         }
