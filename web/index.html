@@ -151,7 +151,7 @@
       <ul class="nav-links">
         <li><a href="#como-funciona">Cómo funciona</a></li>
         <li><a href="#funcionalidades">Funcionalidades</a></li>
-        <li><a href="#beneficios">Beneficios</a></li>
+        <li><a href="#app-alumnos">App Alumnos</a></li>
         <li><a href="#planes">Planes</a></li>
       </ul>
       <a href="https://wa.me/5491133786503" class="btn btn-wa nav-wa" target="_blank" rel="noopener"
@@ -174,7 +174,7 @@
     <ul>
       <li><a href="#como-funciona" class="mobile-link">Cómo funciona</a></li>
       <li><a href="#funcionalidades" class="mobile-link">Funcionalidades</a></li>
-      <li><a href="#beneficios" class="mobile-link">Beneficios</a></li>
+      <li><a href="#app-alumnos" class="mobile-link">App Alumnos</a></li>
       <li><a href="#planes" class="mobile-link">Planes</a></li>
       <li><a href="https://wa.me/5491133786503" class="mobile-link" target="_blank" rel="noopener">💬 WhatsApp</a></li>
       <li><a href="registro.html" class="btn btn-primary mobile-link">Probar gratis</a></li>
@@ -220,13 +220,13 @@
           </div>
           <div class="stat-divider"></div>
           <div class="stat">
-            <span class="stat-value">∞</span>
-            <span class="stat-label">bloques por sesión</span>
+            <span class="stat-value">3</span>
+            <span class="stat-label">capas conectadas</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat">
-            <span class="stat-value">2</span>
-            <span class="stat-label">pantallas sincronizadas</span>
+            <span class="stat-value">📱</span>
+            <span class="stat-label">app incluida sin costo extra</span>
           </div>
         </div>
       </div>
@@ -477,6 +477,51 @@
     </div>
   </section>
 
+  <!-- ======================== ECOSISTEMA 3 CAPAS ======================== -->
+  <section class="ecosystem" id="ecosistema"
+    style="padding:clamp(60px,8vw,120px) 0;background:linear-gradient(135deg,#0a0c12 0%,#0d1018 100%);">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag">El diferencial</span>
+        <h2 class="section-title">El único sistema en Argentina<br />con <span class="gradient-text">3 capas
+            conectadas</span></h2>
+        <p class="section-subtitle">Instructor · Pantalla de sala · App del alumno — todo sincronizado en tiempo real.
+          Ninguna otra plataforma local tiene esto.</p>
+      </div>
+      <div class="reveal"
+        style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2rem;margin-top:3rem;">
+        <div
+          style="background:rgba(229,255,61,0.04);border:1px solid rgba(229,255,61,0.15);border-radius:16px;padding:2rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🖥️</div>
+          <h3 style="color:var(--primary);margin-bottom:.75rem;font-size:1.2rem;">Panel del Instructor</h3>
+          <p style="color:var(--text-muted);font-size:.93rem;line-height:1.6;">Armá el WOD, controlá el cronómetro, la
+            música y los bloques desde tu celular o tablet. Todo en un click.</p>
+        </div>
+        <div
+          style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.2);border-radius:16px;padding:2rem;text-align:center;position:relative;">
+          <div
+            style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#06b6d4,#3b82f6);color:#fff;font-size:.75rem;font-weight:700;padding:4px 14px;border-radius:20px;letter-spacing:.08em;">
+            NÚCLEO</div>
+          <div style="font-size:3rem;margin-bottom:1rem;">📺</div>
+          <h3 style="color:#06b6d4;margin-bottom:.75rem;font-size:1.2rem;">Pantalla de Sala</h3>
+          <p style="color:var(--text-muted);font-size:.93rem;line-height:1.6;">El TV del gym muestra en tiempo real el
+            ejercicio, cuenta regresiva, animación y siguiente bloque. Sin preguntas, sin distracciones.</p>
+        </div>
+        <div
+          style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:16px;padding:2rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">📱</div>
+          <h3 style="color:#a78bfa;margin-bottom:.75rem;font-size:1.2rem;">App del Alumno</h3>
+          <p style="color:var(--text-muted);font-size:.93rem;line-height:1.6;">Los alumnos reservan clases, hacen
+            check-in por QR, ven su historial y calculan su RM. Todo desde la app GymFlow.</p>
+        </div>
+      </div>
+      <div class="reveal" style="text-align:center;margin-top:2.5rem;">
+        <p style="color:rgba(255,255,255,.35);font-size:.9rem;letter-spacing:.05em;">Instructor → Sala → Alumno
+          &nbsp;|&nbsp; Todo sincronizado &nbsp;|&nbsp; Sin apps de terceros &nbsp;|&nbsp; Sin integraciones extras</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ======================== FUNCIONALIDADES ======================== -->
   <section class="features" id="funcionalidades">
     <div class="container">
@@ -579,13 +624,12 @@
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" />
               <circle cx="12" cy="10" r="2" />
-              <path d="M12 8v.01" />
             </svg>
           </div>
           <h3>🖥️ Cartelera TV en tiempo real</h3>
-          <p>Poné la pantalla full-screen en el TV del gym. Muestra el horario semanal de forma
-            automática, resalta la clase que está en curso y se actualiza al instante cuando el instructor edita el
-            horario. Una TV por sala, o una general para todo el gimnasio.</p>
+          <p>Full-screen en el TV del gym. Muestra el horario semanal, resalta la clase en curso y se actualiza al
+            instante.
+            Una TV por sala, o una general para todo el gimnasio.</p>
         </div>
 
         <div class="feature-card reveal">
@@ -598,8 +642,8 @@
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </div>
-          <h3>Compartición entre instructores</h3>
-          <p>Los profesores comparten sesiones dentro del mismo gimnasio. El conocimiento institucional queda en el
+          <h3>Biblioteca compartida entre instructores</h3>
+          <p>Los instructores comparten sesiones dentro del mismo gimnasio. El conocimiento institucional queda en el
             sistema, no en el celular de alguien.</p>
         </div>
 
@@ -631,6 +675,47 @@
           <h3>📱 Check-in por QR</h3>
           <p>Imprimí el QR del gym y pegalo en la entrada. Los alumnos escanean con la app, el sistema registra
             el presente y descuenta la clase automáticamente. Sin papeles, sin errores.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="color:#f59e0b">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+              <path d="M9 16l2 2 4-4" />
+            </svg>
+          </div>
+          <h3>🗓️ Sistema de Reservas</h3>
+          <p>Los alumnos reservan su lugar desde la app con un toque. El sistema controla el cupo máximo por clase,
+            descuenta créditos automáticamente y gestiona cancelaciones con penalidades configurables.</p>
+        </div>
+
+        <div class="feature-card reveal">
+          <div class="feature-icon" style="color:#ec4899">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+          </div>
+          <h3>🔔 Notificaciones Push</h3>
+          <p>Mandá avisos a todos tus alumnos desde el panel: cambios de horario, promos, recordatorios de clase.
+            Las notificaciones llegan directo al celular, sin WhatsApp ni grupos.</p>
+        </div>
+
+        <div class="feature-card reveal" style="border-color:rgba(229,255,61,.25);background:rgba(229,255,61,.03);">
+          <div class="feature-icon" style="color:var(--primary)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+          </div>
+          <h3>🏋️ Calculadora RM Personal</h3>
+          <p>Al terminar cada clase, los alumnos escanean un QR y cargan el peso máximo de cada ejercicio. El sistema
+            calcula su RM (1 rep max) y guarda el historial con evolución gráfica. Único en Argentina.</p>
         </div>
       </div>
     </div>
@@ -864,6 +949,90 @@
             </div>
           </div>
         </div>
+        <div class="testimonial-card reveal">
+          <div class="test-quote">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 0 1-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+            </svg>
+          </div>
+          <p class="test-text">"La calculadora de RM me voló la cabeza. Terminé el WOD, escaneé el QR del TV y cargué el
+            peso. Automáticamente me apareció mi récord de hip thrust con el gráfico de evolución. Ningún gym que
+            conozco tiene algo así."</p>
+          <div class="test-author">
+            <div class="test-avatar">VA</div>
+            <div>
+              <span class="test-name">Valentina A.</span>
+              <span class="test-role">Alumna · funcional · Buenos Aires</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================== APP ALUMNOS ======================== -->
+  <section class="app-alumnos" id="app-alumnos" style="padding:clamp(60px,8vw,120px) 0;background:#080a0f;">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag">App GymFlow</span>
+        <h2 class="section-title">La app que tus alumnos<br /><span class="gradient-text">van a amar</span></h2>
+        <p class="section-subtitle">Disponible en Android. Incluida en todos los planes, sin costo extra para los
+          alumnos.</p>
+      </div>
+      <div class="reveal"
+        style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin-top:3rem;">
+        <div
+          style="background:linear-gradient(135deg,rgba(229,255,61,.06),rgba(229,255,61,.02));border:1px solid rgba(229,255,61,.12);border-radius:14px;padding:1.75rem;">
+          <div style="font-size:2rem;margin-bottom:.75rem;">📅</div>
+          <h4 style="color:#fff;margin-bottom:.5rem;font-size:1rem;">Reservas desde el celular</h4>
+          <p style="color:var(--text-muted);font-size:.875rem;line-height:1.6;">Reservá la clase con un toque, consultá
+            el horario semanal y cancelá con tiempo sin perder el crédito.</p>
+        </div>
+        <div
+          style="background:linear-gradient(135deg,rgba(229,255,61,.06),rgba(229,255,61,.02));border:1px solid rgba(229,255,61,.12);border-radius:14px;padding:1.75rem;">
+          <div style="font-size:2rem;margin-bottom:.75rem;">📷</div>
+          <h4 style="color:#fff;margin-bottom:.5rem;font-size:1rem;">Check-in por QR</h4>
+          <p style="color:var(--text-muted);font-size:.875rem;line-height:1.6;">Escaneá el QR del gym al llegar. El
+            sistema registra la asistencia y descuenta el crédito automáticamente.</p>
+        </div>
+        <div
+          style="background:linear-gradient(135deg,rgba(229,255,61,.1),rgba(229,255,61,.03));border:1px solid rgba(229,255,61,.25);border-radius:14px;padding:1.75rem;position:relative;">
+          <div
+            style="position:absolute;top:-10px;right:16px;background:var(--primary);color:#000;font-size:.7rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.08em;">
+            EXCLUSIVO</div>
+          <div style="font-size:2rem;margin-bottom:.75rem;">🏋️</div>
+          <h4 style="color:var(--primary);margin-bottom:.5rem;font-size:1rem;">Calculadora RM</h4>
+          <p style="color:var(--text-muted);font-size:.875rem;line-height:1.6;">Al terminar cada WOD, escaneá el QR de
+            la pantalla y cargá el peso. El sistema calcula tu récord personal (1RM) y muestra la evolución con
+            gráficos. El diferencial que ningún otro gym tiene.</p>
+        </div>
+        <div
+          style="background:linear-gradient(135deg,rgba(229,255,61,.06),rgba(229,255,61,.02));border:1px solid rgba(229,255,61,.12);border-radius:14px;padding:1.75rem;">
+          <div style="font-size:2rem;margin-bottom:.75rem;">👤</div>
+          <h4 style="color:#fff;margin-bottom:.5rem;font-size:1rem;">Mi perfil y progreso</h4>
+          <p style="color:var(--text-muted);font-size:.875rem;line-height:1.6;">Dashboard personal con membresía activa,
+            clases asistidas, ausentes y disponibles. El alumno ve todo de un vistazo.</p>
+        </div>
+        <div
+          style="background:linear-gradient(135deg,rgba(229,255,61,.06),rgba(229,255,61,.02));border:1px solid rgba(229,255,61,.12);border-radius:14px;padding:1.75rem;">
+          <div style="font-size:2rem;margin-bottom:.75rem;">🔔</div>
+          <h4 style="color:#fff;margin-bottom:.5rem;font-size:1rem;">Notificaciones del gym</h4>
+          <p style="color:var(--text-muted);font-size:.875rem;line-height:1.6;">Recibí alertas de cambios de horario,
+            novedades y promos directamente del gimnasio, sin intermediarios.</p>
+        </div>
+        <div
+          style="background:linear-gradient(135deg,rgba(229,255,61,.06),rgba(229,255,61,.02));border:1px solid rgba(229,255,61,.12);border-radius:14px;padding:1.75rem;">
+          <div style="font-size:2rem;margin-bottom:.75rem;">🏠</div>
+          <h4 style="color:#fff;margin-bottom:.5rem;font-size:1rem;">Portal editorial del gym</h4>
+          <p style="color:var(--text-muted);font-size:.875rem;line-height:1.6;">El admin configura una portada
+            personalizada con noticias, horarios y contenido del gym que los alumnos ven al abrir la app.</p>
+        </div>
+      </div>
+      <div class="reveal" style="text-align:center;margin-top:3rem;">
+        <a href="registro.html" class="btn btn-primary btn-lg">Quiero la app para mis alumnos →</a>
+        <p style="margin-top:1rem;color:rgba(255,255,255,.25);font-size:.85rem;">Disponible en Google Play · Incluida en
+          todos los planes</p>
       </div>
     </div>
   </section>
@@ -912,24 +1081,27 @@
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Cronómetro automático HIIT / Tabata</li>
+              </svg> Cronómetro HIIT / Tabata / AMRAP / EMOM</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg> Integración Spotify</li>
-
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Sesiones ilimitadas</li>
+              </svg> App para alumnos incluida</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Presets inteligentes</li>
+              </svg> Check-in por QR + Reservas</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Soporte por email</li>
+              </svg> Calculadora RM personal</li>
+            <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg> Sesiones ilimitadas · Presets</li>
           </ul>
           <a href="registro.html?plan=instructor" class="btn btn-outline btn-block" data-plan="instructor">Empezar
             gratis 30 días</a>
@@ -958,11 +1130,11 @@
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Biblioteca compartida entre instructores</li>
+              </svg> Todo lo del plan Instructor</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Programación semanal</li>
+              </svg> Biblioteca compartida entre instructores</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
@@ -970,11 +1142,15 @@
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Integración Spotify</li>
+              </svg> CRM de alumnos + facturación</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
-              </svg> Presets inteligentes + variaciones automáticas</li>
+              </svg> <strong>Notificaciones push</strong> a alumnos</li>
+            <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg> Portal editorial del gym</li>
             <li><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12" />
