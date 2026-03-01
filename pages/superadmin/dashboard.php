@@ -287,6 +287,49 @@ layout_footer($user);
     </div>
 </div>
 
+<!-- ═══ CONTROL DE VERSIÓN DE LA APP ══════════════════════════════════════ -->
+<div class="page-body" style="margin-top:0">
+    <div class="card">
+        <div class="flex items-center gap-2 mb-4">
+            <span style="font-size:20px">📱</span>
+            <h2 style="font-size:16px;font-weight:700;margin:0">Control de Versión — App Flutter</h2>
+            <span style="margin-left:auto;font-size:12px;color:var(--gf-text-muted)">Versión mínima requerida</span>
+        </div>
+        <p style="font-size:13px;color:var(--gf-text-muted);margin-bottom:16px;line-height:1.5">
+            Los usuarios con una versión de la app <strong>menor a la mínima requerida</strong> verán una pantalla de
+            bloqueo
+            que los invitará a actualizar desde la tienda. Dejá en <code>1.0.0</code> para no bloquear a nadie.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+                <label
+                    style="font-size:12px;font-weight:600;color:var(--gf-text-muted);display:block;margin-bottom:6px">Versión
+                    mínima requerida</label>
+                <input id="av-min" type="text" placeholder="ej: 1.0.5"
+                    style="width:100%;box-sizing:border-box;background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:8px 12px;font-size:13px;font-family:monospace">
+            </div>
+            <div>
+                <label
+                    style="font-size:12px;font-weight:600;color:var(--gf-text-muted);display:block;margin-bottom:6px">URL
+                    Play Store (Android)</label>
+                <input id="av-android" type="text" placeholder="https://play.google.com/store/apps/..."
+                    style="width:100%;box-sizing:border-box;background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:8px 12px;font-size:13px">
+            </div>
+            <div>
+                <label
+                    style="font-size:12px;font-weight:600;color:var(--gf-text-muted);display:block;margin-bottom:6px">URL
+                    App Store (iOS)</label>
+                <input id="av-ios" type="text" placeholder="https://apps.apple.com/app/..."
+                    style="width:100%;box-sizing:border-box;background:var(--gf-surface-2);border:1px solid var(--gf-border);border-radius:8px;color:inherit;padding:8px 12px;font-size:13px">
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-primary btn-sm" onclick="saveAppVersion()">💾 Guardar cambios</button>
+            <div id="av-result" style="font-size:12px;color:var(--gf-text-muted);min-height:18px"></div>
+        </div>
+    </div>
+</div>
+
 <script src="<?php echo BASE_URL ?>/assets/js/api.js"></script>
 <script>
     async function toggleGym(id, newActive) {
@@ -356,6 +399,36 @@ layout_footer($user);
         }
     }
 
-    document.addEventListener('DOMContentLoaded', loadNotices);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadNotices();
+        loadAppVersion();
+    });
+
+    // ── App Version Config ────────────────────────────────────────────────
+    async function loadAppVersion() {
+        const d = await GF.get(`${window.GF_BASE}/api/app-config.php`);
+        if (!d?.config) return;
+        const c = d.config;
+        document.getElementById('av-min').value = c.min_app_version || '1.0.0';
+        document.getElementById('av-android').value = c.android_store_url || '';
+        document.getElementById('av-ios').value = c.ios_store_url || '';
+    }
+
+    async function saveAppVersion() {
+        const result = document.getElementById('av-result');
+        const d = await GF.post(`${window.GF_BASE}/api/app-config.php`, {
+            min_app_version: document.getElementById('av-min').value.trim(),
+            android_store_url: document.getElementById('av-android').value.trim(),
+            ios_store_url: document.getElementById('av-ios').value.trim(),
+        });
+        if (d?.ok) {
+            result.textContent = '✓ Guardado correctamente.';
+            result.style.color = 'var(--gf-accent)';
+        } else {
+            result.textContent = d?.error || 'Error al guardar.';
+            result.style.color = '#ff6b35';
+        }
+        setTimeout(() => { result.textContent = ''; }, 3000);
+    }
 </script>
 <?php layout_end(); ?>
