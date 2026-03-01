@@ -79,15 +79,15 @@ if ($method === 'GET' && isset($_GET['session_id'])) {
             $name = trim($ex['name'] ?? '');
             if (!$name || isset($seen[$name]))
                 continue;
-            // Skip purely isometric/timed exercises (they have 'duration' but no 'reps')
-            if (!isset($ex['reps']))
-                continue;
+
+            // Determine reps: prefer explicit reps, fall back to 10 for timed/isometric
+            $reps = isset($ex['reps']) ? (int) $ex['reps'] : 10;
 
             $seen[$name] = true;
             $exercises[] = [
                 'id' => $ex['id'] ?? null,
                 'name' => $name,
-                'reps' => (int) $ex['reps'],
+                'reps' => $reps,
                 'block_name' => $block['name'] ?? '',
                 'block_type' => $block['type'] ?? '',
             ];
