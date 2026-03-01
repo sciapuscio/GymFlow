@@ -941,7 +941,7 @@ if (!$sala) {
             // Hook into display-sync.js events via CustomEvents
             document.addEventListener('gf:session:tick', function (e) {
                 const tick = e.detail;
-                if (tick && tick.session_id && tick.status !== 'idle') {
+                if (tick && tick.session_id) {
                     showRmQr(tick.session_id);
                 }
             });
