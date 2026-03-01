@@ -1020,8 +1020,22 @@
       </div>
       <div class="reveal" style="text-align:center;margin-top:3rem;">
         <a href="registro.html" class="btn btn-primary btn-lg">Quiero la app para mis alumnos →</a>
-        <p style="margin-top:1rem;color:rgba(255,255,255,.25);font-size:.85rem;">Disponible en Google Play · Incluida en
-          todos los planes</p>
+        <div style="display:flex;justify-content:center;gap:1rem;margin-top:1.5rem;flex-wrap:wrap;align-items:center;">
+          <!-- Google Play badge -->
+          <a href="#" aria-label="Disponible en Google Play" style="opacity:.85;transition:opacity .2s;"
+            onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.85">
+            <img src="https://play.google.com/intl/es_419/badges/static/images/badges/es-419_badge_web_generic.png"
+              alt="Disponible en Google Play" height="52" style="display:block;border-radius:8px;">
+          </a>
+          <!-- App Store badge -->
+          <a href="#" aria-label="Próximamente en App Store" style="opacity:.85;transition:opacity .2s;"
+            onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.85">
+            <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg"
+              alt="Próximamente en App Store" height="52" style="display:block;border-radius:8px;">
+          </a>
+        </div>
+        <p style="margin-top:.75rem;color:rgba(255,255,255,.2);font-size:.8rem;">Incluida en todos los planes · Android
+          disponible · iOS próximamente</p>
       </div>
     </div>
   </section>
