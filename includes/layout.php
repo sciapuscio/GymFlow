@@ -283,40 +283,51 @@ function layout_footer(array $user): void
                     </div>
                     <script>
                         (function () {
+                            var _bcastConnected = false;
                             const ICONS = { info: 'ℹ️', warning: '⚠️', error: '🚨' };
+
                             function showBroadcast(data) {
                                 document.getElementById('gf-broadcast-icon').textContent = ICONS[data.type] || '📢';
                                 document.getElementById('gf-broadcast-msg').textContent = data.message || '';
                                 document.getElementById('gf-broadcast-overlay').classList.add('active');
                             }
-                            // Connect a dedicated system socket (no sala room)
+
                             function connectBroadcastSocket() {
+                                if (_bcastConnected) return; // prevent duplicate connections
                                 if (typeof io === 'undefined') return;
+                                _bcastConnected = true;
                                 const sock = io(window.GF_SOCKET_URL || 'http://localhost:3001',
                                     { transports: ['websocket', 'polling'] });
                                 sock.on('connect', () => {
                                     sock.emit('join:system', { role: <?php echo json_encode($user['role'] ?? 'admin'); ?> });
                                 });
+                                // If the socket ever disconnects (e.g. server restart), allow reconnect to re-join
+                                sock.on('reconnect', () => {
+                                    sock.emit('join:system', { role: <?php echo json_encode($user['role'] ?? 'admin'); ?> });
+                                });
                                 sock.on('system:broadcast', showBroadcast);
                             }
-                            // Wait for socket.io to be available (may be loaded late on non-live pages)
-                            if (document.readyState === 'loading') {
-                                document.addEventListener('DOMContentLoaded', connectBroadcastSocket);
-                            } else {
-                                connectBroadcastSocket();
+
+                            function initBroadcast() {
+                                if (typeof io !== 'undefined') {
+                                    // socket.io already loaded (e.g. sala page or already injected)
+                                    connectBroadcastSocket();
+                                } else {
+                                    // Dynamically load socket.io, then connect on load
+                                    var _s = document.createElement('script');
+                                    _s.src = (window.GF_SOCKET_URL || 'http://localhost:3001') + '/socket.io/socket.io.js';
+                                    _s.onload = connectBroadcastSocket;
+                                    _s.onerror = function () { /* socket server offline */ };
+                                    document.head.appendChild(_s);
+                                }
                             }
-                            // If io not yet loaded when DOM fires, retry after 2s
-                            setTimeout(connectBroadcastSocket, 2000);
+
+                            if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', initBroadcast);
+                            } else {
+                                initBroadcast();
+                            }
                         })();
-                    </script>
-                    <!-- socket.io client for broadcast-only pages (no-op if already loaded) -->
-                    <script>
-                        if (typeof io === 'undefined') {
-                            var _s = document.createElement('script');
-                            _s.src = (window.GF_SOCKET_URL || 'http://localhost:3000') + '/socket.io/socket.io.js';
-                            _s.onerror = function () { };
-                            document.head.appendChild(_s);
-                        }
                     </script>
                 <?php endif; ?>
             <?php } // end layout_footer()
