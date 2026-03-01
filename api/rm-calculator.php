@@ -79,15 +79,16 @@ if ($method === 'GET' && isset($_GET['session_id'])) {
             $name = trim($ex['name'] ?? '');
             if (!$name || isset($seen[$name]))
                 continue;
-
-            // Determine reps: prefer explicit reps, fall back to 10 for timed/isometric
-            $reps = isset($ex['reps']) ? (int) $ex['reps'] : 10;
+            // Only include exercises with explicit rep counts
+            // (excludes cardio like Jump Rope, Run, duration-only like Plank/Kettlebell 20s)
+            if (!isset($ex['reps']) || (int) $ex['reps'] <= 0)
+                continue;
 
             $seen[$name] = true;
             $exercises[] = [
                 'id' => $ex['id'] ?? null,
                 'name' => $name,
-                'reps' => $reps,
+                'reps' => (int) $ex['reps'],
                 'block_name' => $block['name'] ?? '',
                 'block_type' => $block['type'] ?? '',
             ];
