@@ -896,15 +896,16 @@ if (!$sala) {
 
     <!-- RM QR Corner -->
     <div id="wod-qr-corner" style="
-        position:fixed;top:20px;right:20px;z-index:60;
-        display:none;flex-direction:column;align-items:center;gap:6px
+        position:fixed;top:50%;right:12px;transform:translateY(-50%);z-index:60;
+        display:none;flex-direction:column;align-items:center;gap:5px;
+        opacity:0.82
     ">
         <div id="wod-qr-canvas" style="
-            background:#fff;padding:8px;border-radius:6px;
-            box-shadow:0 2px 16px rgba(0,0,0,.5)
+            background:#fff;padding:6px;border-radius:5px;
+            box-shadow:0 2px 12px rgba(0,0,0,.6)
         "></div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:.12em;
-            color:rgba(255,255,255,.35);text-transform:uppercase">Registrá tu RM</div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;
+            color:rgba(255,255,255,.3);text-transform:uppercase">RM</div>
     </div>
 
     <script>
@@ -923,8 +924,8 @@ if (!$sala) {
                 const url = BASE + '/rm?s=' + sessionId;
                 _rmQr = new QRCode(canvas, {
                     text: url,
-                    width: 88,
-                    height: 88,
+                    width: 72,
+                    height: 72,
                     colorDark: '#000000',
                     colorLight: '#ffffff',
                     correctLevel: QRCode.CorrectLevel.M,
