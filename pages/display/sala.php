@@ -896,9 +896,9 @@ if (!$sala) {
 
     <!-- RM QR Corner -->
     <div id="wod-qr-corner" style="
-        position:fixed;top:50%;right:12px;transform:translateY(-50%);z-index:60;
-        display:none;flex-direction:column;align-items:center;gap:5px;
-        opacity:0.82
+        position:fixed;bottom:52px;right:12px;z-index:60;
+        display:none;flex-direction:column;align-items:center;gap:4px;
+        opacity:0.85
     ">
         <div id="wod-qr-canvas" style="
             background:#fff;padding:6px;border-radius:5px;
