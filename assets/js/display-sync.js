@@ -341,6 +341,9 @@
             if (pausedOverlay) pausedOverlay.classList.remove('visible');
             _applyClockMode(false); // close clock when session ends
             stopTicker();
+            document.dispatchEvent(new CustomEvent('gf:session:finished', {
+                detail: { session_id: state.session_id ?? null }
+            }));
             // After 45 s, return to waiting-for-session screen
             _finishedTimer = setTimeout(() => {
                 _hasSession = false;

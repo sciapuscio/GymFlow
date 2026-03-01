@@ -765,6 +765,19 @@ if (!$sala) {
         <div class="finished-icon">🏆</div>
         <div class="finished-title">¡EXCELENTE!</div>
         <div class="finished-subtitle">Sesión completada, ¡Gracias por venir!</div>
+
+        <!-- QR RM — visible when session has a valid ID -->
+        <div id="finished-qr-section"
+            style="display:none;flex-direction:column;align-items:center;gap:12px;margin-top:clamp(20px,3vh,40px)">
+            <div
+                style="font-size:clamp(13px,1.6vw,20px);color:rgba(0,245,212,0.85);font-weight:700;letter-spacing:.08em;text-transform:uppercase">
+                📱 ¡Cargá tu RM!
+            </div>
+            <div id="finished-qr-canvas" style="background:#fff;padding:10px;border-radius:10px;"></div>
+            <div style="font-size:clamp(10px,1.1vw,14px);color:rgba(255,255,255,0.4);letter-spacing:.1em">
+                Escaneá con la app GymFlow
+            </div>
+        </div>
     </div>
 
     <div id="wod-overlay"
@@ -931,12 +944,37 @@ if (!$sala) {
                     correctLevel: QRCode.CorrectLevel.M,
                 });
                 corner.style.display = 'flex';
+
+                // Also populate the finished screen QR (larger)
+                const finCanvas = document.getElementById('finished-qr-canvas');
+                if (finCanvas) {
+                    finCanvas.innerHTML = '';
+                    new QRCode(finCanvas, {
+                        text: url,
+                        width: 160,
+                        height: 160,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M,
+                    });
+                }
             }
 
             function hideRmQr() {
                 _rmLastSessionId = null;
                 document.getElementById('wod-qr-corner').style.display = 'none';
                 document.getElementById('wod-qr-canvas').innerHTML = '';
+                const finSec = document.getElementById('finished-qr-section');
+                if (finSec) finSec.style.display = 'none';
+                const finCanvas = document.getElementById('finished-qr-canvas');
+                if (finCanvas) finCanvas.innerHTML = '';
+            }
+
+            function showFinishedQr(e) {
+                const sid = (e && e.detail && e.detail.session_id) ? e.detail.session_id : _rmLastSessionId;
+                if (sid) showRmQr(sid);
+                const finSec = document.getElementById('finished-qr-section');
+                if (finSec) finSec.style.display = 'flex';
             }
 
             // Hook into display-sync.js events via CustomEvents
@@ -953,6 +991,8 @@ if (!$sala) {
                     showRmQr(d.session_id);
                 }
             });
+            // Show large QR when session finishes
+            document.addEventListener('gf:session:finished', showFinishedQr);
             document.addEventListener('gf:session:detach', hideRmQr);
         })();
     </script>
