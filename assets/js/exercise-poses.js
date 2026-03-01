@@ -634,32 +634,33 @@
         // ── Compound movements ────────────────────────────────────────────────
         muscle_up: { frames: [P.pullv_hang, P.pullv_top, P.pressv_rack, P.pressv_top, P.pressv_rack, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 3200, restCycleDuration: 5000 },
         box_jump: { frames: [P.jump_crouch, P.jump_air, P.jump_crouch], restFrames: [P.stand], cycleDuration: 1400, restCycleDuration: 5000 },
-        box_step: { frames: [P.stand, P.step_high_r, P.step_on_top, P.step_high_r, P.stand], restFrames: [P.stand], cycleDuration: 3200, restCycleDuration: 5000 },
+        box_step: { frames: [P.stand, P.step_high_r, P.step_on_top, P.step_high_r, P.stand], restFrames: [P.stand], cycleDuration: 3200, restCycleDuration: 5000, sideView: true },
         lunge: { frames: [P.stand, P.lunge_l, P.stand, P.lunge_r], restFrames: [P.stand], cycleDuration: 2600, restCycleDuration: 5000 },
-        hinge: { frames: [P.hinge_top, P.hinge_bottom, P.hinge_top], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000 },
+        hinge: { frames: [P.hinge_top, P.hinge_bottom, P.hinge_top], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000, sideView: true },
         olympic: { frames: [P.olympic_start, P.olympic_pull, P.olympic_catch, P.olympic_pull, P.olympic_start], restFrames: [P.stand], cycleDuration: 2400, restCycleDuration: 5000 },
+        squat: { frames: [P.squat_up, P.squat_down, P.squat_up], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000, sideView: true },
         // ── Push patterns ─────────────────────────────────────────────────────
-        push_h: { frames: [P.pushh_up, P.pushh_down, P.pushh_up], restFrames: [P.pushh_up], cycleDuration: 1800, restCycleDuration: 5000 },
+        push_h: { frames: [P.pushh_up, P.pushh_down, P.pushh_up], restFrames: [P.pushh_up], cycleDuration: 1800, restCycleDuration: 5000, sideView: true },
         push_v: { frames: [P.pressv_rack, P.pressv_top, P.pressv_rack], restFrames: [P.stand], cycleDuration: 2000, restCycleDuration: 5000 },
         dip: { frames: [P.pressv_top, P.pushh_down, P.pressv_top], restFrames: [P.stand], cycleDuration: 1800, restCycleDuration: 5000 },
         press_down: { frames: [P.pressv_top, P.pressv_rack, P.pressv_top], restFrames: [P.stand], cycleDuration: 1800, restCycleDuration: 5000 },
         raise: { frames: [P.stand, P.raise_side, P.stand], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
         // ── Pull patterns ─────────────────────────────────────────────────────
         pull_v: { frames: [P.pullv_hang, P.pullv_top, P.pullv_hang], restFrames: [P.pullv_hang], cycleDuration: 2400, restCycleDuration: 5000 },
-        pull_h: { frames: [P.pullh_ext, P.pullh_cont, P.pullh_ext], restFrames: [P.pullh_ext], cycleDuration: 2000, restCycleDuration: 5000 },
+        pull_h: { frames: [P.pullh_ext, P.pullh_cont, P.pullh_ext], restFrames: [P.pullh_ext], cycleDuration: 2000, restCycleDuration: 5000, sideView: true },
         t2b: { frames: [P.t2b_hang, P.t2b_top, P.t2b_hang], restFrames: [P.pullv_hang], cycleDuration: 2000, restCycleDuration: 5000 },
         curl: { frames: [P.curl_down, P.curl_up, P.curl_down], restFrames: [P.stand], cycleDuration: 1800, restCycleDuration: 5000 },
         // ── Core ─────────────────────────────────────────────────────────────
-        core_dyn: { frames: [P.situp_down, P.situp_up, P.situp_down], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000 },
-        core_iso: { frames: [P.plank, P.plank_b, P.plank], restFrames: [P.stand], cycleDuration: 4000, restCycleDuration: 5000 },
-        ghd: { frames: [P.ghd_sit, P.ghd_back, P.ghd_sit], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000 },
+        core_dyn: { frames: [P.situp_down, P.situp_up, P.situp_down], restFrames: [P.stand], cycleDuration: 2200, restCycleDuration: 5000, sideView: true },
+        core_iso: { frames: [P.plank, P.plank_b, P.plank], restFrames: [P.stand], cycleDuration: 4000, restCycleDuration: 5000, sideView: true },
+        ghd: { frames: [P.ghd_sit, P.ghd_back, P.ghd_sit], restFrames: [P.stand], cycleDuration: 2800, restCycleDuration: 5000, sideView: true },
         // ── Cardio & conditioning ─────────────────────────────────────────────
-        swing: { frames: [P.swing_back, P.swing_top, P.swing_back], restFrames: [P.stand], cycleDuration: 1600, restCycleDuration: 5000 },
-        mc: { frames: [P.mc_l, P.mc_r], restFrames: [P.pushh_up], cycleDuration: 800, restCycleDuration: 5000 },
-        run: { frames: [P.run_r, P.run_l], restFrames: [P.stand], cycleDuration: 700, restCycleDuration: 5000 },
+        swing: { frames: [P.swing_back, P.swing_top, P.swing_back], restFrames: [P.stand], cycleDuration: 1600, restCycleDuration: 5000, sideView: true },
+        mc: { frames: [P.mc_l, P.mc_r], restFrames: [P.pushh_up], cycleDuration: 800, restCycleDuration: 5000, sideView: true },
+        run: { frames: [P.run_r, P.run_l], restFrames: [P.stand], cycleDuration: 700, restCycleDuration: 5000, sideView: true },
         jump: { frames: [P.jump_crouch, P.jump_air, P.jump_crouch], restFrames: [P.stand], cycleDuration: 1200, restCycleDuration: 5000 },
         bike: { frames: [P.bike_a, P.bike_b], restFrames: [P.bike_a], cycleDuration: 900, restCycleDuration: 5000 },
-        row: { frames: [P.pullh_ext, P.pullh_cont, P.pullh_ext], restFrames: [P.pullh_ext], cycleDuration: 1800, restCycleDuration: 5000 },
+        row: { frames: [P.pullh_ext, P.pullh_cont, P.pullh_ext], restFrames: [P.pullh_ext], cycleDuration: 1800, restCycleDuration: 5000, sideView: true },
     };
 
     // ── Public API ─────────────────────────────────────────────────────────────

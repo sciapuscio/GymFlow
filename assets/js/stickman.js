@@ -233,6 +233,8 @@
         this._idleTimerId = null;
         // Janitor easter egg
         this._janitor = null;    // { startMs, state, offsetX, targetX }
+        // Side-profile rendering flag
+        this._sideView = false;
     }
 
     StickFigure.prototype.setExercise = function (name) {
@@ -241,6 +243,7 @@
         this._archetype = (typeof ExercisePoses !== 'undefined')
             ? ExercisePoses.getArchetype(name) : null;
         this._equipment = this._archetype ? (this._archetype.equipment || null) : null;
+        this._sideView = this._archetype ? (this._archetype.sideView || false) : false;
         this._startTs = null;
         if (!this._running) this._startLoop();
     };
@@ -446,8 +449,108 @@
         var to = (from + 1) % n;
         var prog = segT - Math.floor(segT);
         var pose = lerpPose(frames[from], frames[to], prog);
-        this._drawPose(pose, W, H);
+        if (this._sideView && !isRest) {
+            this._drawPoseSide(pose, W, H);
+        } else {
+            this._drawPose(pose, W, H);
+        }
         if (this._equipment && !isRest) this._drawEquipment(pose, W, H, elapsed);
+    };
+
+    // ── Side-profile renderer ───────────────────────────────────────────────
+    // Dynamically projects any front-view pose into a side profile.
+    // "Right" joints = front (near viewer) — solid, full weight.
+    // "Left" joints  = back  (far  viewer) — dashed, 28 % opacity.
+    // No new pose coordinates needed: works with existing data.
+    StickFigure.prototype._drawPoseSide = function (pose, W, H) {
+        var ctx = this.ctx;
+        var lw = Math.max(1.5, H * 0.017);
+        var headR = Math.max(4, H * 0.062);
+        var dOff = W * 0.055; // depth offset separating front / back limb
+
+        // Project a left/right joint pair into side-profile screen coords.
+        // rKey = front (near viewer), lKey = back.
+        function side(rKey, lKey) {
+            var rj = pose[rKey] || [0.5, 0.5];
+            var lj = pose[lKey] || [0.5, 0.5];
+            var cx = ((rj[0] + lj[0]) / 2) * W; // centre x
+            return {
+                f: [cx + dOff, rj[1] * H],  // front: right joint
+                b: [cx - dOff, lj[1] * H],  // back:  left  joint
+            };
+        }
+        function px(k) { var j = pose[k] || [0.5, 0.5]; return [j[0] * W, j[1] * H]; }
+
+        var neck = px('neck'), head = px('head');
+        var sh = side('rs', 'ls');
+        var el = side('re', 'le');
+        var wr = side('rw', 'lw');
+        var hp = side('rh', 'lh');
+        var kn = side('rk', 'lk');
+        var an = side('ra', 'la');
+
+        var shCX = (sh.f[0] + sh.b[0]) / 2, shCY = (sh.f[1] + sh.b[1]) / 2;
+        var hpCX = (hp.f[0] + hp.b[0]) / 2, hpCY = (hp.f[1] + hp.b[1]) / 2;
+
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // ── Back side (far from viewer) — dashed + dim ──
+        var backAlpha = this.color.replace(/[\d.]+\)$/, '0.28)');
+        ctx.strokeStyle = backAlpha;
+        ctx.lineWidth = lw * 0.65;
+        ctx.setLineDash([3, 5]);
+        ctx.beginPath();
+        ctx.moveTo(sh.b[0], sh.b[1]);
+        ctx.lineTo(el.b[0], el.b[1]);
+        ctx.lineTo(wr.b[0], wr.b[1]);
+        ctx.moveTo(hp.b[0], hp.b[1]);
+        ctx.lineTo(kn.b[0], kn.b[1]);
+        ctx.lineTo(an.b[0], an.b[1]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ── Spine / torso (solid center line) ──
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        ctx.moveTo(neck[0], neck[1]); ctx.lineTo(shCX, shCY);
+        ctx.moveTo(neck[0], neck[1]); ctx.lineTo(hpCX, hpCY);
+        // Hip-width indicator
+        ctx.moveTo(hp.f[0], hp.f[1]); ctx.lineTo(hp.b[0], hp.b[1]);
+        ctx.stroke();
+
+        // ── Front side (near viewer) — solid, full weight ──
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = lw;
+        ctx.beginPath();
+        ctx.moveTo(shCX, shCY); ctx.lineTo(sh.f[0], sh.f[1]);
+        ctx.moveTo(sh.f[0], sh.f[1]); ctx.lineTo(el.f[0], el.f[1]); ctx.lineTo(wr.f[0], wr.f[1]);
+        ctx.moveTo(hpCX, hpCY); ctx.lineTo(kn.f[0], kn.f[1]); ctx.lineTo(an.f[0], an.f[1]);
+        ctx.stroke();
+
+        // ── Head + neck ──
+        ctx.beginPath();
+        ctx.moveTo(neck[0], neck[1]); ctx.lineTo(head[0], head[1]);
+        ctx.stroke();
+        // Profile head: small arc to indicate facing direction
+        ctx.beginPath();
+        ctx.arc(head[0] + headR * 0.3, head[1], headR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Nose bump (side profile indicator)
+        ctx.beginPath();
+        ctx.arc(head[0] + headR * 1.1, head[1] + headR * 0.1, headR * 0.28, -0.5, 0.5);
+        ctx.strokeStyle = this.color.replace(/[\d.]+\)$/, '0.55)');
+        ctx.lineWidth = lw * 0.7;
+        ctx.stroke();
+
+        // ── Ground shadow ──
+        var groundY = Math.max(an.f[1], an.b[1]) + lw * 0.5;
+        var groundX = (an.f[0] + an.b[0]) / 2;
+        ctx.beginPath();
+        ctx.ellipse(groundX, groundY, W * 0.22, H * 0.014, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.fill();
     };
 
     StickFigure.prototype._drawPose = function (pose, W, H) {
