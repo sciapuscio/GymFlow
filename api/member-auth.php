@@ -85,13 +85,36 @@ function memberPayload(array $m, int $gymId): array
         error_log('gym branding query failed: ' . $e->getMessage());
     }
 
+    // Classes actually attended in the current membership period
+    $attendedCount = 0;
+    if ($membership) {
+        $attStmt = db()->prepare("
+            SELECT COUNT(*) AS cnt
+            FROM member_reservations
+            WHERE member_id   = ?
+              AND gym_id      = ?
+              AND status      IN ('present', 'attended')
+              AND class_date  >= ?
+              AND class_date  <= ?
+        ");
+        $attStmt->execute([
+            $m['id'],
+            $gymId,
+            $membership['start_date'],
+            $membership['end_date'],
+        ]);
+        $attendedCount = (int) ($attStmt->fetch()['cnt'] ?? 0);
+    }
+
     return [
         'id' => (int) $m['id'],
         'name' => $m['name'],
         'email' => $m['email'],
         'phone' => $m['phone'],
         'qr_token' => $m['qr_token'],
-        'membership' => $membership ?: null,
+        'membership' => $membership ? array_merge($membership, [
+            'classes_attended' => $attendedCount,
+        ]) : null,
         'gym' => $gym ? [
             'name' => $gym['name'],
             'logo_path' => $gym['logo_path'],
