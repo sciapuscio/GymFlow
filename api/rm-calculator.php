@@ -153,6 +153,59 @@ if ($method === 'GET' && $action === 'exercises') {
     jsonResponse(['exercises' => $stmt->fetchAll()]);
 }
 
+// ── GET: WOD history (grouped by session) ────────────────────────────────────
+if ($method === 'GET' && $action === 'wod-history') {
+    $limit = min(50, max(5, (int) ($_GET['limit'] ?? 30)));
+
+    // Fetch all logs for this member, ordered by session and date
+    $stmt = db()->prepare("
+        SELECT
+            rl.id,
+            rl.session_id,
+            COALESCE(gs.name, 'Entrada manual') AS session_name,
+            DATE_FORMAT(COALESCE(gs.date, DATE(rl.logged_at)), '%Y-%m-%d') AS session_date,
+            rl.exercise_name,
+            rl.weight_kg,
+            rl.reps,
+            rl.rm_estimated,
+            DATE_FORMAT(rl.logged_at, '%Y-%m-%d') AS logged_date
+        FROM rm_logs rl
+        LEFT JOIN gym_sessions gs ON gs.id = rl.session_id
+        WHERE rl.member_id = ? AND rl.gym_id = ?
+        ORDER BY
+            COALESCE(gs.date, DATE(rl.logged_at)) DESC,
+            rl.session_id DESC,
+            rl.logged_at DESC
+    ");
+    $stmt->execute([$memberId, $gymId]);
+    $rows = $stmt->fetchAll();
+
+    // Group by session_id (null → 'manual')
+    $grouped = [];
+    foreach ($rows as $row) {
+        $key = $row['session_id'] !== null ? (int) $row['session_id'] : 'manual';
+        if (!isset($grouped[$key])) {
+            $grouped[$key] = [
+                'session_id' => $row['session_id'] !== null ? (int) $row['session_id'] : null,
+                'session_name' => $row['session_name'],
+                'session_date' => $row['session_date'],
+                'entries' => [],
+            ];
+        }
+        $grouped[$key]['entries'][] = [
+            'exercise_name' => $row['exercise_name'],
+            'weight_kg' => (float) $row['weight_kg'],
+            'reps' => (int) $row['reps'],
+            'rm_estimated' => (float) $row['rm_estimated'],
+        ];
+    }
+
+    // Apply limit (number of WOD groups, not rows)
+    $wods = array_values(array_slice($grouped, 0, $limit));
+
+    jsonResponse(['wods' => $wods]);
+}
+
 // ── POST: save RM log ─────────────────────────────────────────────────────────
 if ($method === 'POST') {
     $data = getBody();
