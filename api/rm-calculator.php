@@ -163,7 +163,7 @@ if ($method === 'GET' && $action === 'wod-history') {
             rl.id,
             rl.session_id,
             COALESCE(gs.name, 'Entrada manual') AS session_name,
-            DATE_FORMAT(COALESCE(gs.date, DATE(rl.logged_at)), '%Y-%m-%d') AS session_date,
+            DATE_FORMAT(COALESCE(gs.started_at, gs.scheduled_at, rl.logged_at), '%Y-%m-%d') AS session_date,
             rl.exercise_name,
             rl.weight_kg,
             rl.reps,
@@ -173,7 +173,7 @@ if ($method === 'GET' && $action === 'wod-history') {
         LEFT JOIN gym_sessions gs ON gs.id = rl.session_id
         WHERE rl.member_id = ? AND rl.gym_id = ?
         ORDER BY
-            COALESCE(gs.date, DATE(rl.logged_at)) DESC,
+            COALESCE(gs.started_at, gs.scheduled_at, rl.logged_at) DESC,
             rl.session_id DESC,
             rl.logged_at DESC
     ");
