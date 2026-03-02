@@ -219,10 +219,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $openAt = date('H:i', strtotime($next['start_time']) - $windowMin * 60);
             jsonError("El check-in para tu próxima clase abre a las {$openAt}.", 403);
         } else {
-            $msg = $sedeId
-                ? 'No tenés ninguna clase reservada en esta sede en este momento.'
-                : 'No tenés ninguna clase reservada en este momento. Reservá una clase desde la Grilla.';
-            jsonError($msg, 403);
+            // No class today — check if there's one in the coming days
+            $futureStmt = db()->prepare("
+                SELECT mr.class_date, ss.start_time, ss.label AS class_name
+                FROM member_reservations mr
+                JOIN schedule_slots ss ON ss.id = mr.schedule_slot_id
+                WHERE mr.member_id  = ?
+                  AND mr.gym_id     = ?
+                  AND mr.status      = 'reserved'
+                  AND mr.class_date  > CURDATE()
+                  AND mr.class_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+                ORDER BY mr.class_date ASC, ss.start_time ASC
+                LIMIT 1
+            ");
+            $futureStmt->execute([$member['id'], $gymId]);
+            $futureClass = $futureStmt->fetch();
+
+            if ($futureClass) {
+                $classDate = new DateTime($futureClass['class_date'], new DateTimeZone(TIMEZONE));
+                $today = new DateTime('today', new DateTimeZone(TIMEZONE));
+                $tomorrow = new DateTime('tomorrow', new DateTimeZone(TIMEZONE));
+                if ($classDate->format('Y-m-d') === $tomorrow->format('Y-m-d')) {
+                    $dayLabel = 'mañana';
+                } else {
+                    $dayNames = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+                    $dayLabel = $dayNames[(int) $classDate->format('N') - 1] . ' ' . $classDate->format('d/m');
+                }
+                $openAt = date('H:i', strtotime($futureClass['start_time']) - $windowMin * 60);
+                $className = $futureClass['class_name'] ?? 'tu clase';
+                jsonError("Tu próxima clase es $dayLabel ({$className}). El check-in abre a las {$openAt} de ese día.", 403);
+            } else {
+                $msg = $sedeId
+                    ? 'No tenés ninguna clase reservada en esta sede en los próximos días.'
+                    : 'No tenés ninguna clase reservada. Reservá desde la Grilla.';
+                jsonError($msg, 403);
+            }
         }
     }
 
