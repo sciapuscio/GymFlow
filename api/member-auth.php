@@ -85,25 +85,34 @@ function memberPayload(array $m, int $gymId): array
         error_log('gym branding query failed: ' . $e->getMessage());
     }
 
-    // Classes actually attended in the current membership period
+    // Stats de clases en el período de membresía actual
     $attendedCount = 0;
+    $absentCount = 0;
+    $reservedCount = 0;
     if ($membership) {
-        $attStmt = db()->prepare("
-            SELECT COUNT(*) AS cnt
+        $statsStmt = db()->prepare("
+            SELECT status, COUNT(*) AS cnt
             FROM member_reservations
-            WHERE member_id   = ?
-              AND gym_id      = ?
-              AND status      IN ('present', 'attended')
-              AND class_date  >= ?
-              AND class_date  <= ?
+            WHERE member_id  = ?
+              AND gym_id     = ?
+              AND class_date >= ?
+              AND class_date <= DATE_ADD(CURDATE(), INTERVAL 60 DAY)
+            GROUP BY status
         ");
-        $attStmt->execute([
+        $statsStmt->execute([
             $m['id'],
             $gymId,
             $membership['start_date'],
-            $membership['end_date'],
         ]);
-        $attendedCount = (int) ($attStmt->fetch()['cnt'] ?? 0);
+        foreach ($statsStmt->fetchAll() as $row) {
+            $cnt = (int) $row['cnt'];
+            if (in_array($row['status'], ['present', 'attended']))
+                $attendedCount += $cnt;
+            elseif ($row['status'] === 'absent')
+                $absentCount += $cnt;
+            elseif ($row['status'] === 'reserved')
+                $reservedCount += $cnt;
+        }
     }
 
     return [
@@ -114,6 +123,8 @@ function memberPayload(array $m, int $gymId): array
         'qr_token' => $m['qr_token'],
         'membership' => $membership ? array_merge($membership, [
             'classes_attended' => $attendedCount,
+            'classes_absent' => $absentCount,
+            'classes_reserved' => $reservedCount,
         ]) : null,
         'gym' => $gym ? [
             'name' => $gym['name'],
