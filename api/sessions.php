@@ -41,10 +41,11 @@ if ($method === 'GET' && !$id) {
 // GET single with full blocks
 if ($method === 'GET' && $id) {
     $user = requireAuth();
+
     $stmt = db()->prepare(
         "SELECT gs.*, u.name as instructor_name, s.name as sala_name, s.display_code,
                 g.primary_color, g.secondary_color, g.font_display
-         FROM gym_sessions gs 
+         FROM gym_sessions gs
          JOIN users u ON gs.instructor_id = u.id
          LEFT JOIN salas s ON gs.sala_id = s.id
          LEFT JOIN gyms g ON gs.gym_id = g.id
@@ -54,6 +55,22 @@ if ($method === 'GET' && $id) {
     $session = $stmt->fetch();
     if (!$session)
         jsonError('Session not found', 404);
+
+    // If the caller doesn't own the session, check shared access by email
+    if ((int) $session['gym_id'] !== (int) $user['gym_id']) {
+        $email = strtolower($user['email'] ?? '');
+        $access = db()->prepare("
+            SELECT sag.id FROM session_access_grants sag
+            JOIN instructor_clients ic ON ic.id = sag.client_id
+            WHERE sag.session_id = ? AND LOWER(ic.client_email) = ? AND ic.status = 'active'
+              AND (SELECT shared FROM gym_sessions WHERE id = ?) = 1
+            LIMIT 1
+        ");
+        $access->execute([$id, $email, $id]);
+        if (!$access->fetch())
+            jsonError('Sin acceso a esta sesión', 403);
+    }
+
     $session['blocks_json'] = json_decode($session['blocks_json'], true);
     jsonResponse($session);
 }
