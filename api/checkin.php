@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         SELECT s.id, s.name, sl.name AS sala_name, s.started_at
         FROM gym_sessions s
         JOIN salas sl ON sl.id = s.sala_id
-        WHERE s.gym_id = ? AND s.status = 'live'
+        WHERE s.gym_id = ? AND s.status IN ('playing', 'paused')
         ORDER BY s.started_at DESC LIMIT 1
     ");
     $session->execute([$gym['id']]);
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 5. Buscar sesión activa (si hay)
     $session = db()->prepare("
         SELECT id FROM gym_sessions
-        WHERE gym_id = ? AND status = 'live'
+        WHERE gym_id = ? AND status IN ('playing', 'paused')
         ORDER BY started_at DESC LIMIT 1
     ");
     $session->execute([$gymId]);
@@ -270,11 +270,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 7. Registrar asistencia
     db()->prepare("
         INSERT INTO member_attendances
-            (member_id, gym_session_id, gym_id, sede_id, membership_id, method)
-        VALUES (?,?,?,?,?,?)
+            (member_id, gym_session_id, reservation_id, gym_id, sede_id, membership_id, method)
+        VALUES (?,?,?,?,?,?,?)
     ")->execute([
                 $member['id'],
                 $sessionId,
+                $upcomingClass['reservation_id'],
                 $gymId,
                 $sedeId,
                 $membership['id'],

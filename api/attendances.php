@@ -38,9 +38,11 @@ if ($method === 'GET') {
         $limit = min((int) ($_GET['limit'] ?? 30), 200);
         $stmt = db()->prepare("
             SELECT a.id, a.checked_in_at, a.method,
-                   gs.name AS session_name
+                   COALESCE(ss.label, gs.name) AS session_name
             FROM member_attendances a
-            LEFT JOIN gym_sessions gs ON gs.id = a.gym_session_id
+            LEFT JOIN member_reservations mr ON mr.id = a.reservation_id
+            LEFT JOIN schedule_slots ss      ON ss.id = mr.schedule_slot_id
+            LEFT JOIN gym_sessions gs        ON gs.id = a.gym_session_id
             WHERE a.member_id = ? AND a.gym_id = ?
             ORDER BY a.checked_in_at DESC
             LIMIT $limit
