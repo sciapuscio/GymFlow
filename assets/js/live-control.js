@@ -411,7 +411,6 @@ const GFLive = (() => {
     }
 
     async function setSala(salaId) {
-        // set_sala is still a PHP operation (not real-time)
         const salaIdVal = (salaId && salaId != '0') ? parseInt(salaId) : null;
         try {
             await GF.post(`${window.GF_BASE}/api/sessions.php?id=${session.id}&action=set_sala`, { sala_id: salaIdVal });
@@ -420,18 +419,45 @@ const GFLive = (() => {
             if (socket?.connected) {
                 socket.emit('join:session', { session_id: session.id, sala_id: salaIdVal });
             }
+
+            const toolbar = document.getElementById('sala-toolbar');
+
             if (!salaIdVal) {
                 showToast('Sala desacoplada', 'info');
-                const displayLink = document.querySelector('a[href*="/display/"]');
-                if (displayLink) displayLink.style.display = 'none';
+                if (toolbar) toolbar.innerHTML = '';
             } else {
                 const salaName = document.getElementById('live-sala-select')?.selectedOptions[0]?.text || '';
                 showToast(`Sala asignada: ${salaName}`, 'success');
                 const salas = window.SALAS || [];
                 const sala = salas.find(s => s.id == salaId);
-                if (sala) {
-                    const displayLink = document.querySelector('a[href*="/display/"]');
-                    if (displayLink) { displayLink.href = `${window.GF_BASE}/pages/display/sala.php?code=${sala.display_code}`; displayLink.style.display = ''; }
+                if (sala && sala.display_code && toolbar) {
+                    const base = window.GF_BASE || '';
+                    const code = encodeURIComponent(sala.display_code);
+                    toolbar.innerHTML = `
+                        <a id="btn-display" href="${base}/pages/display/sala.php?code=${code}"
+                            target="_blank" class="btn btn-secondary btn-sm">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                            Display
+                        </a>
+                        <button id="btn-wod-overlay" class="btn btn-secondary btn-sm" onclick="toggleWodOverlay()"
+                            title="Mostrar/ocultar resumen WOD en sala">📋 WOD</button>
+                        <button id="btn-clock-mode" class="btn btn-secondary btn-sm" onclick="toggleClockMode()"
+                            title="Mostrar/ocultar reloj en pantalla">🕐 Reloj</button>
+                        <button id="btn-clock-fs" class="btn btn-secondary btn-sm" onclick="emitClockFs()"
+                            title="Reloj pantalla completa en display">⛶ Full</button>
+                    `;
+                    // Re-apply active states if they were on before
+                    if (window._wodOverlayActive) {
+                        const btn = document.getElementById('btn-wod-overlay');
+                        if (btn) { btn.style.background = 'var(--gf-accent)'; btn.style.color = '#000'; btn.style.borderColor = 'var(--gf-accent)'; }
+                    }
+                    if (window._clockModeActive) {
+                        const btn = document.getElementById('btn-clock-mode');
+                        if (btn) { btn.style.background = 'var(--gf-accent)'; btn.style.color = '#000'; btn.style.borderColor = 'var(--gf-accent)'; }
+                    }
                 }
             }
         } catch (e) { showToast('Error al asignar sala', 'error'); }

@@ -60,7 +60,7 @@ layout_footer($user);
             <div style="font-size:12px;color:var(--gf-text-muted)" id="status-label">Listo para iniciar</div>
         </div>
     </div>
-    <div class="flex gap-2 ml-auto">
+    <div class="flex gap-2 ml-auto" style="align-items:center">
         <select id="live-sala-select" class="form-control" style="width:auto;padding:8px 12px;font-size:13px"
             onchange="setSala(this.value)">
             <option value="">— Sin sala —</option>
@@ -70,28 +70,31 @@ layout_footer($user);
                 </option>
             <?php endforeach; ?>
         </select>
-        <?php if ($session['display_code'] ?? null): ?>
-            <a href="<?php echo BASE_URL ?>/pages/display/sala.php?code=<?php echo urlencode($session['display_code']) ?>"
-                target="_blank" class="btn btn-secondary btn-sm">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Display
-            </a>
-            <button id="btn-wod-overlay" class="btn btn-secondary btn-sm" onclick="toggleWodOverlay()"
-                title="Mostrar/ocultar resumen WOD en sala">
-                📋 WOD
-            </button>
-            <button id="btn-clock-mode" class="btn btn-secondary btn-sm" onclick="toggleClockMode()"
-                title="Mostrar/ocultar reloj en pantalla">
-                🕐 Reloj
-            </button>
-            <button id="btn-clock-fs" class="btn btn-secondary btn-sm" onclick="emitClockFs()"
-                title="Reloj pantalla completa en display">
-                ⛶ Full
-            </button>
-        <?php endif; ?>
+        <div id="sala-toolbar" style="display:contents">
+            <?php if ($session['display_code'] ?? null): ?>
+                <a id="btn-display"
+                    href="<?php echo BASE_URL ?>/pages/display/sala.php?code=<?php echo urlencode($session['display_code']) ?>"
+                    target="_blank" class="btn btn-secondary btn-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Display
+                </a>
+                <button id="btn-wod-overlay" class="btn btn-secondary btn-sm" onclick="toggleWodOverlay()"
+                    title="Mostrar/ocultar resumen WOD en sala">
+                    📋 WOD
+                </button>
+                <button id="btn-clock-mode" class="btn btn-secondary btn-sm" onclick="toggleClockMode()"
+                    title="Mostrar/ocultar reloj en pantalla">
+                    🕐 Reloj
+                </button>
+                <button id="btn-clock-fs" class="btn btn-secondary btn-sm" onclick="emitClockFs()"
+                    title="Reloj pantalla completa en display">
+                    ⛶ Full
+                </button>
+            <?php endif; ?>
+        </div>
         <a href="<?php echo BASE_URL ?>/pages/instructor/builder.php?id=<?php echo $id ?>"
             class="btn btn-secondary btn-sm">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1089,7 +1092,7 @@ layout_footer($user);
 <script src="<?php echo BASE_URL ?>/assets/js/live-control.js"></script>
 <script>
     const SESSION_DATA = <?php echo json_encode(['id' => $id, 'blocks' => $blocks, 'status' => $session['status'], 'sala_id' => (int) $session['sala_id'], 'current_block_index' => (int) $session['current_block_index'], 'current_block_elapsed' => (int) $session['current_block_elapsed']], JSON_HEX_TAG | JSON_HEX_AMP) ?>;
-    const SALAS = <?php echo json_encode($salas, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+    window.SALAS = <?php echo json_encode($salas, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
     const SPOTIFY_CONNECTED = <?php echo $spotifyConnected ? 'true' : 'false' ?>;
     window.GF_SOCKET_URL = '<?php echo SOCKET_URL ?>';
 
